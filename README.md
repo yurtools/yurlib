@@ -252,7 +252,7 @@ The exact service boundaries are subject to architectural review as implementati
 
 Current baseline:
 
-- **Java 25**
+- **Java** using the workstation-provided JDK (Java 26 at bootstrap)
 - **Spring Boot**
 - **Angular**
 - **PostgreSQL**
@@ -433,9 +433,7 @@ Until then, please use GitHub Issues for questions, ideas, and proposed features
 
 ## License
 
-A project license has not yet been selected.
-
-Until a license is added, the repository should not be assumed to grant permission to copy, modify, or redistribute the source code.
+Yurlib is licensed under the [GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`).
 
 ---
 

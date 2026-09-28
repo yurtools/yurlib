@@ -1,11 +1,12 @@
-# eLibrary — Product Concept
+# Yurlib — Product Concept
 
 **Document ID:** PC-001  
-**Version:** 0.2  
-**Status:** Reviewed draft; pending owner approval  
-**Date:** 23 September 2026  
-**Working product name:** eLibrary  
-**Authoritative repository path:** `docs/product/product-concept.md`
+**Version:** 0.3  
+**Status:** Reviewed draft; product name and license approved  
+**Date:** 28 September 2026  
+**Product name:** Yurlib  
+**License:** GNU General Public License v3.0 only (`GPL-3.0-only`)  
+**Authoritative repository path:** `docs/architecture/product-concept.md`
 
 ## Executive summary
 
@@ -17,7 +18,7 @@ Organize an existing EPUB, FB2 and MOBI collection without surrendering control 
 
 **PC-01** — A useful self-hosted product, developed through an auditable AI-assisted process.
 
-eLibrary is a self-hosted electronic library manager for large collections stored in existing folders, including NAS-backed storage. It discovers EPUB, FB2 and MOBI files, builds a persistent catalog, reconciles inconsistent metadata, supports author merging, tags, collections, downloads and conversion, and connects to external electronic libraries through plugins.
+Yurlib is a self-hosted electronic library manager for large collections stored in existing folders, including NAS-backed storage. It discovers EPUB, FB2 and MOBI files, builds a persistent catalog, reconciles inconsistent metadata, supports author merging, tags, collections, downloads and conversion, and connects to external electronic libraries through plugins.
 
 The product must remain useful without AI, internet connectivity or any external connector. AI and remote libraries extend the local catalog; they must not become dependencies of ordinary browsing, curation or downloading of available local files.
 
@@ -310,9 +311,13 @@ Parallel implementation uses bounded ownership and isolated worktrees. Reviewers
 | External checks were underspecified | Separated search, matching, availability, metadata linking and import; kept Flibusta explicit without inventing live capabilities. |
 | Automation lacked operating boundaries | Added plugin lifecycle, network policy, cloud-AI consent, conversion checks, backup/restore and measurable acceptance targets. |
 
-### Decisions to resolve in subsequent design work
+### Resolved decisions
 
-D-01 — Naming: eLibrary remains a working product name; confirm the repository and public application name before publication.
+D-01 — Naming: the repository and public application name is Yurlib.
+
+D-06a — Distribution: Yurlib is licensed under the GNU General Public License v3.0 only (`GPL-3.0-only`).
+
+### Decisions to resolve in subsequent design work
 
 D-02 — Deployment: choose reference hardware, supported CPU architectures, NAS protocol and minimum runtime resources for testing and packaging.
 
@@ -322,7 +327,7 @@ D-04 — Connectors: validate Flibusta feasibility and select the first real sou
 
 D-05 — Plugin execution: decide trusted/bundled versus separately isolated execution, compatibility rules and upgrade behavior before implementing the public extension contract.
 
-D-06 — AI and distribution: choose the initial provider adapter and suggestion workflow, confirm data-disclosure defaults, and decide application licensing and third-party packaging obligations.
+D-06 — AI and distribution: choose the initial provider adapter and suggestion workflow, confirm data-disclosure defaults, and review third-party packaging obligations under `GPL-3.0-only`.
 
 > Approval of this concept establishes product intent. It does not approve every technology, deadline, live connector, numeric benchmark or deployment decision. Those require subsequent design and evidence.
 
@@ -332,9 +337,9 @@ D-06 — AI and distribution: choose the initial provider adapter and suggestion
 
 Review date: 23 September 2026. The source concept is the product description and draft supplied in this conversation. External references below were consulted only for the specific technical checks stated; requirements and delivery proposals are authoring decisions.
 
-### S1 — Oracle — Java SE 25 WatchService documentation
+### S1 — Oracle — Java SE 26 WatchService documentation
 
-[Oracle — Java SE 25 WatchService documentation](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/file/WatchService.html)
+[Oracle — Java SE 26 WatchService documentation](https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/nio/file/WatchService.html)
 
 Confirms that detection of changes made on remote systems is not required and that change notifications do not guarantee a file writer has finished. Used to justify reconciliation scans and stable-file checks.
 
@@ -368,4 +373,4 @@ No production code, external connector, conversion corpus, performance benchmark
 
 ### Document authority
 
-Recommended authoritative repository file: docs/product/product-concept.md. The Word file is the corresponding review/export copy. After approval, update the version and review status together and keep both representations synchronized; do not maintain conflicting design baselines in the tracker.
+The authoritative repository file is `docs/architecture/product-concept.md`. Any exported copy must remain synchronized with this file; do not maintain conflicting design baselines in the tracker.
