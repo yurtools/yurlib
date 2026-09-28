@@ -93,6 +93,15 @@ Logs capture operational plans and executed actions. They do not contain hidden 
 - Upgraded ArchUnit from 1.4.1 to 1.5.1 for JDK 26 compatibility.
 - Overrode the Maven PMD Plugin's bundled PMD 7.17.0 modules with PMD 7.28.0 for JDK 26 compatibility.
 
+### 2026-09-28 — Commit, pull request, and protection
+
+- Committed the bootstrap as `f4fed48` (`Bootstrap Yurlib engineering environment`).
+- Pushed `dev` to `origin` and set its upstream.
+- Opened pull request #12, `Bootstrap Yurlib engineering environment`, against protected `main`.
+- GitHub Actions push run `36476856389` and pull-request run `36476878844` completed successfully.
+- Added the registered `Backend`, `Frontend`, `Compose Configuration`, and `Dependency Review` contexts as strict required checks on `main`.
+- Preserved the existing pull-request requirement, administrator enforcement, stale-review dismissal, conversation resolution, linear history, and force-push/deletion restrictions.
+
 ## Verification
 
 - `node tests/smoke.mjs` in the trusted scanner: 17/17 passed.
@@ -106,4 +115,4 @@ Logs capture operational plans and executed actions. They do not contain hidden 
 
 ## Result
 
-Implementation and local verification are complete. This log is finalized in the setup commit on `dev`. The remaining external actions are to push `dev`, open the pull request, observe CI, and configure required check names after GitHub registers them. GitHub Project creation separately requires expanded token scope.
+Implementation, local verification, push, pull request, CI registration, and branch-protection setup are complete. Pull request #12 is ready for human review. GitHub Project creation separately requires expanded token scope.
