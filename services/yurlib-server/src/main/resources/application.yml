@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: yurlib-server
+  datasource:
+    url: ${YURLIB_DB_URL:jdbc:postgresql://localhost:5432/yurlib}
+    username: ${YURLIB_DB_USERNAME:yurlib}
+    password: ${YURLIB_DB_PASSWORD:yurlib-dev-only}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  threads:
+    virtual:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+server:
+  shutdown: graceful

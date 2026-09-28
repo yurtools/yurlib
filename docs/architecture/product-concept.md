@@ -1,7 +1,7 @@
 # Yurlib — Product Concept
 
 **Document ID:** PC-001  
-**Version:** 0.3  
+**Version:** 0.4
 **Status:** Reviewed draft; product name and license approved  
 **Date:** 28 September 2026  
 **Product name:** Yurlib  
@@ -277,7 +277,7 @@ The following phasing is a proposal, not a removal of requested capabilities. V1
 
 | Stage | Outcome |
 | --- | --- |
-| M0 — Foundation | Create the GitHub repository, install local Plane, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks. |
+| M0 — Foundation | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks. |
 | M1 — Local library | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads. |
 | M2 — Curation | Author aliases and manual merge with history/recovery; tags and collections; duplicate review; supported format conversion; managed output storage; backup/restore verification. |
 | M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow. |
@@ -292,7 +292,7 @@ The intended engineering direction remains Java/Spring microservices with a web 
 
 ### AI-assisted development acceptance
 
-Keep this concept and approved design decisions in GitHub; Plane tracks implementation work rather than replacing the design baseline. Tasks reference stable concept identifiers, the relevant document revision, acceptance criteria and evidence. Each change follows plan → implementation owner → deterministic tests/CI → independent review → human acceptance → merge and release.
+Keep this concept and approved design decisions in the repository. GitHub Issues and Projects track implementation work rather than replacing the design baseline. Issues reference stable concept identifiers, the relevant document revision, acceptance criteria and evidence. Each change follows plan → implementation owner → deterministic tests/CI → independent review → human acceptance → merge and release.
 
 Parallel implementation uses bounded ownership and isolated worktrees. Reviewers check requirements, integration behavior and security, not merely style. Agents may propose architectural changes but must not silently introduce new infrastructure or bypass release authority. Test fixtures, connector contracts and failure scenarios provide objective evidence for reviewing generated code.
 

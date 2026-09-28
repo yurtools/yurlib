@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, backend]
+  - package-ecosystem: npm
+    directory: /web/yurlib-web
+    schedule:
+      interval: weekly
+    labels: [dependencies, frontend]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, infrastructure]

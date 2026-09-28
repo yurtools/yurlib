@@ -1,0 +1,22 @@
+package org.yurlib.server;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import org.junit.jupiter.api.Test;
+
+class ArchitectureTest {
+
+    private final JavaClasses classes = new ClassFileImporter().importPackages("org.yurlib.server");
+
+    @Test
+    void domainDoesNotDependOnDeliveryOrInfrastructure() {
+        noClasses()
+                .that().resideInAPackage("..domain..")
+                .should().dependOnClassesThat()
+                .resideInAnyPackage("..api..", "..infrastructure..")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+}
