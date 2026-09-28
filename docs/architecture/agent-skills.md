@@ -2,9 +2,9 @@
 
 **Project:** Yurlib  
 **Document:** Agent Skills Catalog and Installation Policy  
-**Status:** Draft for approval  
-**Version:** 0.2  
-**Last Updated:** 2026-09-23  
+**Status:** Active bootstrap policy
+**Version:** 0.4
+**Last Updated:** 2026-09-28
 **Recommended Repository Path:** `docs/architecture/agent-skills.md`
 
 ---
@@ -265,17 +265,15 @@ npx skills add ./_skill-review/mthines-agent-skills \
 
 ---
 
-## 3.6 Code Review Orchestrator
+## 3.6 Code Review Agent — Deferred
 
-**Skill:** `code-review`  
+**Skill:** `review-agent`
 **Source Repository:** `https://github.com/openai/codex`  
-**Registry Page:** `https://www.skills.sh/openai/codex/code-review`
+**Reviewed Upstream Location:** `codex-rs/skills/src/assets/samples/review-agent`
 
 ### Purpose
 
-Provide an independent multi-agent code-review workflow.
-
-The current skill is designed as an orchestrator that can dispatch specialized review subagents and consolidate their findings.
+Provide a focused, read-only defect review of an explicit change target.
 
 ### Yurlib Usage
 
@@ -295,12 +293,9 @@ It is not a substitute for:
 - human architectural review;
 - Yurlib-specific security review.
 
-### Install Command After Review
+### Bootstrap Status
 
-```bash
-npx skills add ./_skill-review/openai-codex \
-  --skill code-review
-```
+The previously documented `code-review` orchestrator was not present at reviewed commit `e07e58c8429019de78b138d7138deaaf7f3ef22c`. The available `review-agent` sample has different behavior and is not silently substituted. It remains deferred until its workflow fit is approved.
 
 ---
 
@@ -915,7 +910,7 @@ Recommended order:
 
 6. github-actions-author       project
 
-7. code-review                 project
+7. review-agent               deferred pending workflow approval
 ```
 
 Later, only when justified:
@@ -939,7 +934,6 @@ After the initial bootstrap:
 .agents/
 └── skills/
     ├── architecture-decision/
-    ├── code-review/
     ├── github-actions-author/
     ├── java-spring-best-practices/
     ├── spring-boot-testing/
@@ -968,7 +962,7 @@ Do not search indefinitely for public skills that attempt to encode Yurlib's own
 The following should eventually be created inside the Yurlib repository:
 
 ```text
-plane-work-item
+github-work-item
 add-library-connector
 implement-ingestion-stage
 change-yurlib-event-contract
@@ -983,7 +977,7 @@ These procedures depend on Yurlib-specific concepts such as:
 - connector SPI;
 - NAS behavior;
 - ingestion idempotency;
-- Yurlib Plane workflow;
+- Yurlib GitHub Issues and Projects workflow;
 - Yurlib architectural decisions.
 
 Generic third-party skills should not be allowed to redefine these concepts.
@@ -1140,7 +1134,7 @@ This is optional project policy unless later changed.
 | `java-spring-best-practices` | `cosbort/agent-skills` | Project | Now |
 | `spring-boot-testing` | `marcelorodrigo/agent-skills` | Project | Now |
 | `github-actions-author` | `mthines/agent-skills` | Project | Now |
-| `code-review` | `openai/codex` | Project | Now, if compatible with chosen review runtime |
+| `review-agent` | `openai/codex` | Project | Deferred pending workflow approval |
 | Kubernetes / Helm skill | TBD after review | Project | Deferred; only if Kubernetes becomes a supported deployment target |
 | `terraform-style-guide` | `hashicorp/agent-skills` | Project | Deferred; only if Terraform is adopted for infrastructure provisioning |
 | `terraform-test` | `hashicorp/agent-skills` | Project | Deferred; only if Terraform is adopted for infrastructure provisioning |
@@ -1192,8 +1186,8 @@ For the current Yurlib bootstrap, perform the following:
 13. Scan and inspect github-actions-author.
 14. Install from the local reviewed clone.
 
-15. Review OpenAI Codex code-review compatibility with the selected agent runtime.
-16. Scan and install it only if it fits the Yurlib review workflow.
+15. Review the available OpenAI Codex review-agent replacement with the selected agent runtime.
+16. Keep it deferred until its different workflow is explicitly approved.
 
 17. Commit reviewed project skills.
 18. Record source commits in the skill-change PR.

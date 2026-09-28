@@ -302,7 +302,7 @@ Requirement
 Architecture / Design
     │
     ▼
-Plane Work Item
+GitHub Issue / Project Item
     │
     ▼
 Planning Agent
@@ -329,17 +329,35 @@ AI agents may propose architectural changes, but they should not silently introd
 
 ---
 
+## Local development
+
+Prerequisites are Java 26, Maven 3.9, Node.js 26, npm 12, and Docker with Compose.
+
+```bash
+docker compose up -d postgres
+mvn verify
+npm --prefix web/yurlib-web ci
+npm --prefix web/yurlib-web test -- --watch=false
+npm --prefix web/yurlib-web run build
+```
+
+Run the applications during development with:
+
+```bash
+mvn -pl services/yurlib-server spring-boot:run
+npm --prefix web/yurlib-web start
+```
+
+The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
+
 ## Repository Structure
 
-The repository is expected to evolve toward a structure similar to:
+The bootstrap structure is:
 
 ```text
 yurlib/
 ├── services/
-│   ├── catalog-service/
-│   ├── ingestion-service/
-│   ├── conversion-service/
-│   └── ai-service/
+│   └── yurlib-server/
 │
 ├── web/
 │   └── yurlib-web/
@@ -356,7 +374,8 @@ yurlib/
 │   ├── product/
 │   ├── architecture/
 │   ├── requirements/
-│   └── adr/
+│   ├── adr/
+│   └── logs/
 │
 ├── .github/
 │   ├── agents/
@@ -367,7 +386,7 @@ yurlib/
 └── README.md
 ```
 
-This structure is not yet a compatibility commitment and may change as the architecture is refined.
+The backend starts as a modular monolith under ADR-0002. Logical catalog, ingestion, conversion, connector, and AI boundaries remain explicit inside the deployable and can be extracted only when measured needs justify it.
 
 ---
 
@@ -377,9 +396,9 @@ The current sequence is:
 
 1. Define the product concept.
 2. Create and configure the GitHub repository.
-3. Install and configure the local Plane project-management environment.
+3. Configure GitHub Issues and Projects for work management.
 4. Define the development environment and AI-native SDLC.
-5. Convert the engineering design into Plane work items.
+5. Convert the engineering design into linked GitHub issues and project items.
 6. Bootstrap the application and CI environment.
 7. Implement the first vertical product slice.
 
@@ -425,9 +444,7 @@ Architecture decisions that materially affect the project should be captured as 
 
 Yurlib is currently in the architecture/bootstrap stage.
 
-Contribution guidelines, coding standards, development environment setup, and pull-request requirements will be published as the engineering environment is established.
-
-Until then, please use GitHub Issues for questions, ideas, and proposed features.
+Repository-wide guidance is in [`AGENTS.md`](AGENTS.md), with path-specific instructions under [`.github/instructions/`](.github/instructions/). Use GitHub Issues for questions, ideas, defects, and planned work; changes reach `main` through pull requests and required CI checks.
 
 ---
 

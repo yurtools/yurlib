@@ -1,8 +1,8 @@
 # Yurlib Development Environment & AI Factory Design
 
 **Project:** Yurlib  
-**Status:** Draft for approval  
-**Version:** 0.4  
+**Status:** Active bootstrap baseline
+**Version:** 0.6
 **Last Updated:** 2026-09-28  
 **Repository Path:** `docs/architecture/development-environment.md`
 
@@ -23,8 +23,8 @@ The repository is the source of truth for architecture, engineering rules, agent
 | Area | Baseline |
 |---|---|
 | Source control | GitHub |
-| Work management | Plane |
-| Backend | Workstation-default Java (Java 26 at bootstrap), Spring Boot 4.x |
+| Work management | GitHub Issues and Projects |
+| Backend | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode, Spring Boot 4.x |
 | Build | Workstation-default Maven (Maven 3.9 at bootstrap) |
 | Frontend | Angular using the workstation-default Node.js and npm toolchain |
 | Database | PostgreSQL |
@@ -82,9 +82,9 @@ Yurlib uses trunk-based development with short-lived branches.
 
 ```text
 main
- ├── feature/ELIB-123-description
- ├── bugfix/ELIB-231-description
- └── chore/ELIB-310-description
+ ├── feature/123-description
+ ├── bugfix/231-description
+ └── chore/310-description
 ```
 
 Rules:
@@ -94,11 +94,11 @@ Rules:
 - changes enter through pull requests;
 - required CI checks must pass;
 - default merge strategy is squash merge;
-- Plane work-item IDs should be referenced in branches, PRs, and commits where practical.
+- GitHub issue numbers should be referenced in branches, PRs, and commits where practical.
 
 ---
 
-## 5. Plane Workflow
+## 5. GitHub Issues and Projects Workflow
 
 Initial states:
 
@@ -128,9 +128,9 @@ Duplicate
 Deferred
 ```
 
-Plane stores actionable work. GitHub stores code, design documents, ADRs, and PR history.
+GitHub Issues store actionable work. GitHub Projects organizes that work across the workflow. The repository stores code, design documents, ADRs, and pull-request history.
 
-A Plane task derived from a design should reference the relevant repository document and section.
+An issue derived from a design should reference the relevant repository document and section. Pull requests should link or close their issue where practical.
 
 ---
 
@@ -187,11 +187,11 @@ Additional specialist roles are introduced only when they provide clear value.
 
 ### 7.1 Planner / Architect
 
-Primary responsibility: convert a ready Plane work item into an implementation plan.
+Primary responsibility: convert a ready GitHub issue into an implementation plan.
 
 The planner:
 
-- reads the Plane item;
+- reads the GitHub issue and linked project context;
 - reads linked designs and ADRs;
 - inspects affected code;
 - identifies affected components;
@@ -280,7 +280,7 @@ Do not route every task through every agent.
 Typical small feature:
 
 ```text
-Plane
+GitHub Issue
  → Planner
  → Implementer
  → CI
@@ -291,7 +291,7 @@ Plane
 Larger feature:
 
 ```text
-Plane
+GitHub Issue
  → Planner
  → multiple Implementers
  → Integration Agent
@@ -329,8 +329,7 @@ Implementer
 │   ├── spring-boot-testing
 │   └── architecture-decision
 ├── MCP
-│   ├── Plane
-│   └── GitHub
+│   └── GitHub Issues, Projects, and pull requests
 └── tools
     ├── git
     ├── Maven
@@ -358,8 +357,7 @@ Follow least privilege.
 ### Planner
 
 ```text
-Plane            read
-GitHub           read
+GitHub           issues / projects / repository read
 Repository       read
 Docs / ADRs      read
 ```
@@ -367,8 +365,7 @@ Docs / ADRs      read
 ### Implementer
 
 ```text
-Plane            read
-GitHub           branch / PR write
+GitHub           issues / projects read; branch / PR write
 Repository       assigned worktree read/write
 Build/test       execute
 Docker           local execution as required
@@ -377,8 +374,7 @@ Docker           local execution as required
 ### Reviewer
 
 ```text
-Plane            read
-GitHub           read / comment
+GitHub           issues / projects / repository read; PR comment
 Repository       read
 CI results       read
 ```
@@ -396,8 +392,8 @@ Parallel Codex agents use isolated Git worktrees.
 Example:
 
 ```bash
-git worktree add ../yurlib-ELIB-101 feature/ELIB-101-ingestion
-git worktree add ../yurlib-ELIB-102 feature/ELIB-102-ui
+git worktree add ../yurlib-101 feature/101-ingestion
+git worktree add ../yurlib-102 feature/102-ui
 ```
 
 Default rule:
@@ -407,7 +403,7 @@ Default rule:
 Good parallel split:
 
 ```text
-Agent A → services/ingestion-service/**
+Agent A → services/yurlib-server/src/main/java/**/ingestion/**
 Agent B → web/yurlib-web/**
 Agent C → infrastructure/**
 ```
@@ -737,27 +733,29 @@ A task is done when applicable criteria are satisfied:
 
 ```text
 1. Product concept                         DONE
-2. GitHub repository
-3. Local Plane installation
-4. Development environment design          THIS DOCUMENT
-5. Agent skills review/install
-6. Configure Plane workflow
-7. Convert engineering design into Plane work
-8. Create AGENTS.md and Codex role definitions
-9. Build CI foundation
-10. Implement first product vertical slice
+2. GitHub repository and main protection   DONE
+3. Development environment design          DONE
+4. Record work-management decision         DONE — ADR-0001
+5. Configure GitHub Issues                  DONE
+6. Configure GitHub Project                 BLOCKED — token scope
+7. Agent skills review/install              DONE
+8. Convert engineering design into issues   DONE
+9. Create repository agent instructions     DONE
+10. Build CI foundation                     DONE
+11. Implement first product vertical slice  NEXT
 ```
 
 Do not generate substantial product code before the engineering baseline is usable.
 
 ---
 
-## 25. Initial Engineering Epic
+## 25. Initial Engineering Project
 
-Suggested Plane epic:
+Suggested GitHub Project and parent issue:
 
 ```text
-EPIC — Engineering Environment
+Project — Yurlib Engineering
+Parent issue — Engineering Environment
 ```
 
 Initial work should cover:
@@ -815,7 +813,7 @@ Expected behavior:
 This feature should exercise:
 
 ```text
-Plane
+GitHub Issue / Project
 Planner
 Implementer
 Git worktree
@@ -841,11 +839,11 @@ Observability
 | Agent policy | `AGENTS.md` |
 | Agent external systems | MCP |
 | Repository | Monorepo |
-| Work management | Plane |
+| Work management | GitHub Issues and Projects (ADR-0001) |
 | Branching | Trunk-based |
 | Merge | Squash |
 | Agent isolation | Git worktrees |
-| Backend | Workstation-default Java (Java 26 at bootstrap) + Spring Boot 4.x |
+| Backend | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode + Spring Boot 4.x |
 | Build | Workstation-default Maven (Maven 3.9 at bootstrap) |
 | Frontend | Angular |
 | Database | PostgreSQL |
