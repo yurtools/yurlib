@@ -1,6 +1,6 @@
 # GitHub Project Setup
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-28
 - Branch: `dev`
 - Repository: `yurtools/yurlib`
@@ -43,6 +43,14 @@
 - Marked GitHub Project setup complete in `docs/architecture/development-environment.md` and added the live project and parent-issue URLs.
 - Preserved `docs/logs/0001-initial-environment-setup-committed.md` as the historical record of the earlier token-scope blocker.
 
+### 2026-09-28 — Commit and continuous integration
+
+- Committed the project configuration record as `2b5209d` (`Configure Yurlib GitHub project`).
+- Pushed `dev` to `origin/dev`, updating pull request #12.
+- GitHub Actions push run `36478579979` completed successfully.
+- GitHub Actions pull-request run `36478584990` completed successfully.
+- Renamed this log from `0002-github-project-setup-in-progress.md` to `0002-github-project-setup-committed.md` for the final audit commit.
+
 ## Verification
 
 - `gh project view 1 --owner yurtools --format json`: project is open, public, and contains 11 items.
@@ -50,7 +58,7 @@
 - `gh project field-list 1 --owner yurtools --format json`: 13 fields are available; `Status` contains `Todo`, `In Progress`, and `Done`.
 - GitHub GraphQL repository-link query: project #1 is linked to `yurtools/yurlib`.
 - `git diff --check`: passed before commit.
-- Pull request #12 checks: pending the documentation commit and push.
+- Pull request #12 required checks: `Backend`, `Frontend`, `Compose Configuration`, and `Dependency Review` passed for commit `2b5209d`.
 
 ## Result
 
