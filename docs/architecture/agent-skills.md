@@ -3,7 +3,7 @@
 **Project:** Yurlib  
 **Document:** Agent Skills Catalog and Installation Policy  
 **Status:** Active bootstrap policy
-**Version:** 0.4
+**Version:** 0.5
 **Last Updated:** 2026-09-28
 **Recommended Repository Path:** `docs/architecture/agent-skills.md`
 
@@ -265,7 +265,80 @@ npx skills add ./_skill-review/mthines-agent-skills \
 
 ---
 
-## 3.6 Code Review Agent — Deferred
+## 3.6 Angular Developer
+
+**Skill:** `angular-developer`
+**Source Repository:** `https://github.com/angular/skills`
+**Reviewed Upstream Location:** `angular-developer/`
+**Reviewed Commit:** `75005911fc668124af3fa2044f4f563e637fddd8`
+**License:** MIT
+
+### Purpose
+
+Provide official Angular guidance for Angular version discovery, signals, forms, dependency injection, HTTP, routing, accessibility, styling, testing, and CLI workflows.
+
+### Yurlib Usage
+
+Used primarily by:
+
+- Angular implementation agents;
+- frontend reviewers;
+- frontend test and accessibility work.
+
+### Review Result
+
+The reviewed directory contains 41 Markdown files and no executable surface, auto-run entrypoint, package hook, symlink, binary, or static-scanner finding.
+
+### Install Command After Review
+
+```bash
+npx skills add ./_skill-review/angular-skills \
+  --skill angular-developer
+```
+
+---
+
+## 3.7 Frontend Skill
+
+**Skill:** `frontend-skill`
+**Source Repository:** `https://github.com/openai/plugins`
+**Reviewed Upstream Location:** `plugins/build-web-apps/skills/frontend-skill/`
+**Reviewed Branch:** `update-build-web-apps`
+**Reviewed Commit:** `31cb4d5e9b77e234da702050103e8a9d36ddfce0`
+**License:** MIT
+
+### Purpose
+
+Provide visual-design guidance for hierarchy, composition, imagery, restrained application surfaces, responsive first viewports, and purposeful motion.
+
+### Yurlib Usage
+
+Used primarily by:
+
+- frontend design and implementation agents;
+- UI reviewers;
+- product-surface refinement work.
+
+### Important Constraint
+
+The exact requested skill is present on the official repository's `update-build-web-apps` branch but not on its current default `main` branch, where it has been replaced by newer, differently named frontend skills. Yurlib pins the reviewed commit rather than silently substituting a different skill.
+
+Its generic React and Framer Motion preferences do not override Yurlib's Angular stack. Introducing either dependency requires separate project justification and, when architectural, an accepted ADR.
+
+### Review Result
+
+The reviewed directory contains one Markdown file and one YAML interface file, with no executable surface, auto-run entrypoint, package hook, symlink, binary, or static-scanner finding.
+
+### Install Command After Review
+
+```bash
+npx skills add ./_skill-review/openai-plugins/plugins/build-web-apps \
+  --skill frontend-skill
+```
+
+---
+
+## 3.8 Code Review Agent — Deferred
 
 **Skill:** `review-agent`
 **Source Repository:** `https://github.com/openai/codex`  
@@ -910,16 +983,19 @@ Recommended order:
 
 6. github-actions-author       project
 
-7. review-agent               deferred pending workflow approval
+7. angular-developer           project
+8. frontend-skill              project
+
+9. review-agent               deferred pending workflow approval
 ```
 
 Later, only when justified:
 
 ```text
-8. Kubernetes / Helm skill     if Kubernetes becomes a supported deployment target
-9. terraform-style-guide       only if Terraform is adopted for infrastructure provisioning
-10. terraform-test             only if Terraform is adopted for infrastructure provisioning
-11. agentic-actions-auditor    when agentic GitHub Actions begin
+10. Kubernetes / Helm skill    if Kubernetes becomes a supported deployment target
+11. terraform-style-guide      only if Terraform is adopted for infrastructure provisioning
+12. terraform-test             only if Terraform is adopted for infrastructure provisioning
+13. agentic-actions-auditor    when agentic GitHub Actions begin
 ```
 
 Installing skills incrementally makes unexpected behavior easier to identify.
@@ -934,6 +1010,8 @@ After the initial bootstrap:
 .agents/
 └── skills/
     ├── architecture-decision/
+    ├── angular-developer/
+    ├── frontend-skill/
     ├── github-actions-author/
     ├── java-spring-best-practices/
     ├── spring-boot-testing/
@@ -1134,6 +1212,8 @@ This is optional project policy unless later changed.
 | `java-spring-best-practices` | `cosbort/agent-skills` | Project | Now |
 | `spring-boot-testing` | `marcelorodrigo/agent-skills` | Project | Now |
 | `github-actions-author` | `mthines/agent-skills` | Project | Now |
+| `angular-developer` | `angular/skills` | Project | Now |
+| `frontend-skill` | `openai/plugins` (`update-build-web-apps` at reviewed commit) | Project | Now |
 | `review-agent` | `openai/codex` | Project | Deferred pending workflow approval |
 | Kubernetes / Helm skill | TBD after review | Project | Deferred; only if Kubernetes becomes a supported deployment target |
 | `terraform-style-guide` | `hashicorp/agent-skills` | Project | Deferred; only if Terraform is adopted for infrastructure provisioning |

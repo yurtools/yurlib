@@ -2,7 +2,7 @@
 
 **Project:** Yurlib  
 **Status:** Active bootstrap baseline
-**Version:** 0.6
+**Version:** 0.7
 **Last Updated:** 2026-09-28  
 **Repository Path:** `docs/architecture/development-environment.md`
 
@@ -341,6 +341,15 @@ Project skills live under:
 ```text
 .agents/skills/
 ```
+
+The reviewed frontend skill set includes:
+
+| Skill | Purpose | Reviewed source |
+|---|---|---|
+| `angular-developer` | Angular 22+ architecture, implementation, accessibility, routing, forms, signals, and testing guidance | `angular/skills` at `75005911fc668124af3fa2044f4f563e637fddd8` |
+| `frontend-skill` | Visual direction, interface hierarchy, responsive composition, imagery, and motion guidance | `openai/plugins`, branch `update-build-web-apps`, at `31cb4d5e9b77e234da702050103e8a9d36ddfce0` |
+
+Both skills are project-local dependencies under `.agents/skills/`. Their generic guidance remains subordinate to this document, `AGENTS.md`, accepted ADRs, and the repository's Angular architecture. In particular, `frontend-skill` must not introduce React or Framer Motion into Yurlib unless a separately approved architecture decision changes the frontend stack.
 
 Skill installation and review policy is defined in:
 
