@@ -737,7 +737,7 @@ A task is done when applicable criteria are satisfied:
 3. Development environment design          DONE
 4. Record work-management decision         DONE — ADR-0001
 5. Configure GitHub Issues                  DONE
-6. Configure GitHub Project                 BLOCKED — token scope
+6. Configure GitHub Project                 DONE
 7. Agent skills review/install              DONE
 8. Convert engineering design into issues   DONE
 9. Create repository agent instructions     DONE
@@ -751,11 +751,11 @@ Do not generate substantial product code before the engineering baseline is usab
 
 ## 25. Initial Engineering Project
 
-Suggested GitHub Project and parent issue:
+Configured GitHub Project and parent issue:
 
 ```text
-Project — Yurlib Engineering
-Parent issue — Engineering Environment
+Project — Yurlib Engineering — https://github.com/users/yurtools/projects/1
+Parent issue — Engineering Environment — https://github.com/yurtools/yurlib/issues/11
 ```
 
 Initial work should cover:
