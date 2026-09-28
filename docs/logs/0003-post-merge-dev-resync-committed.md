@@ -48,11 +48,18 @@ Results:
 - Created local `dev` from `origin/main` at `44e79c1`.
 - Recreated `origin/dev` and configured local `dev` to track it.
 
+### 2026-09-28 — Commit and continuous integration
+
+- Committed this branch-resynchronization record as `e1eea59` (`Record post-merge dev resynchronization`).
+- Pushed the commit to `origin/dev`.
+- GitHub Actions push run `36479553962` completed successfully: `Backend`, `Frontend`, and `Compose Configuration` passed; the pull-request-only `Dependency Review` job was skipped as designed.
+
 ## Verification
 
 - Local `dev`, `origin/dev`, and `origin/main` initially resolved to the same squash-merge commit before this audit-log commit.
 - The worktree was clean before adding this log.
 - `git diff --check`: passed before commit.
+- GitHub Actions CI: passed for commit `e1eea59`.
 
 ## Result
 
