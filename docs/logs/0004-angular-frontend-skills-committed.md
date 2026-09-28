@@ -1,6 +1,6 @@
 # Angular and Frontend Skills Installation
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-28
 - Branch: `dev`
 - Repository: `yurtools/yurlib`
@@ -59,15 +59,22 @@
 - Added both skills, purposes, exact reviewed sources, and the Angular-stack precedence constraint to `docs/architecture/development-environment.md`; advanced that document to version 0.7.
 - Added detailed approved-source entries, review results, installation order, inventory entries, and source-summary rows to `docs/architecture/agent-skills.md`; advanced that document to version 0.5.
 
+### 2026-09-28 — Commit and continuous integration
+
+- Committed the reviewed skills and documentation as `1c4460c` (`Add reviewed Angular frontend skills`).
+- Pushed `dev` to `origin/dev`.
+- GitHub Actions push run `36481126891` completed successfully: `Backend`, `Frontend`, and `Compose Configuration` passed; the pull-request-only `Dependency Review` job was skipped as designed.
+- Renamed this log from `0004-angular-frontend-skills-in-progress.md` to `0004-angular-frontend-skills-committed.md` for the final audit commit.
+
 ## Verification
 
 - Installed-directory `diff -rq` checks against both quarantined sources: passed with no differences.
 - Trusted scanner on `.agents/skills/angular-developer --fail-on high`: zero findings.
 - Trusted scanner on `.agents/skills/frontend-skill --fail-on high`: zero findings.
 - Installed inventory: 43 files total, containing only Markdown and the expected OpenAI YAML interface file.
-- `git diff --check`: pending after final log update.
-- GitHub Actions CI: pending commit and push.
+- `git diff --check`: passed.
+- GitHub Actions CI run `36481126891`: passed for commit `1c4460c`.
 
 ## Result
 
-Both requested skills are reviewed, approved, installed project-locally, and documented. Commit, push, and CI verification remain.
+Both requested skills are reviewed, approved, installed project-locally, documented, committed, pushed, and verified by CI.
