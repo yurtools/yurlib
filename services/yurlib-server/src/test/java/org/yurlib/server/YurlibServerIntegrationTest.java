@@ -7,10 +7,10 @@ import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
@@ -53,15 +53,16 @@ class YurlibServerIntegrationTest {
                 WHERE table_schema = 'public'
                 """).query(String.class).list();
 
-        assertThat(tables).containsAll(Set.of(
-                "library_root",
-                "scan_job",
-                "file_outcome",
-                "work",
-                "edition",
-                "asset",
-                "asset_location",
-                "metadata_observation"));
+        assertThat(tables)
+                .containsAll(Set.of(
+                        "library_root",
+                        "scan_job",
+                        "file_outcome",
+                        "work",
+                        "edition",
+                        "asset",
+                        "asset_location",
+                        "metadata_observation"));
     }
 
     @Test
@@ -74,10 +75,7 @@ class YurlibServerIntegrationTest {
                 ) VALUES (
                     :id, 'Main library', 'library-main', '', :digest
                 )
-                """)
-                .param("id", rootId)
-                .param("digest", "0".repeat(64))
-                .update();
+                """).param("id", rootId).param("digest", "0".repeat(64)).update();
         insertQueuedScan(client, rootId, UUID.randomUUID());
 
         assertThatThrownBy(() -> insertQueuedScan(client, rootId, UUID.randomUUID()))
@@ -95,10 +93,10 @@ class YurlibServerIntegrationTest {
                     :id, 'Escaping library', 'library-escape', :path, :digest
                 )
                 """)
-                .param("id", UUID.randomUUID())
-                .param("path", "books\\..\\outside")
-                .param("digest", "0".repeat(64))
-                .update())
+                        .param("id", UUID.randomUUID())
+                        .param("path", "books\\..\\outside")
+                        .param("digest", "0".repeat(64))
+                        .update())
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -116,7 +114,8 @@ class YurlibServerIntegrationTest {
                 null));
 
         assertThat(libraryRootStore.findAll()).containsExactly(saved);
-        var storedDigest = JdbcClient.create(dataSource).sql("""
+        var storedDigest = JdbcClient.create(dataSource)
+                .sql("""
                 SELECT expected_identity_digest
                 FROM library_root
                 WHERE id = :id

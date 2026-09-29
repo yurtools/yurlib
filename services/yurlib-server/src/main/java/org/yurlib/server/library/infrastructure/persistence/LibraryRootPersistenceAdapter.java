@@ -31,19 +31,21 @@ public class LibraryRootPersistenceAdapter implements LibraryRootStore {
             }
             throw new LibraryRootFailure(
                     LibraryRootFailure.Code.ROOT_ALREADY_CONFIGURED,
-                    "A library root is already configured for this deployment.");
+                    "A library root is already configured for this deployment.",
+                    exception);
         }
     }
 
     @Override
     public List<LibraryRoot> findAll() {
-        return repository.findAllByOrderByNameAsc().stream().map(LibraryRootEntity::toDomain).toList();
+        return repository.findAllByOrderByNameAsc().stream()
+                .map(LibraryRootEntity::toDomain)
+                .toList();
     }
 
     private static boolean isSingleRootConstraintViolation(Throwable failure) {
         for (Throwable current = failure; current != null; current = current.getCause()) {
-            if (current.getMessage() != null
-                    && current.getMessage().contains("library_root_singleton_unique")) {
+            if (current.getMessage() != null && current.getMessage().contains("library_root_singleton_unique")) {
                 return true;
             }
         }

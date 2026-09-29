@@ -1,9 +1,9 @@
 package org.yurlib.server.library.api;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -71,9 +71,9 @@ class LibraryRootControllerTest {
 
     @Test
     void returnsSafeProblemDetailsForAMissingMarker() throws Exception {
-        when(useCases.configure(any())).thenThrow(new LibraryRootFailure(
-                LibraryRootFailure.Code.ROOT_UNAVAILABLE,
-                "The configured library root is unavailable."));
+        when(useCases.configure(any()))
+                .thenThrow(new LibraryRootFailure(
+                        LibraryRootFailure.Code.ROOT_UNAVAILABLE, "The configured library root is unavailable."));
 
         mockMvc.perform(post("/api/v1/library-roots")
                         .header(CorrelationIdFilter.HEADER, CORRELATION_ID)
@@ -115,13 +115,12 @@ class LibraryRootControllerTest {
     void replacesNonUuidCorrelationIdentifiers() throws Exception {
         when(useCases.list()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/library-roots")
-                        .header(CorrelationIdFilter.HEADER, "not-safe-to-reflect"))
+        mockMvc.perform(get("/api/v1/library-roots").header(CorrelationIdFilter.HEADER, "not-safe-to-reflect"))
                 .andExpect(status().isOk())
                 .andExpect(header().string(CorrelationIdFilter.HEADER, not("not-safe-to-reflect")))
                 .andExpect(header().string(
-                        CorrelationIdFilter.HEADER,
-                        matchesPattern("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")));
+                                CorrelationIdFilter.HEADER,
+                                matchesPattern("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")));
     }
 
     private static LibraryRoot root() {

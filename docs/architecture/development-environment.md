@@ -20,23 +20,23 @@ The repository is the source of truth for architecture, engineering rules, agent
 
 ## 2. Initial Engineering Stack
 
-| Area | Baseline |
-|---|---|
-| Source control | GitHub |
-| Work management | GitHub Issues and Projects |
-| Backend | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode, Spring Boot 4.x |
-| Build | Workstation-default Maven (Maven 3.9 at bootstrap) |
-| Frontend | Angular using the workstation-default Node.js and npm toolchain |
-| Database | PostgreSQL |
-| Vector support | pgvector when needed |
-| DB migrations | Flyway |
-| Integration testing | Testcontainers |
-| Architecture testing | ArchUnit |
-| Observability | OpenTelemetry |
-| CI/CD | GitHub Actions |
-| Initial deployment | Docker / Docker Compose |
-| Optional future deployment | Kubernetes + Helm or Kustomize |
-| Infrastructure provisioning | Terraform only if later required |
+| Area                        | Baseline                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| Source control              | GitHub                                                                            |
+| Work management             | GitHub Issues and Projects                                                        |
+| Backend                     | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode, Spring Boot 4.x |
+| Build                       | Maven Wrapper 3.9.11                                                              |
+| Frontend                    | Angular using the workstation-default Node.js and npm toolchain                   |
+| Database                    | PostgreSQL                                                                        |
+| Vector support              | pgvector when needed                                                              |
+| DB migrations               | Flyway                                                                            |
+| Integration testing         | Testcontainers                                                                    |
+| Architecture testing        | ArchUnit                                                                          |
+| Observability               | OpenTelemetry                                                                     |
+| CI/CD                       | GitHub Actions                                                                    |
+| Initial deployment          | Docker / Docker Compose                                                           |
+| Optional future deployment  | Kubernetes + Helm or Kustomize                                                    |
+| Infrastructure provisioning | Terraform only if later required                                                  |
 
 Terraform is **not** part of the initial Yurlib baseline.
 
@@ -344,10 +344,10 @@ Project skills live under:
 
 The reviewed frontend skill set includes:
 
-| Skill | Purpose | Reviewed source |
-|---|---|---|
-| `angular-developer` | Angular 22+ architecture, implementation, accessibility, routing, forms, signals, and testing guidance | `angular/skills` at `75005911fc668124af3fa2044f4f563e637fddd8` |
-| `frontend-skill` | Visual direction, interface hierarchy, responsive composition, imagery, and motion guidance | `openai/plugins`, branch `update-build-web-apps`, at `31cb4d5e9b77e234da702050103e8a9d36ddfce0` |
+| Skill               | Purpose                                                                                                | Reviewed source                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `angular-developer` | Angular 22+ architecture, implementation, accessibility, routing, forms, signals, and testing guidance | `angular/skills` at `75005911fc668124af3fa2044f4f563e637fddd8`                                  |
+| `frontend-skill`    | Visual direction, interface hierarchy, responsive composition, imagery, and motion guidance            | `openai/plugins`, branch `update-build-web-apps`, at `31cb4d5e9b77e234da702050103e8a9d36ddfce0` |
 
 Both skills are project-local dependencies under `.agents/skills/`. Their generic guidance remains subordinate to this document, `AGENTS.md`, accepted ADRs, and the repository's Angular architecture. In particular, `frontend-skill` must not introduce React or Framer Motion into Yurlib unless a separately approved architecture decision changes the frontend stack.
 
@@ -520,7 +520,7 @@ contracts/events/
 
 Breaking contract changes require explicit review.
 
-The active OpenAPI contract is compared with its reviewed baseline during `mvn verify`. Backward-incompatible changes fail the build. Baselines are updated only alongside an explicitly reviewed contract change; see `contracts/openapi/README.md`.
+The active OpenAPI contract is compared with its reviewed baseline during `./mvnw verify`. Backward-incompatible changes fail the build. Baselines are updated only alongside an explicitly reviewed contract change; see `contracts/openapi/README.md`.
 
 Event consumers must be idempotent.
 
@@ -588,11 +588,19 @@ Mutation testing may be added later for critical domain logic.
 
 ## 18. CI Quality Gate
 
-Primary backend verification using the workstation Maven installation:
+Primary backend verification uses the checked-in Maven Wrapper:
 
 ```bash
-mvn verify
+./mvnw verify
 ```
+
+The build enforces JDK 25 or 26 and Maven 3.9.11 or newer within the Maven 3.x line. Spotless checks Java, Maven POM, Markdown, YAML, and JSON formatting. Apply the pinned formatters before verification when files drift:
+
+```bash
+./mvnw spotless:apply
+```
+
+Compiler lint, the repository-owned PMD ruleset, SpotBugs with FindSecBugs, and minimum JaCoCo line and branch coverage are enforced during `verify`. CI preserves their reports and the complete Maven log as short-lived diagnostic artifacts.
 
 Target PR pipeline:
 
@@ -777,7 +785,7 @@ Initial work should cover:
 
 ```text
 Repository structure
-Workstation-default Java / Maven
+Workstation-default Java / Maven Wrapper
 Spring Boot service template
 Angular foundation
 Docker Compose environment
@@ -854,27 +862,27 @@ Observability
 
 ## 27. Current Decisions
 
-| Area | Decision |
-|---|---|
-| AI runtime | Codex only |
-| Initial AI roles | Planner, Implementer, Code Reviewer, Security Reviewer |
-| Agent procedures | `.agents/skills/` |
-| Agent policy | `AGENTS.md` |
-| Agent external systems | MCP |
-| Repository | Monorepo |
-| Work management | GitHub Issues and Projects (ADR-0001) |
-| Branching | Trunk-based |
-| Merge | Squash |
-| Agent isolation | Git worktrees |
-| Backend | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode + Spring Boot 4.x |
-| Build | Workstation-default Maven (Maven 3.9 at bootstrap) |
-| Frontend | Angular |
-| Database | PostgreSQL |
-| Project license | GPL-3.0-only |
-| Initial deployment | Docker Compose |
-| Kubernetes | Deferred / optional |
-| Terraform | Deferred; infrastructure provisioning only |
-| Human authority | Required for architectural changes |
+| Area                   | Decision                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| AI runtime             | Codex only                                                                         |
+| Initial AI roles       | Planner, Implementer, Code Reviewer, Security Reviewer                             |
+| Agent procedures       | `.agents/skills/`                                                                  |
+| Agent policy           | `AGENTS.md`                                                                        |
+| Agent external systems | MCP                                                                                |
+| Repository             | Monorepo                                                                           |
+| Work management        | GitHub Issues and Projects (ADR-0001)                                              |
+| Branching              | Trunk-based                                                                        |
+| Merge                  | Squash                                                                             |
+| Agent isolation        | Git worktrees                                                                      |
+| Backend                | Workstation-default JDK (Java 26 at bootstrap), Java 25 bytecode + Spring Boot 4.x |
+| Build                  | Maven Wrapper 3.9.11                                                               |
+| Frontend               | Angular                                                                            |
+| Database               | PostgreSQL                                                                         |
+| Project license        | GPL-3.0-only                                                                       |
+| Initial deployment     | Docker Compose                                                                     |
+| Kubernetes             | Deferred / optional                                                                |
+| Terraform              | Deferred; infrastructure provisioning only                                         |
+| Human authority        | Required for architectural changes                                                 |
 
 ---
 

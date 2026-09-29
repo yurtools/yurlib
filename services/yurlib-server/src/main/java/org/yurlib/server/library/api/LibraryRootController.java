@@ -31,10 +31,7 @@ public class LibraryRootController {
     @ResponseStatus(HttpStatus.CREATED)
     public LibraryRootResponse create(@Valid @RequestBody CreateLibraryRootRequest request) {
         var command = new ConfigureLibraryRootCommand(
-                request.name().strip(),
-                request.mountAlias(),
-                request.relativePath(),
-                request.identityToken());
+                request.name().strip(), request.mountAlias(), request.relativePath(), request.identityToken());
         return LibraryRootResponse.from(useCases.configure(command));
     }
 }

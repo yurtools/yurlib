@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
-import org.yurlib.server.testing.RepositoryPaths;
 import org.junit.jupiter.api.Test;
+import org.yurlib.server.testing.RepositoryPaths;
 
 class OpenApiContractTest {
 

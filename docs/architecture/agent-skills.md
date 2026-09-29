@@ -421,13 +421,13 @@ Therefore Terraform is not part of the initial Yurlib engineering environment or
 
 At project bootstrap, Yurlib does not require a Terraform skill.
 
-| Capability | Initial Status | Skill Needed Initially |
-|---|---|---|
-| Docker image creation | Required | Evaluate a Docker/container skill only if repeated workflow warrants it |
-| Docker Compose | Required | Prefer repository-specific instructions initially |
-| Kubernetes | Optional future | No |
-| Helm | Optional future | No |
-| Terraform | Optional future infrastructure provisioning | No |
+| Capability            | Initial Status                              | Skill Needed Initially                                                  |
+| --------------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
+| Docker image creation | Required                                    | Evaluate a Docker/container skill only if repeated workflow warrants it |
+| Docker Compose        | Required                                    | Prefer repository-specific instructions initially                       |
+| Kubernetes            | Optional future                             | No                                                                      |
+| Helm                  | Optional future                             | No                                                                      |
+| Terraform             | Optional future infrastructure provisioning | No                                                                      |
 
 The initial Docker/Compose procedures are simple enough to keep in:
 
@@ -1204,21 +1204,21 @@ This is optional project policy unless later changed.
 
 # 23. Current Approved Sources Summary
 
-| Skill | Source | Scope | Timing |
-|---|---|---|---|
-| `skill-security-review` | `dkleptsov/skill-security-review` | Global security tooling | Now |
-| `system-design` | `jwynia/agent-skills` | Project | Now |
-| `architecture-decision` | `jwynia/agent-skills` | Project | Now |
-| `java-spring-best-practices` | `cosbort/agent-skills` | Project | Now |
-| `spring-boot-testing` | `marcelorodrigo/agent-skills` | Project | Now |
-| `github-actions-author` | `mthines/agent-skills` | Project | Now |
-| `angular-developer` | `angular/skills` | Project | Now |
-| `frontend-skill` | `openai/plugins` (`update-build-web-apps` at reviewed commit) | Project | Now |
-| `review-agent` | `openai/codex` | Project | Deferred pending workflow approval |
-| Kubernetes / Helm skill | TBD after review | Project | Deferred; only if Kubernetes becomes a supported deployment target |
-| `terraform-style-guide` | `hashicorp/agent-skills` | Project | Deferred; only if Terraform is adopted for infrastructure provisioning |
-| `terraform-test` | `hashicorp/agent-skills` | Project | Deferred; only if Terraform is adopted for infrastructure provisioning |
-| `agentic-actions-auditor` | `trailofbits/skills` | Project | When AI runs in GitHub Actions |
+| Skill                        | Source                                                        | Scope                   | Timing                                                                 |
+| ---------------------------- | ------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
+| `skill-security-review`      | `dkleptsov/skill-security-review`                             | Global security tooling | Now                                                                    |
+| `system-design`              | `jwynia/agent-skills`                                         | Project                 | Now                                                                    |
+| `architecture-decision`      | `jwynia/agent-skills`                                         | Project                 | Now                                                                    |
+| `java-spring-best-practices` | `cosbort/agent-skills`                                        | Project                 | Now                                                                    |
+| `spring-boot-testing`        | `marcelorodrigo/agent-skills`                                 | Project                 | Now                                                                    |
+| `github-actions-author`      | `mthines/agent-skills`                                        | Project                 | Now                                                                    |
+| `angular-developer`          | `angular/skills`                                              | Project                 | Now                                                                    |
+| `frontend-skill`             | `openai/plugins` (`update-build-web-apps` at reviewed commit) | Project                 | Now                                                                    |
+| `review-agent`               | `openai/codex`                                                | Project                 | Deferred pending workflow approval                                     |
+| Kubernetes / Helm skill      | TBD after review                                              | Project                 | Deferred; only if Kubernetes becomes a supported deployment target     |
+| `terraform-style-guide`      | `hashicorp/agent-skills`                                      | Project                 | Deferred; only if Terraform is adopted for infrastructure provisioning |
+| `terraform-test`             | `hashicorp/agent-skills`                                      | Project                 | Deferred; only if Terraform is adopted for infrastructure provisioning |
+| `agentic-actions-auditor`    | `trailofbits/skills`                                          | Project                 | When AI runs in GitHub Actions                                         |
 
 ---
 

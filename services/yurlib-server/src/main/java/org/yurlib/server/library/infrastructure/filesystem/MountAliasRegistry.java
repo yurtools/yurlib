@@ -33,8 +33,7 @@ public final class MountAliasRegistry {
         var prefix = prefixes.get(alias);
         if (prefix == null) {
             throw new LibraryRootFailure(
-                    LibraryRootFailure.Code.ROOT_NOT_ALLOWED,
-                    "The requested library mount alias is not allowed.");
+                    LibraryRootFailure.Code.ROOT_NOT_ALLOWED, "The requested library mount alias is not allowed.");
         }
         var normalized = normalizeRelativePath(relativePath);
         try {
@@ -47,7 +46,7 @@ public final class MountAliasRegistry {
             }
             return new ResolvedRoot(normalized, candidate);
         } catch (IOException exception) {
-            throw unavailable();
+            throw unavailable(exception);
         }
     }
 
@@ -62,7 +61,7 @@ public final class MountAliasRegistry {
             }
             return path;
         } catch (IOException exception) {
-            throw new IllegalStateException("Library mount is unavailable for alias: " + mount.alias());
+            throw new IllegalStateException("Library mount is unavailable for alias: " + mount.alias(), exception);
         }
     }
 
@@ -78,7 +77,8 @@ public final class MountAliasRegistry {
             for (var rightIndex = leftIndex + 1; rightIndex < entries.size(); rightIndex++) {
                 var left = entries.get(leftIndex);
                 var right = entries.get(rightIndex);
-                if (left.getValue().startsWith(right.getValue()) || right.getValue().startsWith(left.getValue())) {
+                if (left.getValue().startsWith(right.getValue())
+                        || right.getValue().startsWith(left.getValue())) {
                     throw new IllegalStateException(
                             "Library mount aliases must not overlap: " + left.getKey() + ", " + right.getKey());
                 }
@@ -105,22 +105,29 @@ public final class MountAliasRegistry {
             }
             return normalized;
         } catch (InvalidPathException exception) {
-            throw pathEscape();
+            throw pathEscape(exception);
         }
     }
 
     private static LibraryRootFailure unavailable() {
         return new LibraryRootFailure(
-                LibraryRootFailure.Code.ROOT_UNAVAILABLE,
-                "The configured library root is unavailable.");
+                LibraryRootFailure.Code.ROOT_UNAVAILABLE, "The configured library root is unavailable.");
+    }
+
+    private static LibraryRootFailure unavailable(IOException cause) {
+        return new LibraryRootFailure(
+                LibraryRootFailure.Code.ROOT_UNAVAILABLE, "The configured library root is unavailable.", cause);
     }
 
     private static LibraryRootFailure pathEscape() {
         return new LibraryRootFailure(
-                LibraryRootFailure.Code.PATH_ESCAPE,
-                "The requested library path is outside its allowed mount.");
+                LibraryRootFailure.Code.PATH_ESCAPE, "The requested library path is outside its allowed mount.");
     }
 
-    public record ResolvedRoot(String normalizedRelativePath, Path path) {
+    private static LibraryRootFailure pathEscape(InvalidPathException cause) {
+        return new LibraryRootFailure(
+                LibraryRootFailure.Code.PATH_ESCAPE, "The requested library path is outside its allowed mount.", cause);
     }
+
+    public record ResolvedRoot(String normalizedRelativePath, Path path) {}
 }

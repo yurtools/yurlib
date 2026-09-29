@@ -30,13 +30,13 @@ The proposed first-release deployment is a Linux container host with local or ho
 
 ### Product principles
 
-| Principle | Required outcome |
-| --- | --- |
-| Preserve originals | Index existing folders without reorganizing them. Separate source assets from generated files and curated metadata. |
-| Preserve uncertainty | Represent unknown or conflicting metadata explicitly. A plausible match is not a verified identity. |
-| Keep control with the owner | Make merges, external imports and file-changing operations explicit and auditable. Default to non-destructive behavior. |
-| Make progress visible | Run expensive work in the background, expose partial results, and recover from interrupted jobs. |
-| Extend without coupling | Add sources, formats, conversion engines and AI providers through defined boundaries rather than changes to the catalog core. |
+| Principle                   | Required outcome                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Preserve originals          | Index existing folders without reorganizing them. Separate source assets from generated files and curated metadata.           |
+| Preserve uncertainty        | Represent unknown or conflicting metadata explicitly. A plausible match is not a verified identity.                           |
+| Keep control with the owner | Make merges, external imports and file-changing operations explicit and auditable. Default to non-destructive behavior.       |
+| Make progress visible       | Run expensive work in the background, expose partial results, and recover from interrupted jobs.                              |
+| Extend without coupling     | Add sources, formats, conversion engines and AI providers through defined boundaries rather than changes to the catalog core. |
 
 ### Two related but separate objectives
 
@@ -46,16 +46,16 @@ The product objective is a reliable, fast and convenient library. The engineerin
 
 **PC-02** — Separate intellectual identity, publication details, binary content and physical location.
 
-| Concept | Meaning and identity rule |
-| --- | --- |
-| Work | The underlying intellectual work. A translated title can refer to the same work without identifying the same edition. |
-| Edition | A language, translation or publication-specific version. Record translator, publisher, identifiers, dates and abridgment when known; allow provisional records. |
-| Asset | A particular ebook binary, including format, content identity and processing status. A conversion creates a new asset, not a new intellectual work. |
-| Asset location | A stored occurrence of an asset: root and relative path, or managed-storage reference. Identical bytes at two locations remain separately traceable. |
-| Contributor and alias | A person or organization associated with a work or edition in a role. Aliases are not globally unique identifiers; two people can share a name. |
-| Metadata observation | A value reported by a file, parser, external source or inference, with provenance. A curated value is a separate user-controlled decision. |
-| External record | A source-scoped identifier and metadata snapshot. Linking it to a local work or edition does not mean the file was imported. |
-| Series, tag and collection | Series has ordering and membership; tags label works by default; collections group works by default. Edition and asset attributes remain distinct. |
+| Concept                    | Meaning and identity rule                                                                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Work                       | The underlying intellectual work. A translated title can refer to the same work without identifying the same edition.                                           |
+| Edition                    | A language, translation or publication-specific version. Record translator, publisher, identifiers, dates and abridgment when known; allow provisional records. |
+| Asset                      | A particular ebook binary, including format, content identity and processing status. A conversion creates a new asset, not a new intellectual work.             |
+| Asset location             | A stored occurrence of an asset: root and relative path, or managed-storage reference. Identical bytes at two locations remain separately traceable.            |
+| Contributor and alias      | A person or organization associated with a work or edition in a role. Aliases are not globally unique identifiers; two people can share a name.                 |
+| Metadata observation       | A value reported by a file, parser, external source or inference, with provenance. A curated value is a separate user-controlled decision.                      |
+| External record            | A source-scoped identifier and metadata snapshot. Linking it to a local work or edition does not mean the file was imported.                                    |
+| Series, tag and collection | Series has ordering and membership; tags label works by default; collections group works by default. Edition and asset attributes remain distinct.              |
 
 ### Provenance and curation
 
@@ -135,12 +135,12 @@ Show discovery, extraction, hashing, conversion, external checks and AI enrichme
 
 Provide a first-class Library Connector extension point for Flibusta and other configured libraries, catalogs and metadata services. The core catalog must contain no Flibusta-specific assumptions. Each connector declares the operations actually available from its source and the configured account.
 
-| Operation | Expected product behavior |
-| --- | --- |
-| Search | Query selected sources and return source-labeled candidates with pagination or an explicit coverage limit. Do not add them to the local catalog automatically. |
-| Check a local book | Find possible matches, reported editions and formats. Show evidence and uncertainty; metadata presence does not prove that a file is retrievable. |
-| Link or enrich | Associate a source record with a local work or edition, or propose metadata changes. Preserve provenance and existing curated values. |
-| Import | On explicit request, retrieve an available, permitted asset into staging, validate it, and pass it through the normal ingestion pipeline. Do not bypass deduplication or security. |
+| Operation          | Expected product behavior                                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Search             | Query selected sources and return source-labeled candidates with pagination or an explicit coverage limit. Do not add them to the local catalog automatically.                     |
+| Check a local book | Find possible matches, reported editions and formats. Show evidence and uncertainty; metadata presence does not prove that a file is retrievable.                                  |
+| Link or enrich     | Associate a source record with a local work or edition, or propose metadata changes. Preserve provenance and existing curated values.                                              |
+| Import             | On explicit request, retrieve an available, permitted asset into staging, validate it, and pass it through the normal ingestion pipeline. Do not bypass deduplication or security. |
 
 ### Availability is not a single Boolean
 
@@ -246,16 +246,16 @@ Expose health and readiness, structured diagnostics, queue depth, job failures, 
 
 The design target remains 100,000+ ebook assets. This is a sizing objective, not a measured claim. “Superfast ingestion” means early useful results, incremental processing, bounded resource use and sustained throughput without making the library UI unusable.
 
-| ID | Proposed acceptance measure |
-| --- | --- |
-| NFR-01 | Repeated scans and retry/restart tests produce no duplicate catalog effects for an unchanged asset location. |
-| NFR-02 | A completed unchanged rescan reparses zero unchanged ebook payloads unless verification is requested or the extraction version invalidates prior results. |
-| NFR-03 | Disconnecting a root or interrupting a scan marks the root unavailable/incomplete; it does not delete records or declare all files removed. |
-| NFR-04 | Search and catalog-list APIs target p95 ≤ 2 seconds at 100,000 assets during a bounded scan, on an agreed reference environment. |
+| ID     | Proposed acceptance measure                                                                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-01 | Repeated scans and retry/restart tests produce no duplicate catalog effects for an unchanged asset location.                                                   |
+| NFR-02 | A completed unchanged rescan reparses zero unchanged ebook payloads unless verification is requested or the extraction version invalidates prior results.      |
+| NFR-03 | Disconnecting a root or interrupting a scan marks the root unavailable/incomplete; it does not delete records or declare all files removed.                    |
+| NFR-04 | Search and catalog-list APIs target p95 ≤ 2 seconds at 100,000 assets during a bounded scan, on an agreed reference environment.                               |
 | NFR-05 | A scan request returns a job identifier without waiting for scanning. First provisional results target ≤ 60 seconds on an agreed corpus with accessible files. |
-| NFR-06 | The same read-only source corpus is byte-for-byte unchanged after scan, curation, download and conversion tests. |
-| NFR-07 | Connector timeout, rate-limit, no-match and partial-result states are distinguishable, and local-library operations still succeed. |
-| NFR-08 | A tested backup restores curated fields, aliases, tags, history and required managed assets into a fresh deployment. |
+| NFR-06 | The same read-only source corpus is byte-for-byte unchanged after scan, curation, download and conversion tests.                                               |
+| NFR-07 | Connector timeout, rate-limit, no-match and partial-result states are distinguishable, and local-library operations still succeed.                             |
+| NFR-08 | A tested backup restores curated fields, aliases, tags, history and required managed assets into a fresh deployment.                                           |
 
 ### Benchmark contract
 
@@ -275,11 +275,11 @@ Include partial copies, renamed files, unreachable roots, symlinks, malicious ar
 
 The following phasing is a proposal, not a removal of requested capabilities. V1 is the combined usable product across M1–M3; M1 alone is an early milestone, not a claim that the complete concept has shipped.
 
-| Stage | Outcome |
-| --- | --- |
-| M0 — Foundation | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks. |
-| M1 — Local library | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads. |
-| M2 — Curation | Author aliases and manual merge with history/recovery; tags and collections; duplicate review; supported format conversion; managed output storage; backup/restore verification. |
+| Stage                  | Outcome                                                                                                                                                                                                           |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 — Foundation        | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks.                                     |
+| M1 — Local library     | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads.                                   |
+| M2 — Curation          | Author aliases and manual merge with history/recovery; tags and collections; duplicate review; supported format conversion; managed output storage; backup/restore verification.                                  |
 | M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow. |
 
 ### Follow-on scope
@@ -302,14 +302,14 @@ Parallel implementation uses bounded ownership and isolated worktrees. Reviewers
 
 ### Material revisions from the original concept
 
-| Review finding | Revision in this document |
-| --- | --- |
-| Product and design were mixed | Retained architectural direction but removed fixed service topology and implementation-interface code from the concept. |
-| The first release was too ambiguous | Separated an early usable local-library milestone from the complete proposed V1. Retained connectors, conversion and optional AI. |
-| File and book identity needed more detail | Added asset locations, provisional editions, translation/anthology ambiguity and non-unique author aliases. |
-| NAS failure could resemble deletion | Added root identity checks, completed-scan reconciliation, explicit availability and no automatic record deletion. |
-| External checks were underspecified | Separated search, matching, availability, metadata linking and import; kept Flibusta explicit without inventing live capabilities. |
-| Automation lacked operating boundaries | Added plugin lifecycle, network policy, cloud-AI consent, conversion checks, backup/restore and measurable acceptance targets. |
+| Review finding                            | Revision in this document                                                                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Product and design were mixed             | Retained architectural direction but removed fixed service topology and implementation-interface code from the concept.            |
+| The first release was too ambiguous       | Separated an early usable local-library milestone from the complete proposed V1. Retained connectors, conversion and optional AI.  |
+| File and book identity needed more detail | Added asset locations, provisional editions, translation/anthology ambiguity and non-unique author aliases.                        |
+| NAS failure could resemble deletion       | Added root identity checks, completed-scan reconciliation, explicit availability and no automatic record deletion.                 |
+| External checks were underspecified       | Separated search, matching, availability, metadata linking and import; kept Flibusta explicit without inventing live capabilities. |
+| Automation lacked operating boundaries    | Added plugin lifecycle, network policy, cloud-AI consent, conversion checks, backup/restore and measurable acceptance targets.     |
 
 ### Resolved decisions
 

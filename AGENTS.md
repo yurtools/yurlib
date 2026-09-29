@@ -50,7 +50,7 @@ Do not silently introduce a new service, database engine, broker, cache, search 
 Run the smallest relevant verification and expand with the risk of the change. The full baseline is:
 
 ```bash
-mvn verify
+./mvnw verify
 npm --prefix web/yurlib-web ci
 npm --prefix web/yurlib-web test -- --watch=false
 npm --prefix web/yurlib-web run build

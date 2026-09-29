@@ -16,30 +16,24 @@ public class LibraryRootProblemHandler {
 
     @ExceptionHandler(LibraryRootFailure.class)
     ProblemDetail handleLibraryRootFailure(LibraryRootFailure failure, HttpServletRequest request) {
-        var status = switch (failure.code()) {
-            case ROOT_NOT_ALLOWED, PATH_ESCAPE -> HttpStatus.BAD_REQUEST;
-            case ROOT_UNAVAILABLE, ROOT_IDENTITY_MISMATCH, ROOT_ALREADY_CONFIGURED -> HttpStatus.CONFLICT;
-        };
+        var status =
+                switch (failure.code()) {
+                    case ROOT_NOT_ALLOWED, PATH_ESCAPE -> HttpStatus.BAD_REQUEST;
+                    case ROOT_UNAVAILABLE, ROOT_IDENTITY_MISMATCH, ROOT_ALREADY_CONFIGURED -> HttpStatus.CONFLICT;
+                };
         return problem(status, failure.code().name(), failure.getMessage(), request);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     ProblemDetail handleInvalidRequest(Exception failure, HttpServletRequest request) {
-        return problem(
-                HttpStatus.BAD_REQUEST,
-                "INVALID_REQUEST",
-                "The library root request is invalid.",
-                request);
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "The library root request is invalid.", request);
     }
 
-    private static ProblemDetail problem(
-            HttpStatus status,
-            String code,
-            String detail,
-            HttpServletRequest request) {
+    private static ProblemDetail problem(HttpStatus status, String code, String detail, HttpServletRequest request) {
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(title(code));
-        problem.setType(URI.create("urn:yurlib:problem:" + code.toLowerCase(Locale.ROOT).replace('_', '-')));
+        problem.setType(
+                URI.create("urn:yurlib:problem:" + code.toLowerCase(Locale.ROOT).replace('_', '-')));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         problem.setProperty("correlationId", request.getAttribute(CorrelationIdFilter.ATTRIBUTE));

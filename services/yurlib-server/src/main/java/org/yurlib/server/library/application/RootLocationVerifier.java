@@ -4,6 +4,5 @@ public interface RootLocationVerifier {
 
     VerifiedRootLocation verify(String mountAlias, String relativePath, String identityToken);
 
-    record VerifiedRootLocation(String normalizedRelativePath, String identityDigest) {
-    }
+    record VerifiedRootLocation(String normalizedRelativePath, String identityDigest) {}
 }
