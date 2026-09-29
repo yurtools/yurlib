@@ -10,8 +10,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.yurlib.server.library.application.LibraryRootFailure;
+import org.yurlib.server.library.application.ScanJobFailure;
 
-@RestControllerAdvice(assignableTypes = LibraryRootController.class)
+@RestControllerAdvice(assignableTypes = {LibraryRootController.class, ScanJobController.class})
 public class LibraryRootProblemHandler {
 
     @ExceptionHandler(LibraryRootFailure.class)
@@ -20,6 +21,16 @@ public class LibraryRootProblemHandler {
                 switch (failure.code()) {
                     case ROOT_NOT_ALLOWED, PATH_ESCAPE -> HttpStatus.BAD_REQUEST;
                     case ROOT_UNAVAILABLE, ROOT_IDENTITY_MISMATCH, ROOT_ALREADY_CONFIGURED -> HttpStatus.CONFLICT;
+                };
+        return problem(status, failure.code().name(), failure.getMessage(), request);
+    }
+
+    @ExceptionHandler(ScanJobFailure.class)
+    ProblemDetail handleScanJobFailure(ScanJobFailure failure, HttpServletRequest request) {
+        var status =
+                switch (failure.code()) {
+                    case ROOT_NOT_FOUND, JOB_NOT_FOUND -> HttpStatus.NOT_FOUND;
+                    case SCAN_ALREADY_ACTIVE -> HttpStatus.CONFLICT;
                 };
         return problem(status, failure.code().name(), failure.getMessage(), request);
     }
@@ -47,6 +58,9 @@ public class LibraryRootProblemHandler {
             case "ROOT_IDENTITY_MISMATCH" -> "Library root identity mismatch";
             case "ROOT_ALREADY_CONFIGURED" -> "Library root already configured";
             case "PATH_ESCAPE" -> "Library path rejected";
+            case "ROOT_NOT_FOUND" -> "Library root not found";
+            case "JOB_NOT_FOUND" -> "Scan job not found";
+            case "SCAN_ALREADY_ACTIVE" -> "Scan already active";
             default -> "Invalid request";
         };
     }
