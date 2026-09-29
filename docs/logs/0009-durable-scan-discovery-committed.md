@@ -1,6 +1,6 @@
 # Durable Scan Jobs and Bounded Discovery
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-29
 - Branch: `feature/15-durable-scan-discovery`
 - Issue: [#15](https://github.com/yurtools/yurlib/issues/15)
@@ -83,4 +83,4 @@
 
 ## Result
 
-Implementation and local verification are complete. Commit and push are pending. Pull request creation remains intentionally blocked until the green prerequisite pull request #32 is squash-merged into `main`.
+Implementation and local verification are complete in commit `47dd487` (`feat: add durable scan discovery (#15)`). Pull request creation remains intentionally blocked until the green prerequisite pull request #32 is squash-merged into `main`.
