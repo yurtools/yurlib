@@ -2,8 +2,8 @@
 
 **Project:** Yurlib  
 **Status:** Active bootstrap baseline
-**Version:** 0.8
-**Last Updated:** 2026-09-28  
+**Version:** 0.9
+**Last Updated:** 2026-09-29
 **Repository Path:** `docs/architecture/development-environment.md`
 
 ---
@@ -520,6 +520,8 @@ contracts/events/
 
 Breaking contract changes require explicit review.
 
+The active OpenAPI contract is compared with its reviewed baseline during `mvn verify`. Backward-incompatible changes fail the build. Baselines are updated only alongside an explicitly reviewed contract change; see `contracts/openapi/README.md`.
+
 Event consumers must be idempotent.
 
 Events should carry standard metadata such as:
@@ -577,6 +579,8 @@ Requirements:
 - bug fixes include regression tests when feasible;
 - key service boundaries receive component/contract coverage;
 - tests should verify requirements, not merely reproduce implementation logic.
+
+Local-library acceptance tests use the authored sources and generated hostile cases under `services/yurlib-server/src/test/resources/fixtures/source`. The fixture helper records source hashes before a scenario and verifies them afterward so tests cannot silently modify source-book bytes.
 
 Mutation testing may be added later for critical domain logic.
 

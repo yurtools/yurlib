@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE FictionBook [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description><title-info><genre>prose_contemporary</genre><book-title>&xxe;</book-title><lang>en</lang></title-info></description>
+  <body><section><p>External entities must be disabled.</p></section></body>
+</FictionBook>

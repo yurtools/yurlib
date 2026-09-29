@@ -32,8 +32,10 @@
         <archunit.version>1.5.1</archunit.version>
         <jacoco.version>0.8.15</jacoco.version>
         <maven-pmd.version>3.28.0</maven-pmd.version>
+        <openapi-diff.version>2.1.4</openapi-diff.version>
         <pmd.version>7.28.0</pmd.version>
         <spotbugs-maven.version>4.10.4.1</spotbugs-maven.version>
+        <swagger-parser.version>2.1.48</swagger-parser.version>
     </properties>
 
     <modules>
@@ -41,6 +43,29 @@
     </modules>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openapitools.openapidiff</groupId>
+                <artifactId>openapi-diff-maven</artifactId>
+                <version>${openapi-diff.version}</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>reject-breaking-api-changes</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>diff</goal>
+                        </goals>
+                        <configuration>
+                            <oldSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/baseline/yurlib-v1.yaml</oldSpec>
+                            <newSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/yurlib-v1.yaml</newSpec>
+                            <failOnIncompatible>true</failOnIncompatible>
+                            <failOnChanged>false</failOnChanged>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

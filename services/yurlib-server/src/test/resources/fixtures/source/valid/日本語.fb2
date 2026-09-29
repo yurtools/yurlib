@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description><title-info><genre>prose_contemporary</genre><book-title>Unicode Path</book-title><lang>ja</lang></title-info></description>
+  <body><section><p>ユニコード</p></section></body>
+</FictionBook>

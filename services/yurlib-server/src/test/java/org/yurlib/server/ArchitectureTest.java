@@ -11,12 +11,15 @@ class ArchitectureTest {
     private final JavaClasses classes = new ClassFileImporter().importPackages("org.yurlib.server");
 
     @Test
-    void domainDoesNotDependOnDeliveryOrInfrastructure() {
+    void domainDoesNotDependOnFrameworkDeliveryOrInfrastructure() {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat()
-                .resideInAnyPackage("..api..", "..infrastructure..")
-                .allowEmptyShould(true)
+                .resideInAnyPackage(
+                        "org.springframework..",
+                        "jakarta.persistence..",
+                        "..api..",
+                        "..infrastructure..")
                 .check(classes);
     }
 }

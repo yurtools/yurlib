@@ -1,0 +1,348 @@
+openapi: 3.1.0
+info:
+  title: Yurlib API
+  version: 0.1.0
+  description: Initial contract for the first local-library vertical slice.
+servers:
+  - url: /
+paths:
+  /api/v1/library-roots:
+    get:
+      operationId: listLibraryRoots
+      summary: List configured library roots
+      responses:
+        "200":
+          description: Configured roots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryRoot"
+    post:
+      operationId: createLibraryRoot
+      summary: Configure and validate a read-only library root
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLibraryRootRequest"
+      responses:
+        "201":
+          description: Root configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryRoot"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/library-roots/{rootId}/scans:
+    post:
+      operationId: startLibraryScan
+      summary: Queue a durable scan
+      parameters:
+        - $ref: "#/components/parameters/RootId"
+      responses:
+        "202":
+          description: Scan queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanJob"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/jobs/{jobId}:
+    get:
+      operationId: getScanJob
+      summary: Read scan progress and failures
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Scan job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanJob"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/catalog/works:
+    get:
+      operationId: listWorks
+      summary: Page and search provisional catalog works
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Catalog page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkPage"
+  /api/v1/assets/{assetId}/content:
+    get:
+      operationId: downloadOriginalAsset
+      summary: Stream an available original asset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Original ebook bytes
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/epub+zip: {}
+            application/xml: {}
+            application/x-mobipocket-ebook: {}
+            application/octet-stream: {}
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    RootId:
+      name: rootId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: RFC 9457 problem response
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    CreateLibraryRootRequest:
+      type: object
+      additionalProperties: false
+      required: [name, mountAlias, relativePath, identityToken]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        mountAlias:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{0,62}$"
+        relativePath:
+          type: string
+          maxLength: 1024
+          description: Normalized path relative to the deployment-owned mount alias.
+        identityToken:
+          type: string
+          minLength: 16
+          maxLength: 200
+          writeOnly: true
+    LibraryRoot:
+      type: object
+      required: [id, name, mountAlias, relativePath, mode, availability]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mountAlias:
+          type: string
+        relativePath:
+          type: string
+        mode:
+          type: string
+          const: READ_ONLY
+        availability:
+          $ref: "#/components/schemas/RootAvailability"
+        lastSuccessfulScanAt:
+          type: [string, "null"]
+          format: date-time
+    RootAvailability:
+      type: string
+      enum: [UNKNOWN, AVAILABLE, UNAVAILABLE, IDENTITY_MISMATCH]
+    ScanJob:
+      type: object
+      required:
+        - id
+        - rootId
+        - state
+        - discoveredCount
+        - processedCount
+        - skippedCount
+        - failedCount
+        - failures
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        rootId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [QUEUED, RUNNING, SUCCEEDED, COMPLETED_WITH_FAILURES, FAILED, CANCELLED]
+        discoveredCount:
+          type: integer
+          format: int64
+          minimum: 0
+        processedCount:
+          type: integer
+          format: int64
+          minimum: 0
+        skippedCount:
+          type: integer
+          format: int64
+          minimum: 0
+        failedCount:
+          type: integer
+          format: int64
+          minimum: 0
+        coverageComplete:
+          type: boolean
+          default: false
+        failures:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/FileFailure"
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: [string, "null"]
+          format: date-time
+        completedAt:
+          type: [string, "null"]
+          format: date-time
+    FileFailure:
+      type: object
+      required: [relativePath, code, detail]
+      properties:
+        relativePath:
+          type: string
+        code:
+          type: string
+        detail:
+          type: string
+    WorkPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkSummary"
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+    WorkSummary:
+      type: object
+      required: [id, title, provisional, assets]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: [string, "null"]
+        contributors:
+          type: array
+          items:
+            type: string
+        provisional:
+          type: boolean
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetSummary"
+    AssetSummary:
+      type: object
+      required: [id, format, size, availability, original]
+      properties:
+        id:
+          type: string
+          format: uuid
+        format:
+          type: string
+          enum: [EPUB, FB2, MOBI]
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+        availability:
+          type: string
+          enum: [AVAILABLE, UNAVAILABLE]
+        original:
+          type: boolean
+          const: true
+    Problem:
+      type: object
+      required: [type, title, status, code, correlationId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+        correlationId:
+          type: string
+security:
+  - bearerAuth: []
