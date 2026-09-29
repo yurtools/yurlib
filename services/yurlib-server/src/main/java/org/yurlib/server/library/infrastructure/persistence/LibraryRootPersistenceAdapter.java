@@ -1,6 +1,8 @@
 package org.yurlib.server.library.infrastructure.persistence;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 import org.yurlib.server.library.application.LibraryRootFailure;
@@ -34,6 +36,11 @@ public class LibraryRootPersistenceAdapter implements LibraryRootStore {
                     "A library root is already configured for this deployment.",
                     exception);
         }
+    }
+
+    @Override
+    public Optional<LibraryRoot> findById(UUID rootId) {
+        return repository.findById(rootId).map(LibraryRootEntity::toDomain);
     }
 
     @Override

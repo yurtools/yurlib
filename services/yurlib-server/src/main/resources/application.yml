@@ -30,3 +30,7 @@ server:
 yurlib:
   library:
     mounts: []
+    scan:
+      lease-timeout: 1m
+      poll-delay: 1s
+      worker-enabled: true
