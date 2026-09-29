@@ -66,4 +66,5 @@ None. Maven itself emits JDK 26 forward-compatibility warnings from its Guice/Si
 
 - Issue: <https://github.com/yurtools/yurlib/issues/31>
 - Branch: `chore/31-maven-quality-gates`
-- Commit and pull request references are added after publication.
+- Implementation commit: `caa712c` (`chore: enforce Maven quality gates (#31)`)
+- Pull request: [#32](https://github.com/yurtools/yurlib/pull/32)
