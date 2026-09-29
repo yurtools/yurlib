@@ -1,6 +1,6 @@
 # Read-Only Root Configuration
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-29
 - Branch: `feature/23-read-only-root-configuration`
 - Issue: [#23](https://github.com/yurtools/yurlib/issues/23)
@@ -61,4 +61,4 @@
 
 ## Result
 
-Implementation and local verification complete. Commit, pull request, and protected-branch checks are pending.
+Implementation and local verification complete in commit `09159fa` (`feat: secure read-only library roots (#23)`). Pull request and protected-branch checks are pending.
