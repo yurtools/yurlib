@@ -5,12 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.yurlib.server.library.application.AllowedMountQuery;
 import org.yurlib.server.library.application.LibraryRootFailure;
 import org.yurlib.server.library.infrastructure.config.LibraryStorageProperties;
 
-public final class MountAliasRegistry {
+public final class MountAliasRegistry implements AllowedMountQuery {
 
     private static final Pattern ALIAS = Pattern.compile("[a-z][a-z0-9-]{0,62}");
 
@@ -48,6 +50,11 @@ public final class MountAliasRegistry {
         } catch (IOException exception) {
             throw unavailable(exception);
         }
+    }
+
+    @Override
+    public List<String> aliases() {
+        return prefixes.keySet().stream().sorted().toList();
     }
 
     private static Path canonicalDirectory(LibraryStorageProperties.Mount mount) {

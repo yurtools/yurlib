@@ -1,6 +1,6 @@
 # Safe Catalog and Download APIs
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
 - Branch: `feature/25-safe-catalog-download-apis`
 - Issue: [#25](https://github.com/yurtools/yurlib/issues/25)
@@ -47,6 +47,11 @@
 - Pushed `feature/25-safe-catalog-download-apis` to `origin`.
 - Opened pull request [#38](https://github.com/yurtools/yurlib/pull/38), linked to close issue #25 after merge.
 
+### 2026-09-29 — Merge reconciliation
+
+- Confirmed pull request #38 was squash-merged to protected `main` as `1f143d8`.
+- Confirmed issue #25 closed automatically and its Yurlib Engineering project item moved to `Done`.
+
 ## Verification
 
 - `./mvnw verify` — passed; 70 tests, OpenAPI compatibility, architecture rules, coverage thresholds, PMD, SpotBugs, and FindSecBugs all passed. PostgreSQL integration tests ran with Testcontainers.
@@ -60,4 +65,4 @@
 
 ## Result
 
-Implementation and local verification are complete. Pull request #38 is open for review; issue #25 remains `In Progress` until merge.
+Pull request #38 was squash-merged as `1f143d8`; issue #25 is closed and its project item is `Done`.
