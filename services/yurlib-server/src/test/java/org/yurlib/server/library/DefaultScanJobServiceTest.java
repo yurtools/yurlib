@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.yurlib.server.library.application.DefaultScanJobService;
 import org.yurlib.server.library.application.LibraryRootStore;
+import org.yurlib.server.library.application.MetadataExtractor;
 import org.yurlib.server.library.application.ScanJobFailure;
 import org.yurlib.server.library.application.ScanJobStore;
 import org.yurlib.server.library.domain.FileOutcome;
@@ -28,14 +29,17 @@ class DefaultScanJobServiceTest {
 
     private final LibraryRootStore roots = mock(LibraryRootStore.class);
     private final ScanJobStore jobs = mock(ScanJobStore.class);
-    private final DefaultScanJobService service = new DefaultScanJobService(roots, jobs, CLOCK);
+    private final MetadataExtractor extractor = mock(MetadataExtractor.class);
+    private final DefaultScanJobService service = new DefaultScanJobService(roots, jobs, extractor, CLOCK);
 
     @Test
     void queuesAJobOnlyForAConfiguredRoot() {
         var root = root();
         var queued = job(root.id(), ScanJob.State.QUEUED);
+        when(extractor.extractionVersion()).thenReturn("bounded-metadata-v1");
         when(roots.findById(root.id())).thenReturn(Optional.of(root));
-        when(jobs.queue(root.id(), "correlation-id", "discovery-v1", NOW)).thenReturn(queued);
+        when(jobs.queue(root.id(), "correlation-id", "bounded-metadata-v1", NOW))
+                .thenReturn(queued);
 
         assertThat(service.queue(root.id(), "correlation-id")).isEqualTo(queued);
     }

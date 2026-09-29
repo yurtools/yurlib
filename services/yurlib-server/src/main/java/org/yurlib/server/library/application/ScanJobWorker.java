@@ -10,6 +10,7 @@ public final class ScanJobWorker {
     private final LibraryRootStore roots;
     private final ScanJobStore jobs;
     private final ScanDiscovery discovery;
+    private final CatalogCandidateReconciler candidateReconciler;
     private final MissingLocationReconciler reconciler;
     private final Clock clock;
     private final Duration leaseTimeout;
@@ -18,12 +19,14 @@ public final class ScanJobWorker {
             LibraryRootStore roots,
             ScanJobStore jobs,
             ScanDiscovery discovery,
+            CatalogCandidateReconciler candidateReconciler,
             MissingLocationReconciler reconciler,
             Clock clock,
             Duration leaseTimeout) {
         this.roots = roots;
         this.jobs = jobs;
         this.discovery = discovery;
+        this.candidateReconciler = candidateReconciler;
         this.reconciler = reconciler;
         this.clock = clock;
         this.leaseTimeout = leaseTimeout;
@@ -39,7 +42,8 @@ public final class ScanJobWorker {
         var job = claimed.get();
         try {
             var root = roots.findById(job.libraryRootId()).orElseThrow();
-            var listener = new PersistingDiscoveryListener(job.id(), jobs, clock);
+            var listener = new PersistingDiscoveryListener(
+                    root.id(), job.id(), job.extractionVersion(), jobs, candidateReconciler, clock);
             var result = discovery.discover(root, listener);
             if (result.coverageComplete()) {
                 reconciler.reconcileAfterCompleteScan(root.id(), job.id());
@@ -61,12 +65,24 @@ public final class ScanJobWorker {
     private static final class PersistingDiscoveryListener implements ScanDiscovery.Listener {
 
         private final UUID jobId;
+        private final UUID rootId;
+        private final String extractionVersion;
         private final ScanJobStore jobs;
+        private final CatalogCandidateReconciler candidateReconciler;
         private final Clock clock;
 
-        private PersistingDiscoveryListener(UUID jobId, ScanJobStore jobs, Clock clock) {
+        private PersistingDiscoveryListener(
+                UUID rootId,
+                UUID jobId,
+                String extractionVersion,
+                ScanJobStore jobs,
+                CatalogCandidateReconciler candidateReconciler,
+                Clock clock) {
+            this.rootId = rootId;
             this.jobId = jobId;
+            this.extractionVersion = extractionVersion;
             this.jobs = jobs;
+            this.candidateReconciler = candidateReconciler;
             this.clock = clock;
         }
 
@@ -76,9 +92,16 @@ public final class ScanJobWorker {
         }
 
         @Override
-        public void discovered(String normalizedRelativePath) {
+        public void discovered(ScanDiscovery.Candidate candidate) {
+            var result = candidateReconciler.reconcile(rootId, jobId, extractionVersion, candidate);
             jobs.recordOutcome(new FileOutcome(
-                    jobId, normalizedRelativePath, FileOutcome.State.DISCOVERED, null, null, 1, clock.instant()));
+                    jobId,
+                    candidate.normalizedRelativePath(),
+                    FileOutcome.State.valueOf(result.state().name()),
+                    result.errorCode(),
+                    result.safeDiagnostic(),
+                    1,
+                    clock.instant()));
         }
 
         @Override

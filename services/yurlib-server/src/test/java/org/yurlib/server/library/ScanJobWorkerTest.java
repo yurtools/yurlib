@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,6 +17,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.yurlib.server.library.application.CandidateReconciliationResult;
+import org.yurlib.server.library.application.CatalogCandidateReconciler;
 import org.yurlib.server.library.application.LibraryRootFailure;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.MissingLocationReconciler;
@@ -35,8 +38,10 @@ class ScanJobWorkerTest {
     private final LibraryRootStore roots = mock(LibraryRootStore.class);
     private final ScanJobStore jobs = mock(ScanJobStore.class);
     private final ScanDiscovery discovery = mock(ScanDiscovery.class);
+    private final CatalogCandidateReconciler candidateReconciler = mock(CatalogCandidateReconciler.class);
     private final MissingLocationReconciler reconciler = mock(MissingLocationReconciler.class);
-    private final ScanJobWorker worker = new ScanJobWorker(roots, jobs, discovery, reconciler, CLOCK, LEASE_TIMEOUT);
+    private final ScanJobWorker worker =
+            new ScanJobWorker(roots, jobs, discovery, candidateReconciler, reconciler, CLOCK, LEASE_TIMEOUT);
 
     @Test
     void returnsWithoutWorkWhenNoJobCanBeClaimed() {
@@ -52,11 +57,14 @@ class ScanJobWorkerTest {
         var job = runningJob(root.id());
         when(jobs.claimNext(NOW, NOW.minus(LEASE_TIMEOUT))).thenReturn(Optional.of(job));
         when(roots.findById(root.id())).thenReturn(Optional.of(root));
+        var candidate = new ScanDiscovery.Candidate("good.epub", Path.of("good.epub"), 12, NOW, "key");
+        when(candidateReconciler.reconcile(root.id(), job.id(), job.extractionVersion(), candidate))
+                .thenReturn(CandidateReconciliationResult.processed());
         when(discovery.discover(any(), any())).thenAnswer(invocation -> {
             ScanDiscovery.Listener listener = invocation.getArgument(1);
             listener.heartbeat();
             listener.failed("broken.epub", "FILE_UNREADABLE", "Unreadable");
-            listener.discovered("good.epub");
+            listener.discovered(candidate);
             return new ScanDiscovery.DiscoveryResult(true);
         });
 
@@ -68,6 +76,7 @@ class ScanJobWorkerTest {
                 .extracting(FileOutcome::normalizedRelativePath)
                 .containsExactly("broken.epub", "good.epub");
         verify(jobs).heartbeat(job.id(), NOW);
+        verify(candidateReconciler).reconcile(root.id(), job.id(), job.extractionVersion(), candidate);
         verify(reconciler).reconcileAfterCompleteScan(root.id(), job.id());
         verify(jobs).complete(job.id(), true, NOW);
     }

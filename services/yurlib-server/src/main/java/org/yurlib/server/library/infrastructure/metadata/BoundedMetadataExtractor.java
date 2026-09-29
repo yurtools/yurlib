@@ -12,6 +12,7 @@ import org.yurlib.server.library.application.MetadataExtractor;
 
 public final class BoundedMetadataExtractor implements MetadataExtractor {
 
+    public static final String EXTRACTION_VERSION = "bounded-metadata-v1";
     private static final String CORRUPT_DIAGNOSTIC = "The book file could not be read safely.";
 
     private final FileFactsReader factsReader;
@@ -32,6 +33,11 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
             }
         }
         parsers = Map.copyOf(configured);
+    }
+
+    @Override
+    public String extractionVersion() {
+        return EXTRACTION_VERSION;
     }
 
     @Override
