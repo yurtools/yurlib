@@ -1,9 +1,13 @@
 package org.yurlib.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Set;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -31,6 +35,77 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("1");
+        assertThat(value).isEqualTo("2");
+    }
+
+    @Test
+    void createsTheLocalLibraryTablesFromAnEmptyDatabase() {
+        var tables = JdbcClient.create(dataSource).sql("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                """).query(String.class).list();
+
+        assertThat(tables).containsAll(Set.of(
+                "library_root",
+                "scan_job",
+                "file_outcome",
+                "work",
+                "edition",
+                "asset",
+                "asset_location",
+                "metadata_observation"));
+    }
+
+    @Test
+    void enforcesOneActiveScanPerLibraryRoot() {
+        var client = JdbcClient.create(dataSource);
+        var rootId = UUID.randomUUID();
+        client.sql("""
+                INSERT INTO library_root (
+                    id, name, mount_alias, relative_base_path, expected_identity_digest
+                ) VALUES (
+                    :id, 'Main library', 'library-main', '', :digest
+                )
+                """)
+                .param("id", rootId)
+                .param("digest", "0".repeat(64))
+                .update();
+        insertQueuedScan(client, rootId, UUID.randomUUID());
+
+        assertThatThrownBy(() -> insertQueuedScan(client, rootId, UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void rejectsNonNormalizedStoredPaths() {
+        var client = JdbcClient.create(dataSource);
+
+        assertThatThrownBy(() -> client.sql("""
+                INSERT INTO library_root (
+                    id, name, mount_alias, relative_base_path, expected_identity_digest
+                ) VALUES (
+                    :id, 'Escaping library', 'library-escape', :path, :digest
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("path", "books\\..\\outside")
+                .param("digest", "0".repeat(64))
+                .update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private static void insertQueuedScan(JdbcClient client, UUID rootId, UUID jobId) {
+        client.sql("""
+                INSERT INTO scan_job (
+                    id, library_root_id, state, correlation_id, extraction_version
+                ) VALUES (
+                    :id, :rootId, 'QUEUED', :correlationId, 'extractor-v1'
+                )
+                """)
+                .param("id", jobId)
+                .param("rootId", rootId)
+                .param("correlationId", jobId.toString())
+                .update();
     }
 }

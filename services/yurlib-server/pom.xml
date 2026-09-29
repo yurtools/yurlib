@@ -71,6 +71,12 @@
             <version>${archunit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser-v3</artifactId>
+            <version>${swagger-parser.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
