@@ -7,7 +7,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.yurlib.server.library.application.CatalogCandidateReconciler;
+import org.yurlib.server.library.application.CatalogStore;
 import org.yurlib.server.library.application.ConfigureLibraryRootService;
+import org.yurlib.server.library.application.DefaultCatalogCandidateReconciler;
 import org.yurlib.server.library.application.DefaultScanJobService;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.LibraryRootUseCases;
@@ -54,10 +57,8 @@ public class LibraryRootConfiguration {
     }
 
     @Bean
-    MissingLocationReconciler missingLocationReconciler() {
-        return (rootId, scanJobId) -> {
-            // Issue #24 supplies catalog-location reconciliation behind this boundary.
-        };
+    MissingLocationReconciler missingLocationReconciler(CatalogStore catalog) {
+        return catalog::markUnseenMissing;
     }
 
     @Bean
@@ -66,8 +67,15 @@ public class LibraryRootConfiguration {
     }
 
     @Bean
-    ScanJobUseCases scanJobUseCases(LibraryRootStore roots, ScanJobStore jobs, Clock clock) {
-        return new DefaultScanJobService(roots, jobs, clock);
+    ScanJobUseCases scanJobUseCases(
+            LibraryRootStore roots, ScanJobStore jobs, MetadataExtractor extractor, Clock clock) {
+        return new DefaultScanJobService(roots, jobs, extractor, clock);
+    }
+
+    @Bean
+    CatalogCandidateReconciler catalogCandidateReconciler(
+            CatalogStore catalog, MetadataExtractor extractor, Clock clock) {
+        return new DefaultCatalogCandidateReconciler(catalog, extractor, clock);
     }
 
     @Bean
@@ -75,9 +83,10 @@ public class LibraryRootConfiguration {
             LibraryRootStore roots,
             ScanJobStore jobs,
             ScanDiscovery discovery,
+            CatalogCandidateReconciler candidateReconciler,
             MissingLocationReconciler reconciler,
             Clock clock,
             @Value("${yurlib.library.scan.lease-timeout:PT1M}") Duration leaseTimeout) {
-        return new ScanJobWorker(roots, jobs, discovery, reconciler, clock, leaseTimeout);
+        return new ScanJobWorker(roots, jobs, discovery, candidateReconciler, reconciler, clock, leaseTimeout);
     }
 }

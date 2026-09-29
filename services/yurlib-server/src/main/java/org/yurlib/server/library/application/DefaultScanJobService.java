@@ -6,16 +6,17 @@ import org.yurlib.server.library.domain.ScanJob;
 
 public final class DefaultScanJobService implements ScanJobUseCases {
 
-    static final String EXTRACTION_VERSION = "discovery-v1";
     private static final int MAXIMUM_RETURNED_FAILURES = 100;
 
     private final LibraryRootStore roots;
     private final ScanJobStore jobs;
+    private final MetadataExtractor extractor;
     private final Clock clock;
 
-    public DefaultScanJobService(LibraryRootStore roots, ScanJobStore jobs, Clock clock) {
+    public DefaultScanJobService(LibraryRootStore roots, ScanJobStore jobs, MetadataExtractor extractor, Clock clock) {
         this.roots = roots;
         this.jobs = jobs;
+        this.extractor = extractor;
         this.clock = clock;
     }
 
@@ -24,7 +25,7 @@ public final class DefaultScanJobService implements ScanJobUseCases {
         roots.findById(rootId)
                 .orElseThrow(() -> new ScanJobFailure(
                         ScanJobFailure.Code.ROOT_NOT_FOUND, "The requested library root does not exist."));
-        return jobs.queue(rootId, correlationId, EXTRACTION_VERSION, clock.instant());
+        return jobs.queue(rootId, correlationId, extractor.extractionVersion(), clock.instant());
     }
 
     @Override

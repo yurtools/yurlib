@@ -72,7 +72,12 @@ public final class FilesystemScanDiscovery implements ScanDiscovery {
                 listener.failed(relativePath, "PATH_ESCAPE", "A candidate escaped the configured root.");
                 return FileVisitResult.CONTINUE;
             }
-            listener.discovered(relativePath);
+            listener.discovered(new Candidate(
+                    relativePath,
+                    actual,
+                    attributes.size(),
+                    attributes.lastModifiedTime().toInstant(),
+                    attributes.fileKey() == null ? null : attributes.fileKey().toString()));
             return FileVisitResult.CONTINUE;
         }
 

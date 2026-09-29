@@ -40,7 +40,9 @@ class FilesystemScanDiscoveryTest {
         var result = discovery(mount).discover(root(), listener);
 
         assertThat(result.coverageComplete()).isTrue();
-        assertThat(listener.discovered).containsExactlyInAnyOrder("fiction/one.EPUB", "fiction/two.fb2");
+        assertThat(listener.discovered)
+                .extracting(ScanDiscovery.Candidate::normalizedRelativePath)
+                .containsExactlyInAnyOrder("fiction/one.EPUB", "fiction/two.fb2");
         assertThat(listener.failures).containsExactly("fiction/escape.mobi:PATH_ESCAPE");
         assertThat(listener.heartbeats).isGreaterThanOrEqualTo(5);
     }
@@ -73,7 +75,7 @@ class FilesystemScanDiscoveryTest {
 
     private static final class RecordingListener implements ScanDiscovery.Listener {
 
-        private final List<String> discovered = new ArrayList<>();
+        private final List<ScanDiscovery.Candidate> discovered = new ArrayList<>();
         private final List<String> failures = new ArrayList<>();
         private int heartbeats;
 
@@ -83,8 +85,8 @@ class FilesystemScanDiscoveryTest {
         }
 
         @Override
-        public void discovered(String normalizedRelativePath) {
-            discovered.add(normalizedRelativePath);
+        public void discovered(ScanDiscovery.Candidate candidate) {
+            discovered.add(candidate);
         }
 
         @Override
