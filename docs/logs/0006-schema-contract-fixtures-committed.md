@@ -1,6 +1,6 @@
 # Schema, Contract, and Fixture Foundation
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-29
 - Branch: `feature/20-schema-contract-fixtures`
 - Issue: [#20](https://github.com/yurtools/yurlib/issues/20)
@@ -59,6 +59,12 @@
 - Replaced the Maven-property assumption with repository-root discovery, moved the test out of the production domain package, and used supported path assertions.
 - The failures did not affect the migration itself: the first PostgreSQL run had already migrated an empty database successfully to schema v2.
 
+### 2026-09-29 — Delivery
+
+- Committed the issue #20 implementation as `0e1e8b2` (`Establish local-library foundation (#20)`).
+- Pushed `feature/20-schema-contract-fixtures` and opened pull request #29, `Establish local-library schema and test foundation`, with `Closes #20`.
+- Required CI run `36585622003` passed: `Backend`, `Frontend`, `Compose Configuration`, and `Dependency Review`.
+
 ## Verification
 
 - `mvn -B -pl services/yurlib-server test`: 13 tests passed after the final schema and invariant changes.
@@ -69,7 +75,8 @@
 - `docker compose config`: passed.
 - `cmp contracts/openapi/baseline/yurlib-v1.yaml contracts/openapi/yurlib-v1.yaml`: passed.
 - `git diff --check`: passed.
+- Pull-request CI run `36585622003`: all four required checks passed.
 
 ## Result
 
-All issue #20 implementation and local acceptance criteria are complete. Commit, pull request, protected-branch CI, and merge remain.
+All issue #20 implementation and acceptance criteria are complete. The branch is committed, pull request #29 is open, and protected-branch CI is green; squash merge remains.
