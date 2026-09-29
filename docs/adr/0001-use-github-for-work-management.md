@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-28
+- Last reviewed: 2026-09-29
 - Decider: Yurlib project owner
 
 ## Context
@@ -20,27 +21,17 @@ Yurlib will use GitHub as its work-management system:
 - Branch names, commits, and pull requests reference GitHub issue numbers where practical.
 - Architecture and product decisions remain authoritative in version-controlled documents and ADRs; Issues and Projects track the work but do not replace the design baseline.
 
-The initial project workflow is:
+The configured initial project status workflow deliberately uses GitHub's three standard states:
 
 ```text
-Backlog
-   ↓
-Ready for Design
-   ↓
-Design
-   ↓
-Ready for Implementation
+Todo
    ↓
 In Progress
-   ↓
-AI Review
-   ↓
-Human Review
    ↓
 Done
 ```
 
-Terminal alternatives are `Cancelled`, `Duplicate`, and `Deferred`.
+Design readiness, automated checks, AI review, and human review remain visible in issue and pull-request evidence rather than separate Project status values. Additional workflow states should be added only when observed coordination needs justify them.
 
 Plane is not required for the initial Yurlib engineering environment. Adopting another work-management system later requires a new ADR and an explicit migration plan.
 
@@ -52,11 +43,13 @@ Plane is not required for the initial Yurlib engineering environment. Adopting a
 - No separate Plane deployment, backup, upgrade, authentication, or integration is required.
 - Issue-to-branch and issue-to-pull-request traceability uses native GitHub relationships.
 - The initial process remains proportionate to a single-maintainer project.
+- The small status set keeps project maintenance low while issues and pull requests retain detailed evidence.
 
 ### Negative
 
 - GitHub Projects may provide less specialized planning functionality than Plane.
 - Project workflow configuration depends on GitHub-hosted features.
+- The Project view does not expose separate design and review stages at a glance.
 - A later migration would require preserving issue links and decision traceability.
 
 ## Alternatives considered

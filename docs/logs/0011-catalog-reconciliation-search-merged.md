@@ -1,7 +1,8 @@
 # Catalog Reconciliation and Search
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
+- Merged: 2026-09-29
 - Branch: `feature/24-catalog-reconciliation-search`
 - Issue: [#24](https://github.com/yurtools/yurlib/issues/24)
 - Repository: `yurtools/yurlib`
@@ -63,6 +64,11 @@
 - `docker compose config` — passed.
 - Pull request #35 checks on head `45013fc` — Backend, Frontend, Compose Configuration, and Dependency Review passed.
 
+### 2026-09-29 — Merge completion
+
+- Pull request #35 was squash-merged into `main` as `a44c4e5`.
+- Issue #24 closed automatically and its Yurlib Engineering project item moved to `Done`.
+
 ## Result
 
-Implementation and local verification are complete in commit `2e38743` (`feat: add catalog reconciliation and search (#24)`). The branch is pushed and pull request [#35](https://github.com/yurtools/yurlib/pull/35) is open for protected-branch review.
+Implementation and local verification completed in commit `2e38743` (`feat: add catalog reconciliation and search (#24)`). Pull request [#35](https://github.com/yurtools/yurlib/pull/35) was squash-merged as `a44c4e5`; issue #24 is closed and its project item is `Done`.
