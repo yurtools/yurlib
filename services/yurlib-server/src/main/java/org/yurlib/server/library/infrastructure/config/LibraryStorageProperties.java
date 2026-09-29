@@ -11,6 +11,5 @@ public record LibraryStorageProperties(List<Mount> mounts) {
         mounts = mounts == null ? List.of() : List.copyOf(mounts);
     }
 
-    public record Mount(String alias, Path path) {
-    }
+    public record Mount(String alias, Path path) {}
 }

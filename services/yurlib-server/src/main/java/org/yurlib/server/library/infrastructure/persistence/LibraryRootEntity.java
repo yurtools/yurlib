@@ -43,6 +43,7 @@ class LibraryRootEntity {
     private short singletonKey = 1;
 
     protected LibraryRootEntity() {
+        // Required by JPA.
     }
 
     LibraryRootEntity(LibraryRoot root) {

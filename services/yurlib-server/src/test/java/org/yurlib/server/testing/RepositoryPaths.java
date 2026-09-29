@@ -5,8 +5,7 @@ import java.nio.file.Path;
 
 public final class RepositoryPaths {
 
-    private RepositoryPaths() {
-    }
+    private RepositoryPaths() {}
 
     public static Path root() {
         var candidate = Path.of("").toAbsolutePath().normalize();

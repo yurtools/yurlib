@@ -97,10 +97,7 @@ class FilesystemRootVerifierTest {
     }
 
     private static void assertFailure(
-            FilesystemRootVerifier verifier,
-            String relativePath,
-            String identityToken,
-            LibraryRootFailure.Code code) {
+            FilesystemRootVerifier verifier, String relativePath, String identityToken, LibraryRootFailure.Code code) {
         assertFailure(verifier, "main", relativePath, identityToken, code);
     }
 
@@ -111,7 +108,8 @@ class FilesystemRootVerifierTest {
             String identityToken,
             LibraryRootFailure.Code code) {
         assertThatThrownBy(() -> verifier.verify(alias, relativePath, identityToken))
-                .isInstanceOfSatisfying(LibraryRootFailure.class, failure ->
-                        assertThat(failure.code()).isEqualTo(code));
+                .isInstanceOfSatisfying(
+                        LibraryRootFailure.class,
+                        failure -> assertThat(failure.code()).isEqualTo(code));
     }
 }

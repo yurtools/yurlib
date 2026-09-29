@@ -26,8 +26,7 @@ class ConfigureLibraryRootServiceTest {
 
     @Test
     void persistsAReadOnlyAvailableRootWithOnlyTheIdentityDigest() {
-        var command = new ConfigureLibraryRootCommand(
-                "Main library", "main", "unicode/日本語", "private-token-1234");
+        var command = new ConfigureLibraryRootCommand("Main library", "main", "unicode/日本語", "private-token-1234");
         when(verifier.verify("main", "unicode/日本語", "private-token-1234"))
                 .thenReturn(new RootLocationVerifier.VerifiedRootLocation("unicode/日本語", "a".repeat(64)));
         when(store.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -46,10 +45,12 @@ class ConfigureLibraryRootServiceTest {
     void rejectsASecondRootBeforeAccessingItsFilesystem() {
         when(store.hasAny()).thenReturn(true);
 
-        assertThatThrownBy(() -> service.configure(new ConfigureLibraryRootCommand(
-                "Second library", "second", "", "private-token-1234")))
-                .isInstanceOfSatisfying(LibraryRootFailure.class, failure ->
-                        assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_ALREADY_CONFIGURED));
+        assertThatThrownBy(() -> service.configure(
+                        new ConfigureLibraryRootCommand("Second library", "second", "", "private-token-1234")))
+                .isInstanceOfSatisfying(
+                        LibraryRootFailure.class,
+                        failure ->
+                                assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_ALREADY_CONFIGURED));
         verify(verifier, never()).verify(any(), any(), any());
     }
 

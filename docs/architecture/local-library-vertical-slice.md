@@ -103,16 +103,16 @@ Symlinks are not followed during discovery. A candidate whose real path escapes 
 
 ## 6. Data model
 
-| Record | Required first-slice fields and invariants |
-|---|---|
-| Library Root | UUID, name, mount alias, relative base path, expected identity digest, mode=`READ_ONLY`, availability, last successful scan |
-| Scan Job | UUID, root ID, state, created/started/heartbeat/completed timestamps, discovered/processed/skipped/failed counters, completion coverage flag, error summary |
-| File Outcome | job ID, normalized relative path, state, error code, safe diagnostic, attempt count |
-| Asset Location | UUID, root ID, normalized relative path, size, modified time, optional file key, availability, last-seen successful scan; unique on root and normalized relative path |
-| Asset | UUID, format, byte size, original/derived flag (`original` only in this slice), optional future content hash |
-| Work | UUID, provisional title and resolution state |
-| Edition | UUID, work ID, observed language and identifiers, provisional state |
-| Metadata Observation | UUID, subject ID/type, field, value, source=`FILE`, parser name/version, observed timestamp |
+| Record               | Required first-slice fields and invariants                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Library Root         | UUID, name, mount alias, relative base path, expected identity digest, mode=`READ_ONLY`, availability, last successful scan                                           |
+| Scan Job             | UUID, root ID, state, created/started/heartbeat/completed timestamps, discovered/processed/skipped/failed counters, completion coverage flag, error summary           |
+| File Outcome         | job ID, normalized relative path, state, error code, safe diagnostic, attempt count                                                                                   |
+| Asset Location       | UUID, root ID, normalized relative path, size, modified time, optional file key, availability, last-seen successful scan; unique on root and normalized relative path |
+| Asset                | UUID, format, byte size, original/derived flag (`original` only in this slice), optional future content hash                                                          |
+| Work                 | UUID, provisional title and resolution state                                                                                                                          |
+| Edition              | UUID, work ID, observed language and identifiers, provisional state                                                                                                   |
+| Metadata Observation | UUID, subject ID/type, field, value, source=`FILE`, parser name/version, observed timestamp                                                                           |
 
 An unchanged check compares the location's normalized relative path, size, modified time, and extraction-version identifier. These facts are change hints, not duplicate proof. A later full hash may establish binary identity.
 
@@ -156,14 +156,14 @@ Parser adapters must enforce bounded reads and format-specific safety. EPUB ZIP 
 
 The initial contract is `contracts/openapi/yurlib-v1.yaml`.
 
-| Operation | Result |
-|---|---|
-| `POST /api/v1/library-roots` | Persist and validate one read-only root; `201` |
-| `GET /api/v1/library-roots` | List configured root and availability |
-| `POST /api/v1/library-roots/{rootId}/scans` | Commit queued job and return job resource; `202` |
-| `GET /api/v1/jobs/{jobId}` | Return state, counters, warnings, and safe failures |
-| `GET /api/v1/catalog/works` | Page/filter provisional works and available original assets |
-| `GET /api/v1/assets/{assetId}/content` | Revalidate and stream an available contained original asset |
+| Operation                                   | Result                                                      |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| `POST /api/v1/library-roots`                | Persist and validate one read-only root; `201`              |
+| `GET /api/v1/library-roots`                 | List configured root and availability                       |
+| `POST /api/v1/library-roots/{rootId}/scans` | Commit queued job and return job resource; `202`            |
+| `GET /api/v1/jobs/{jobId}`                  | Return state, counters, warnings, and safe failures         |
+| `GET /api/v1/catalog/works`                 | Page/filter provisional works and available original assets |
+| `GET /api/v1/assets/{assetId}/content`      | Revalidate and stream an available contained original asset |
 
 Errors use RFC 9457 Problem Details with a stable `code`, correlation identifier, and safe detail. Initial codes include `ROOT_NOT_ALLOWED`, `ROOT_UNAVAILABLE`, `ROOT_IDENTITY_MISMATCH`, `SCAN_ALREADY_ACTIVE`, `PATH_ESCAPE`, `FILE_UNSTABLE`, `UNSUPPORTED_FORMAT`, `ENCRYPTED_ASSET`, `CORRUPT_ASSET`, `PARSE_LIMIT_EXCEEDED`, and `ASSET_UNAVAILABLE`.
 
@@ -195,19 +195,19 @@ Authentication implementation is a separate M1 issue so that the walking skeleto
 
 ## 13. Acceptance matrix
 
-| Scenario | Required evidence |
-|---|---|
-| Happy path | Configure verified root, receive job ID, discover fixtures, see catalog entries, download original bytes |
-| Idempotent rescan | Second unchanged scan creates no duplicate catalog effects and reparses zero payloads |
-| Restart | Interrupt a running scan, restart application, recover/retry job, preserve idempotent results |
-| Unavailable root | Missing mount or marker prevents reconciliation and preserves prior catalog/location state |
-| Wrong root | Identity mismatch fails before discovery and preserves prior state |
-| Partial failure | One malformed book records a failure while valid books complete |
-| Unstable file | Changed pre/post stat is deferred/retryable and not published as a stable asset |
-| Path safety | Traversal input and escaping symlink are rejected; source corpus remains byte-for-byte unchanged |
-| XML/ZIP limits | XXE and decompression-limit fixtures are rejected without external reads or resource exhaustion |
-| Download safety | Unknown/unavailable asset returns Problem Details; no endpoint accepts a filesystem path |
-| Contract/UI | Angular uses relative URLs, stops polling, exposes progress/failures, and downloads by asset ID |
+| Scenario          | Required evidence                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| Happy path        | Configure verified root, receive job ID, discover fixtures, see catalog entries, download original bytes |
+| Idempotent rescan | Second unchanged scan creates no duplicate catalog effects and reparses zero payloads                    |
+| Restart           | Interrupt a running scan, restart application, recover/retry job, preserve idempotent results            |
+| Unavailable root  | Missing mount or marker prevents reconciliation and preserves prior catalog/location state               |
+| Wrong root        | Identity mismatch fails before discovery and preserves prior state                                       |
+| Partial failure   | One malformed book records a failure while valid books complete                                          |
+| Unstable file     | Changed pre/post stat is deferred/retryable and not published as a stable asset                          |
+| Path safety       | Traversal input and escaping symlink are rejected; source corpus remains byte-for-byte unchanged         |
+| XML/ZIP limits    | XXE and decompression-limit fixtures are rejected without external reads or resource exhaustion          |
+| Download safety   | Unknown/unavailable asset returns Problem Details; no endpoint accepts a filesystem path                 |
+| Contract/UI       | Angular uses relative URLs, stops polling, exposes progress/failures, and downloads by asset ID          |
 
 ## 14. Implementation order
 
