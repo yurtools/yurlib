@@ -7,20 +7,25 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.yurlib.server.library.application.AssetContentStore;
+import org.yurlib.server.library.application.AssetFileOpener;
 import org.yurlib.server.library.application.CatalogCandidateReconciler;
 import org.yurlib.server.library.application.CatalogStore;
 import org.yurlib.server.library.application.ConfigureLibraryRootService;
 import org.yurlib.server.library.application.DefaultCatalogCandidateReconciler;
+import org.yurlib.server.library.application.DefaultOriginalAssetContentService;
 import org.yurlib.server.library.application.DefaultScanJobService;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.LibraryRootUseCases;
 import org.yurlib.server.library.application.MetadataExtractor;
 import org.yurlib.server.library.application.MissingLocationReconciler;
+import org.yurlib.server.library.application.OriginalAssetContentUseCases;
 import org.yurlib.server.library.application.RootLocationVerifier;
 import org.yurlib.server.library.application.ScanDiscovery;
 import org.yurlib.server.library.application.ScanJobStore;
 import org.yurlib.server.library.application.ScanJobUseCases;
 import org.yurlib.server.library.application.ScanJobWorker;
+import org.yurlib.server.library.infrastructure.filesystem.FilesystemAssetFileOpener;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemRootVerifier;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemScanDiscovery;
 import org.yurlib.server.library.infrastructure.filesystem.MountAliasRegistry;
@@ -76,6 +81,17 @@ public class LibraryRootConfiguration {
     CatalogCandidateReconciler catalogCandidateReconciler(
             CatalogStore catalog, MetadataExtractor extractor, Clock clock) {
         return new DefaultCatalogCandidateReconciler(catalog, extractor, clock);
+    }
+
+    @Bean
+    AssetFileOpener assetFileOpener(FilesystemRootVerifier verifier) {
+        return new FilesystemAssetFileOpener(verifier);
+    }
+
+    @Bean
+    OriginalAssetContentUseCases originalAssetContentUseCases(
+            AssetContentStore assets, LibraryRootStore roots, AssetFileOpener opener) {
+        return new DefaultOriginalAssetContentService(assets, roots, opener);
     }
 
     @Bean

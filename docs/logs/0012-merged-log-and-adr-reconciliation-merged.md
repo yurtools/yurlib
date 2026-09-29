@@ -1,7 +1,8 @@
 # Merged Log and ADR Reconciliation
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
+- Merged: 2026-09-29
 - Branch: `docs/36-reconcile-merged-logs-adrs`
 - Issue: [#36](https://github.com/yurtools/yurlib/issues/36)
 - Repository: `yurtools/yurlib`
@@ -49,4 +50,4 @@
 
 ## Result
 
-Required documentation reconciliation is complete in commit `0331e99` (`docs: reconcile merged logs and project workflow (#36)`). The branch is pushed and pull request [#37](https://github.com/yurtools/yurlib/pull/37) is open for protected-branch review.
+Required documentation reconciliation completed in commit `0331e99` (`docs: reconcile merged logs and project workflow (#36)`). Pull request [#37](https://github.com/yurtools/yurlib/pull/37) was squash-merged as `74c9647`; issue #36 is closed and its project item is `Done`.
