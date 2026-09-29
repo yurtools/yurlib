@@ -100,33 +100,17 @@ Rules:
 
 ## 5. GitHub Issues and Projects Workflow
 
-Initial states:
+Configured initial states:
 
 ```text
-Backlog
-   ↓
-Ready for Design
-   ↓
-Design
-   ↓
-Ready for Implementation
+Todo
    ↓
 In Progress
-   ↓
-AI Review
-   ↓
-Human Review
    ↓
 Done
 ```
 
-Terminal alternatives:
-
-```text
-Cancelled
-Duplicate
-Deferred
-```
+Design and review evidence is recorded in issues, pull requests, required checks, and review history. Add more Project status values only when the current workflow creates a demonstrated coordination problem.
 
 GitHub Issues store actionable work. GitHub Projects organizes that work across the workflow. The repository stores code, design documents, ADRs, and pull-request history.
 

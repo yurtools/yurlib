@@ -1,7 +1,8 @@
 # Durable Scan Jobs and Bounded Discovery
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
+- Merged: 2026-09-29
 - Branch: `feature/15-durable-scan-discovery`
 - Issue: [#15](https://github.com/yurtools/yurlib/issues/15)
 - Repository: `yurtools/yurlib`
@@ -85,6 +86,11 @@
 - Confirmed the comparison against `origin/main` contains only issue #15 implementation, tests, configuration, and this process log.
 - Opened pull request [#33](https://github.com/yurtools/yurlib/pull/33), linked to close issue #15.
 
+### 2026-09-29 — Merge completion
+
+- Pull request #33 was squash-merged into `main` as `b4277c8`.
+- Issue #15 closed automatically and its Yurlib Engineering project item moved to `Done`.
+
 ## Verification
 
 - `./mvnw -B -pl services/yurlib-server -am spotless:apply test -Dtest='DefaultScanJobServiceTest,ScanJobWorkerTest,ScanJobControllerTest,FilesystemScanDiscoveryTest,ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false` — passed, 13 tests.
@@ -98,4 +104,4 @@
 
 ## Result
 
-Implementation and local verification are complete in commit `47dd487` (`feat: add durable scan discovery (#15)`). The branch is synchronized with `main` at merge commit `6f65fb1`, and pull request #33 is open for protected-branch review.
+Implementation and local verification completed in commit `47dd487` (`feat: add durable scan discovery (#15)`). Pull request #33 was squash-merged as `b4277c8`; issue #15 is closed and its project item is `Done`.

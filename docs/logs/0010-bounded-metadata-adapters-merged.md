@@ -1,7 +1,8 @@
 # Bounded EPUB, FB2, and MOBI Metadata Adapters
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
+- Merged: 2026-09-29
 - Branch: `feature/16-bounded-metadata-adapters`
 - Issue: [#16](https://github.com/yurtools/yurlib/issues/16)
 - Repository: `yurtools/yurlib`
@@ -57,6 +58,11 @@
 - SpotBugs identified a possible root-path filename dereference and a redundant MOBI length condition; both were corrected.
 - Added eight focused plain-JUnit scenarios covering valid EPUB/FB2/MOBI metadata and provenance, honest absent values, malformed/XXE FB2, traversal/decompression EPUB, encrypted EPUB/MOBI, excluded `.fb2.zip`, MOBI record limits, unstable files, and fixture-source preservation.
 
+### 2026-09-29 — Merge completion
+
+- Pull request #34 was squash-merged into `main` as `1bd88cb`.
+- Issue #16 closed automatically and its Yurlib Engineering project item moved to `Done`.
+
 ## Verification
 
 - `./mvnw -B -pl services/yurlib-server -am spotless:apply test -Dtest=BoundedMetadataExtractorTest -Dsurefire.failIfNoSpecifiedTests=false` — passed, 8 focused tests.
@@ -68,4 +74,4 @@
 
 ## Result
 
-Implementation and local verification are complete in commit `2e6bcd8` (`feat: add bounded metadata adapters (#16)`). The branch is pushed and pull request [#34](https://github.com/yurtools/yurlib/pull/34) is open for protected-branch review.
+Implementation and local verification completed in commit `2e6bcd8` (`feat: add bounded metadata adapters (#16)`). Pull request [#34](https://github.com/yurtools/yurlib/pull/34) was squash-merged as `1bd88cb`; issue #16 is closed and its project item is `Done`.
