@@ -26,3 +26,7 @@ management:
 
 server:
   shutdown: graceful
+
+yurlib:
+  library:
+    mounts: []

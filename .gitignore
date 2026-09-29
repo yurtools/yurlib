@@ -23,6 +23,7 @@ Thumbs.db
 .env.*
 !.env.example
 *.local
+.local/
 
 # Logs and temporary files
 *.log
