@@ -64,6 +64,7 @@
 - `npm --prefix web/yurlib-web test -- --watch=false` — passed, 7 tests across 2 files.
 - `npm --prefix web/yurlib-web run build` — passed; 326.14 kB initial bundle and no budget warnings.
 - `docker compose config` — passed.
+- GitHub Actions run [36632909234](https://github.com/yurtools/yurlib/actions/runs/36632909234) — passed all backend, frontend, dependency-review, and Compose jobs for pull request #39.
 
 ## Result
 
