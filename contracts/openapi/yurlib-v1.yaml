@@ -6,6 +6,56 @@ info:
 servers:
   - url: /
 paths:
+  /api/v1/session:
+    get:
+      operationId: getOwnerSession
+      summary: Read owner authentication and access mode state
+      security: []
+      responses:
+        "200":
+          description: Current owner session state and an Angular-compatible CSRF cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerSession"
+    post:
+      operationId: createOwnerSession
+      summary: Authenticate the deployment owner
+      security:
+        - csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+      responses:
+        "204":
+          description: Owner session created
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+  /api/v1/session/logout:
+    post:
+      operationId: deleteOwnerSession
+      summary: End the current owner session
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      responses:
+        "204":
+          description: Owner session ended
+        "403":
+          $ref: "#/components/responses/Problem"
   /api/v1/library-mounts:
     get:
       operationId: listLibraryMounts
@@ -35,6 +85,9 @@ paths:
     post:
       operationId: createLibraryRoot
       summary: Configure and validate a read-only library root
+      security:
+        - sessionCookie: []
+          csrfHeader: []
       requestBody:
         required: true
         content:
@@ -56,6 +109,9 @@ paths:
     post:
       operationId: startLibraryScan
       summary: Queue a durable scan
+      security:
+        - sessionCookie: []
+          csrfHeader: []
       parameters:
         - $ref: "#/components/parameters/RootId"
       responses:
@@ -148,10 +204,14 @@ paths:
           $ref: "#/components/responses/Problem"
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: opaque
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-XSRF-TOKEN
   parameters:
     RootId:
       name: rootId
@@ -168,6 +228,18 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
   schemas:
+    OwnerSession:
+      type: object
+      additionalProperties: false
+      required: [mode, authenticated]
+      properties:
+        mode:
+          type: string
+          enum: [OWNER, LOOPBACK_DEVELOPMENT]
+        authenticated:
+          type: boolean
+        username:
+          type: [string, "null"]
     LibraryMount:
       type: object
       additionalProperties: false
@@ -366,4 +438,4 @@ components:
         correlationId:
           type: string
 security:
-  - bearerAuth: []
+  - sessionCookie: []

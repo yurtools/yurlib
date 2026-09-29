@@ -6,8 +6,7 @@ It is designed for people who already have books stored on local disks or NAS de
 
 Yurlib is also being developed as an **AI-native software engineering project**: architecture, requirements, implementation, testing, review, and delivery are designed to work well with modern coding agents while keeping important technical decisions under human control.
 
-> **Project status:** Engineering bootstrap and first local-library design complete; the M1 persistence, contract, and security-fixture foundation is under implementation.
-> The walking skeleton will configure one read-only root and prove durable EPUB, FB2, and MOBI ingestion through the persistent catalog and web interface.
+> **Project status:** Engineering bootstrap and the first local-library walking skeleton are implemented. M1 acceptance and owner-access verification are in progress.
 
 ---
 
@@ -348,11 +347,13 @@ mkdir -p .local/library
 printf '%s\n' 'replace-with-a-private-random-token' > .local/library/.yurlib-root-id
 export YURLIB_LIBRARY_MOUNTS_0_ALIAS=main
 export YURLIB_LIBRARY_MOUNTS_0_PATH="$PWD/.local/library"
-./mvnw -pl services/yurlib-server spring-boot:run
+./mvnw -pl services/yurlib-server spring-boot:run -Dspring-boot.run.profiles=loopback-dev
 npm --prefix web/yurlib-web start
 ```
 
-The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`; Compose mounts that directory at `/library/main` with `read_only: true` and exposes it through the `main` alias.
+The `loopback-dev` profile binds the backend to `127.0.0.1`; startup fails if that profile is combined with a wildcard or non-loopback address. To exercise owner access over local HTTP instead, omit the profile and set `YURLIB_OWNER_USERNAME`, `YURLIB_OWNER_PASSWORD`, and `YURLIB_SESSION_COOKIE_SECURE=false`. Shared-network deployments must keep the secure-cookie default and terminate TLS at Yurlib or a trusted reverse proxy.
+
+The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the library at `/library/main` with `read_only: true`, exposes it through the `main` alias, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
 
 The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
 

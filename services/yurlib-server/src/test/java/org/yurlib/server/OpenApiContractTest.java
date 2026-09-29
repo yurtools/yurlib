@@ -24,6 +24,8 @@ class OpenApiContractTest {
         assertThat(result.getOpenAPI().getPaths().keySet())
                 .containsExactlyInAnyOrder(
                         "/api/v1/library-mounts",
+                        "/api/v1/session",
+                        "/api/v1/session/logout",
                         "/api/v1/library-roots",
                         "/api/v1/library-roots/{rootId}/scans",
                         "/api/v1/jobs/{jobId}",

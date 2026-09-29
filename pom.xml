@@ -45,6 +45,7 @@
         <prettier.version>3.9.9</prettier.version>
         <spotless.version>3.10.3</spotless.version>
         <spotbugs-maven.version>4.10.4.1</spotbugs-maven.version>
+        <spotbugs.version>4.10.4</spotbugs.version>
         <swagger-parser.version>2.1.48</swagger-parser.version>
     </properties>
 

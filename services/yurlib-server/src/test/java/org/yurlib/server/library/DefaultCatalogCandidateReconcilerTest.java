@@ -44,7 +44,8 @@ class DefaultCatalogCandidateReconcilerTest {
     void skipsAnUnchangedCandidateWithoutInvokingTheParser() {
         var candidate = candidate();
         when(catalog.findLocation(ROOT_ID, candidate.normalizedRelativePath()))
-                .thenReturn(Optional.of(new CatalogLocationSnapshot(123, MODIFIED_AT, EXTRACTION_VERSION)));
+                .thenReturn(
+                        Optional.of(new CatalogLocationSnapshot(123, MODIFIED_AT.plusNanos(999), EXTRACTION_VERSION)));
 
         var result = reconciler.reconcile(ROOT_ID, JOB_ID, EXTRACTION_VERSION, candidate);
 

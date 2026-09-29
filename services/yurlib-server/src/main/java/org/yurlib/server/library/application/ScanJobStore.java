@@ -17,6 +17,8 @@ public interface ScanJobStore {
 
     Optional<ScanJob> claimNext(Instant claimedAt, Instant leaseExpiredBefore);
 
+    long queuedCount();
+
     void recordOutcome(FileOutcome outcome);
 
     void heartbeat(UUID jobId, Instant heartbeatAt);

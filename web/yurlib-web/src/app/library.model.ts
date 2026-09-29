@@ -72,3 +72,9 @@ export interface ProblemDetails {
   code?: string;
   correlationId?: string;
 }
+
+export interface OwnerSession {
+  mode: 'OWNER' | 'LOOPBACK_DEVELOPMENT';
+  authenticated: boolean;
+  username: string | null;
+}

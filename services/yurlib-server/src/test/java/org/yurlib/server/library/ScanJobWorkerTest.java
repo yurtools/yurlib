@@ -24,6 +24,7 @@ import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.MissingLocationReconciler;
 import org.yurlib.server.library.application.ScanDiscovery;
 import org.yurlib.server.library.application.ScanJobStore;
+import org.yurlib.server.library.application.ScanJobTelemetry;
 import org.yurlib.server.library.application.ScanJobWorker;
 import org.yurlib.server.library.domain.FileOutcome;
 import org.yurlib.server.library.domain.LibraryRoot;
@@ -40,8 +41,9 @@ class ScanJobWorkerTest {
     private final ScanDiscovery discovery = mock(ScanDiscovery.class);
     private final CatalogCandidateReconciler candidateReconciler = mock(CatalogCandidateReconciler.class);
     private final MissingLocationReconciler reconciler = mock(MissingLocationReconciler.class);
+    private final ScanJobTelemetry telemetry = mock(ScanJobTelemetry.class);
     private final ScanJobWorker worker =
-            new ScanJobWorker(roots, jobs, discovery, candidateReconciler, reconciler, CLOCK, LEASE_TIMEOUT);
+            new ScanJobWorker(roots, jobs, discovery, candidateReconciler, reconciler, CLOCK, LEASE_TIMEOUT, telemetry);
 
     @Test
     void returnsWithoutWorkWhenNoJobCanBeClaimed() {
@@ -67,6 +69,7 @@ class ScanJobWorkerTest {
             listener.discovered(candidate);
             return new ScanDiscovery.DiscoveryResult(true);
         });
+        when(jobs.complete(job.id(), true, NOW)).thenReturn(completedJob(job, ScanJob.State.COMPLETED_WITH_FAILURES));
 
         assertThat(worker.runNext()).isTrue();
 
@@ -79,6 +82,9 @@ class ScanJobWorkerTest {
         verify(candidateReconciler).reconcile(root.id(), job.id(), job.extractionVersion(), candidate);
         verify(reconciler).reconcileAfterCompleteScan(root.id(), job.id());
         verify(jobs).complete(job.id(), true, NOW);
+        verify(telemetry).started(job);
+        verify(telemetry).fileFailed("FILE_UNREADABLE");
+        verify(telemetry).completed(any(), eq(Duration.ZERO));
     }
 
     @Test
@@ -89,6 +95,7 @@ class ScanJobWorkerTest {
         when(roots.findById(root.id())).thenReturn(Optional.of(root));
         when(discovery.discover(eq(root), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new ScanDiscovery.DiscoveryResult(false));
+        when(jobs.complete(job.id(), false, NOW)).thenReturn(completedJob(job, ScanJob.State.COMPLETED_WITH_FAILURES));
 
         assertThat(worker.runNext()).isTrue();
 
@@ -105,11 +112,13 @@ class ScanJobWorkerTest {
         when(discovery.discover(eq(root), org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new LibraryRootFailure(
                         LibraryRootFailure.Code.ROOT_IDENTITY_MISMATCH, "Sensitive detail must not be persisted."));
+        when(jobs.fail(job.id(), "ROOT_IDENTITY_MISMATCH", NOW)).thenReturn(completedJob(job, ScanJob.State.FAILED));
 
         assertThat(worker.runNext()).isTrue();
 
         verify(jobs).fail(job.id(), "ROOT_IDENTITY_MISMATCH", NOW);
         verify(jobs, never()).complete(any(), org.mockito.ArgumentMatchers.anyBoolean(), any());
+        verify(telemetry).failed(any(), eq("ROOT_IDENTITY_MISMATCH"), eq(Duration.ZERO));
     }
 
     private static LibraryRoot root() {
@@ -141,5 +150,24 @@ class ScanJobWorkerTest {
                 0,
                 false,
                 null);
+    }
+
+    private static ScanJob completedJob(ScanJob job, ScanJob.State state) {
+        return new ScanJob(
+                job.id(),
+                job.libraryRootId(),
+                state,
+                job.correlationId(),
+                job.extractionVersion(),
+                job.createdAt(),
+                job.startedAt(),
+                NOW,
+                NOW,
+                2,
+                1,
+                0,
+                1,
+                true,
+                state == ScanJob.State.FAILED ? "ROOT_IDENTITY_MISMATCH" : null);
     }
 }

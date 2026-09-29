@@ -114,6 +114,13 @@ public class JdbcScanJobStore implements ScanJobStore {
     }
 
     @Override
+    public long queuedCount() {
+        return jdbc.sql("SELECT COUNT(*) FROM scan_job WHERE state = 'QUEUED'")
+                .query(Long.class)
+                .single();
+    }
+
+    @Override
     @Transactional
     public void recordOutcome(FileOutcome outcome) {
         var previousState = jdbc.sql("""
