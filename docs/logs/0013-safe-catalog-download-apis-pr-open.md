@@ -1,6 +1,6 @@
 # Safe Catalog and Download APIs
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `feature/25-safe-catalog-download-apis`
 - Issue: [#25](https://github.com/yurtools/yurlib/issues/25)
@@ -41,6 +41,12 @@
 - Added application-service, MVC, filesystem security, and PostgreSQL mapping tests. The filesystem regression suite covers final and intermediate symbolic links, changed file facts, and changed root identity.
 - Reviewed the completed implementation after the first green build and tightened intermediate-symlink handling before final verification.
 
+### 2026-09-29 — Delivery
+
+- Committed the implementation as `f9f152c` (`feat: complete safe catalog and download APIs (#25)`).
+- Pushed `feature/25-safe-catalog-download-apis` to `origin`.
+- Opened pull request [#38](https://github.com/yurtools/yurlib/pull/38), linked to close issue #25 after merge.
+
 ## Verification
 
 - `./mvnw verify` — passed; 70 tests, OpenAPI compatibility, architecture rules, coverage thresholds, PMD, SpotBugs, and FindSecBugs all passed. PostgreSQL integration tests ran with Testcontainers.
@@ -53,4 +59,4 @@
 
 ## Result
 
-Implementation and local verification are complete. Commit, push, and pull-request creation are pending.
+Implementation and local verification are complete. Pull request #38 is open for review; issue #25 remains `In Progress` until merge.
