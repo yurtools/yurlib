@@ -21,6 +21,13 @@ class OpenApiContractTest {
         assertThat(result.getOpenAPI()).isNotNull();
         assertThat(result.getMessages()).isEmpty();
         assertThat(result.getOpenAPI().getOpenapi()).isEqualTo("3.1.0");
-        assertThat(result.getOpenAPI().getPaths()).hasSize(5);
+        assertThat(result.getOpenAPI().getPaths().keySet())
+                .containsExactlyInAnyOrder(
+                        "/api/v1/library-mounts",
+                        "/api/v1/library-roots",
+                        "/api/v1/library-roots/{rootId}/scans",
+                        "/api/v1/jobs/{jobId}",
+                        "/api/v1/catalog/works",
+                        "/api/v1/assets/{assetId}/content");
     }
 }

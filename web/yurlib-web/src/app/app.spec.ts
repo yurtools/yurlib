@@ -1,34 +1,218 @@
-import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { CatalogPage, LibraryRoot, ScanJob } from './library.model';
 
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  let fixture: ComponentFixture<App>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
       imports: [App],
-    })
-      .compileComponents();
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    fixture = TestBed.createComponent(App);
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
   });
 
-  it('should render the Yurlib title', async () => {
-    const fixture = TestBed.createComponent(App);
+  it('loads only server-advertised mounts and renders accessible root fields', async () => {
+    await initialize([], emptyCatalog(), [{ alias: 'archive' }, { alias: 'main' }]);
+
+    const element = fixture.nativeElement as HTMLElement;
+    const labels = [...element.querySelectorAll('label')].map((label) => label.textContent?.trim());
+    const options = [...element.querySelectorAll('select option')].map((option) =>
+      option.textContent?.trim(),
+    );
+
+    expect(labels.some((label) => label === 'Library name')).toBe(true);
+    expect(labels.some((label) => label?.startsWith('Allowed mount'))).toBe(true);
+    expect(labels.some((label) => label?.startsWith('Identity token'))).toBe(true);
+    expect(options).toEqual(['archive', 'main']);
+    expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+  });
+
+  it('validates root input and sends the selected alias without a backend host', async () => {
+    await initialize([], emptyCatalog(), [{ alias: 'main' }]);
+    const element = fixture.nativeElement as HTMLElement;
+    setInput(
+      element.querySelectorAll<HTMLInputElement>('.root-form input')[2],
+      'private-token-1234',
+    );
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Yurlib');
-  });
 
-  it('should link to backend health without a hard-coded host', async () => {
-    const fixture = TestBed.createComponent(App);
+    element.querySelector<HTMLFormElement>('.root-form')?.dispatchEvent(new SubmitEvent('submit'));
+    const request = http.expectOne('/api/v1/library-roots');
+    expect(request.request.body).toEqual({
+      name: 'Main library',
+      mountAlias: 'main',
+      relativePath: '',
+      identityToken: 'private-token-1234',
+    });
+    request.flush(root());
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const healthLink = compiled.querySelector<HTMLAnchorElement>('a[href="/actuator/health"]');
 
-    expect(healthLink?.textContent).toContain('Backend health');
-    expect(healthLink?.getAttribute('href')).toBe('/actuator/health');
+    expect(element.querySelector('.source-name')?.textContent).toContain('Main library');
+    expect(element.textContent).not.toContain('private-token-1234');
   });
+
+  it('shows the queued job immediately and stops bounded polling when destroyed', async () => {
+    await initialize([root()], emptyCatalog());
+    vi.useFakeTimers();
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('.source-actions button')?.click();
+    http.expectOne('/api/v1/library-roots/root-1/scans').flush(job('QUEUED'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(element.querySelector('.scan-state')?.textContent).toContain('queued');
+    await vi.advanceTimersByTimeAsync(750);
+    http.expectOne('/api/v1/jobs/job-1').flush(job('RUNNING'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    fixture.destroy();
+    await vi.advanceTimersByTimeAsync(5_000);
+    http.expectNone('/api/v1/jobs/job-1');
+  });
+
+  it('renders safe scan failures as counts without inventing a percentage', async () => {
+    await initialize([root()], emptyCatalog());
+    vi.useFakeTimers();
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.source-actions button')?.click();
+    http.expectOne('/api/v1/library-roots/root-1/scans').flush(job('QUEUED'));
+    await vi.advanceTimersByTimeAsync(750);
+    http.expectOne('/api/v1/jobs/job-1').flush({
+      ...job('COMPLETED_WITH_FAILURES'),
+      discoveredCount: 4,
+      processedCount: 3,
+      failedCount: 1,
+      failures: [
+        {
+          relativePath: 'broken/book.fb2',
+          code: 'CORRUPT_ASSET',
+          detail: 'Metadata could not be read.',
+        },
+      ],
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(element.querySelector('.scan-counts')?.textContent).toContain('Discovered4');
+    expect(element.querySelector('.failures')?.textContent).toContain('broken/book.fb2');
+    expect(element.querySelector('.failures')?.textContent).toContain('CORRUPT_ASSET');
+    expect(element.textContent).not.toContain('%');
+  });
+
+  it('shows provisional unknown catalog values and downloads by asset identifier', async () => {
+    await initialize([], {
+      items: [
+        {
+          id: 'work-1',
+          title: null,
+          contributors: [],
+          provisional: true,
+          assets: [
+            {
+              id: 'asset-1',
+              format: 'EPUB',
+              size: 2048,
+              availability: 'AVAILABLE',
+              original: true,
+            },
+          ],
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.work-row')?.textContent).toContain('Untitled work');
+    expect(element.querySelector('.work-row')?.textContent).toContain('Contributor unknown');
+    expect(element.querySelector('.provisional')?.textContent).toContain('Provisional');
+    expect(element.querySelector<HTMLAnchorElement>('.asset-list a')?.getAttribute('href')).toBe(
+      '/api/v1/assets/asset-1/content',
+    );
+  });
+
+  it('searches and pages with bounded relative catalog requests', async () => {
+    await initialize([], { ...emptyCatalog(), totalElements: 13 });
+    const element = fixture.nativeElement as HTMLElement;
+    setInput(element.querySelector<HTMLInputElement>('#catalog-query')!, 'Ursula');
+    element.querySelector<HTMLFormElement>('.search')?.dispatchEvent(new SubmitEvent('submit'));
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/v1/catalog/works' &&
+          request.params.get('query') === 'Ursula' &&
+          request.params.get('page') === '0' &&
+          request.params.get('size') === '12',
+      )
+      .flush({ ...emptyCatalog(), totalElements: 13 });
+    await fixture.whenStable();
+
+    element.querySelectorAll<HTMLButtonElement>('.pagination button')[1].click();
+    http
+      .expectOne(
+        (request) => request.url === '/api/v1/catalog/works' && request.params.get('page') === '1',
+      )
+      .flush({ ...emptyCatalog(), page: 1, totalElements: 13 });
+  });
+
+  function setInput(input: HTMLInputElement, value: string) {
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  async function initialize(
+    roots: LibraryRoot[],
+    catalog: CatalogPage,
+    mounts = [{ alias: 'main' }],
+  ) {
+    http.expectOne('/api/v1/library-mounts').flush(mounts);
+    http.expectOne('/api/v1/library-roots').flush(roots);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(catalog);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+  }
+
+  function emptyCatalog(): CatalogPage {
+    return { items: [], page: 0, size: 12, totalElements: 0 };
+  }
+
+  function root(): LibraryRoot {
+    return {
+      id: 'root-1',
+      name: 'Main library',
+      mountAlias: 'main',
+      relativePath: 'books',
+      mode: 'READ_ONLY',
+      availability: 'AVAILABLE',
+    };
+  }
+
+  function job(state: ScanJob['state']): ScanJob {
+    return {
+      id: 'job-1',
+      rootId: 'root-1',
+      state,
+      discoveredCount: 0,
+      processedCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+      coverageComplete: false,
+      failures: [],
+      createdAt: '2026-09-29T12:00:00Z',
+    };
+  }
 });

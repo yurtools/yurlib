@@ -77,6 +77,15 @@ class FilesystemRootVerifierTest {
     }
 
     @Test
+    void advertisesAliasesWithoutExposingTheirPaths() throws IOException {
+        var secondMount = Files.createDirectory(temporaryDirectory.resolve("second-mount"));
+        var firstMount = Files.createDirectory(temporaryDirectory.resolve("first-mount"));
+        var registry = new MountAliasRegistry(List.of(mount("second", secondMount), mount("first", firstMount)));
+
+        assertThat(registry.aliases()).containsExactly("first", "second");
+    }
+
+    @Test
     void rejectsOverlappingCanonicalMounts() throws IOException {
         var parent = Files.createDirectory(temporaryDirectory.resolve("parent"));
         var child = Files.createDirectory(parent.resolve("child"));

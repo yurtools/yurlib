@@ -29,7 +29,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.scss", "src/workbench.scss"]
           },
           "configurations": {
             "production": {
@@ -62,7 +62,8 @@
               "buildTarget": "yurlib-web:build:production"
             },
             "development": {
-              "buildTarget": "yurlib-web:build:development"
+              "buildTarget": "yurlib-web:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

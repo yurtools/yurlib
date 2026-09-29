@@ -65,7 +65,7 @@ Angular web
           ▼
 Spring Boot yurlib-server
   ├── API
-  │   ├── library roots
+  │   ├── allowed mounts and library roots
   │   ├── scan jobs
   │   ├── catalog query
   │   └── asset download
@@ -96,6 +96,8 @@ library-main -> /mnt/books
 ```
 
 The root API accepts `mountAlias`, a normalized relative path, and the expected identity token. It does not accept an unrestricted absolute path. The resolved path must remain within the canonical allowed prefix after normalization and real-path resolution. The server persists only a cryptographic digest of the identity token and never returns or logs the token.
+
+The mount-discovery API returns only stable aliases from deployment configuration. It never returns canonical or physical filesystem paths.
 
 Each root contains an operator-created `.yurlib-root-id` text file whose trimmed content equals the configured identity token. Yurlib reads but never creates or modifies this marker. A missing or mismatched marker makes the root unavailable and prevents missing-location reconciliation.
 
@@ -160,6 +162,7 @@ The initial contract is `contracts/openapi/yurlib-v1.yaml`.
 
 | Operation                                   | Result                                                      |
 | ------------------------------------------- | ----------------------------------------------------------- |
+| `GET /api/v1/library-mounts`                | List allowed mount aliases without physical paths           |
 | `POST /api/v1/library-roots`                | Persist and validate one read-only root; `201`              |
 | `GET /api/v1/library-roots`                 | List configured root and availability                       |
 | `POST /api/v1/library-roots/{rootId}/scans` | Commit queued job and return job resource; `202`            |
@@ -171,7 +174,7 @@ Errors use RFC 9457 Problem Details with a stable `code`, correlation identifier
 
 ## 10. Angular workflow
 
-1. Root setup selects an administrator-provided mount alias and supplies name, relative path, and identity token.
+1. The client loads allowed aliases from `GET /api/v1/library-mounts`; root setup selects one advertised alias and supplies name, relative path, and identity token.
 2. Starting a scan immediately shows the returned job ID and `QUEUED` state.
 3. The client polls with bounded backoff while the job is nonterminal and stops polling on component destruction.
 4. The progress view shows counts rather than a fabricated percentage when total work is unknown.
