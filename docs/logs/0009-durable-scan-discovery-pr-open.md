@@ -1,6 +1,6 @@
 # Durable Scan Jobs and Bounded Discovery
 
-- Status: Committed
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `feature/15-durable-scan-discovery`
 - Issue: [#15](https://github.com/yurtools/yurlib/issues/15)
@@ -13,6 +13,10 @@
 ## Continuation prompt
 
 > continue with the next task
+
+## Merge continuation prompt
+
+> squashed and merged
 
 ## Plan
 
@@ -71,6 +75,16 @@
 - Added MVC tests for `202 QUEUED`, durable counters/failures, correlation IDs, and active-scan Problem Details.
 - Added PostgreSQL Testcontainers coverage for queue/claim/outcome/completion persistence, the one-active-job invariant, and expired-running-job reclaim.
 
+### 2026-09-29 — Prerequisite merge and pull request
+
+- Confirmed prerequisite pull request #32 was squash-merged into `main` as `c45e107`.
+- Fetched `origin/main` and merged it into the published issue #15 branch without rewriting branch history.
+- Resolved overlapping edits in `LibraryRootProblemHandler` and `FilesystemRootVerifier` by retaining the issue #15 scan behavior on top of the merged formatting baseline.
+- Re-ran the complete Maven verification gate after conflict resolution; all 42 tests and all quality gates passed.
+- Committed the synchronization as `6f65fb1` and pushed the branch.
+- Confirmed the comparison against `origin/main` contains only issue #15 implementation, tests, configuration, and this process log.
+- Opened pull request [#33](https://github.com/yurtools/yurlib/pull/33), linked to close issue #15.
+
 ## Verification
 
 - `./mvnw -B -pl services/yurlib-server -am spotless:apply test -Dtest='DefaultScanJobServiceTest,ScanJobWorkerTest,ScanJobControllerTest,FilesystemScanDiscoveryTest,ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false` — passed, 13 tests.
@@ -80,7 +94,8 @@
 - `npm --prefix web/yurlib-web test -- --watch=false` — passed, 3 tests.
 - `npm --prefix web/yurlib-web run build` — passed.
 - `docker compose config` — passed.
+- Post-merge `./mvnw -B verify` — passed, 42 tests; formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs gates passed.
 
 ## Result
 
-Implementation and local verification are complete in commit `47dd487` (`feat: add durable scan discovery (#15)`). Pull request creation remains intentionally blocked until the green prerequisite pull request #32 is squash-merged into `main`.
+Implementation and local verification are complete in commit `47dd487` (`feat: add durable scan discovery (#15)`). The branch is synchronized with `main` at merge commit `6f65fb1`, and pull request #33 is open for protected-branch review.
