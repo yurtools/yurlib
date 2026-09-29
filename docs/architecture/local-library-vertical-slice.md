@@ -152,6 +152,8 @@ Validate allowed mount and identity marker
 
 Parser adapters must enforce bounded reads and format-specific safety. EPUB ZIP structures require entry-count, expanded-size, ratio, and per-entry limits without general archive ingestion. FB2 XML parsing disables DTDs and external entities. MOBI parsing must use bounded offsets and allocation limits. Parser selection and concrete dependency review belong to the metadata-adapter implementation issue.
 
+The accepted initial dependency and limit review is recorded in [Metadata Adapter Dependency and Safety Review](metadata-adapter-review.md).
+
 ## 9. API contract
 
 The initial contract is `contracts/openapi/yurlib-v1.yaml`.

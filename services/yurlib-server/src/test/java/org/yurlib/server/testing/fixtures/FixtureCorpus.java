@@ -84,7 +84,8 @@ public final class FixtureCorpus {
                     <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id">
                       <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
                         <dc:identifier id="book-id">urn:uuid:yurlib-fixture</dc:identifier>
-                        <dc:title>Minimal EPUB Fixture</dc:title><dc:language>en</dc:language>
+                        <dc:title>Minimal EPUB Fixture</dc:title><dc:creator>Fixture Author</dc:creator>
+                        <dc:language>en</dc:language>
                       </metadata>
                       <manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest>
                       <spine><itemref idref="chapter"/></spine>

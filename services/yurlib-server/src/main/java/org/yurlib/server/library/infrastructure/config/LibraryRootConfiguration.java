@@ -11,6 +11,7 @@ import org.yurlib.server.library.application.ConfigureLibraryRootService;
 import org.yurlib.server.library.application.DefaultScanJobService;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.LibraryRootUseCases;
+import org.yurlib.server.library.application.MetadataExtractor;
 import org.yurlib.server.library.application.MissingLocationReconciler;
 import org.yurlib.server.library.application.RootLocationVerifier;
 import org.yurlib.server.library.application.ScanDiscovery;
@@ -20,6 +21,7 @@ import org.yurlib.server.library.application.ScanJobWorker;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemRootVerifier;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemScanDiscovery;
 import org.yurlib.server.library.infrastructure.filesystem.MountAliasRegistry;
+import org.yurlib.server.library.infrastructure.metadata.BoundedMetadataExtractor;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(LibraryStorageProperties.class)
@@ -56,6 +58,11 @@ public class LibraryRootConfiguration {
         return (rootId, scanJobId) -> {
             // Issue #24 supplies catalog-location reconciliation behind this boundary.
         };
+    }
+
+    @Bean
+    MetadataExtractor metadataExtractor() {
+        return new BoundedMetadataExtractor();
     }
 
     @Bean
