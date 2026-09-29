@@ -1,9 +1,9 @@
 # Yurlib — Product Concept
 
 **Document ID:** PC-001  
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Reviewed draft; product name and license approved  
-**Date:** 28 September 2026  
+**Date:** 29 September 2026
 **Product name:** Yurlib  
 **License:** GNU General Public License v3.0 only (`GPL-3.0-only`)  
 **Authoritative repository path:** `docs/architecture/product-concept.md`
@@ -321,7 +321,9 @@ D-06a — Distribution: Yurlib is licensed under the GNU General Public License 
 
 D-02 — Deployment: choose reference hardware, supported CPU architectures, NAS protocol and minimum runtime resources for testing and packaging.
 
-D-03 — Scope: approve the M1–M3 phasing, access model, managed-folder rollout and the tested conversion-route matrix. Explicitly decide whether .fb2.zip archives enter V1.
+D-03a — First local-library slice: accepted through ADR-0003. Start with one read-only root, plain EPUB/FB2/MOBI files, PostgreSQL-backed in-process jobs, polling, loopback-only unauthenticated development, and owner authentication before shared-network deployment. `.fb2.zip` remains deferred pending an archive-security decision.
+
+D-03b — Remaining scope: approve later M1–M3 access details, managed-folder rollout and the tested conversion-route matrix.
 
 D-04 — Connectors: validate Flibusta feasibility and select the first real source, supported OPDS version(s), permitted operations and network policy. Define the fallback when a target source cannot be supported.
 

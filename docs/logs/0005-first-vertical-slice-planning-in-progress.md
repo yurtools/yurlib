@@ -49,10 +49,38 @@ The prompt approves the recommended next-step design from the preceding exchange
 - `npm --prefix web/yurlib-web run build`: production build completed successfully.
 - `git diff --check`: passed.
 
+### 2026-09-29 — Post-bootstrap merge
+
+- Committed the Angular correction and this active log as `095b752` (`Fix deployment-neutral backend health link`) and pushed `dev`.
+- Opened pull request #14, `Add reviewed frontend skills and fix health link`, for the accumulated post-bootstrap audit, skill, documentation, and Angular changes.
+- Required `Backend`, `Frontend`, `Compose Configuration`, and `Dependency Review` pull-request checks passed.
+- Squash-merged pull request #14 into protected `main` as `92e7a25ccb243d6f35ec69f37dd2f2bf68fd7f72` and deleted remote `dev`.
+- Created short-lived branch `feature/3-local-library-slice-plan` from the updated `origin/main`.
+
+### 2026-09-29 — Walking-skeleton design
+
+- Added accepted ADR-0003 for one verified read-only root, allowed mount aliases, an identity marker, plain EPUB/FB2/MOBI scope, PostgreSQL-backed jobs, a bounded in-process worker, polling, loopback-only development bypass, required shared-network owner authentication, and asset-ID downloads.
+- Added `docs/architecture/local-library-vertical-slice.md` with scope, component boundaries, filesystem trust model, conceptual data model, job lifecycle, recovery, extraction safety, Angular flow, observability, acceptance matrix, implementation order, and definition of done.
+- Added `contracts/openapi/yurlib-v1.yaml` with five initial root, scan, job, catalog, and download paths plus RFC 9457 Problem Details schemas.
+- Updated the ADR index, development-environment version 0.8, product-concept version 0.5 and D-03 split, and README project status.
+
+### 2026-09-29 — GitHub backlog
+
+- Created milestone #2, `M1 — Local Library`.
+- Added `m1`, `ingestion`, and `catalog` labels.
+- Created implementation issues #15, #16, #20, and #22. Four parallel creations returned transient GraphQL errors; retrying them sequentially created #23 through #26.
+- Created parent delivery issue #27 with the ordered checklist #20, #23, #15, #16, #24, #25, #26, and #22.
+- Added all nine M1 issues to the public `Yurlib Engineering` project.
+- Updated issue #3 with the approved artifacts and complete implementation backlog and moved it to `In Progress` pending merge of the planning pull request.
+
 ## Verification
 
-Pending.
+- Angular unit tests: one file and three tests passed.
+- Angular production build: passed.
+- OpenAPI YAML: parsed successfully as OpenAPI 3.1 with five paths.
+- `git diff --check`: passed before the planning commit.
+- Pull-request CI for the planning branch: pending.
 
 ## Result
 
-In progress.
+The bootstrap merge, Angular correction, approved design, initial API contract, and M1 implementation backlog are complete. Planning-branch commit, pull request, and CI verification remain.

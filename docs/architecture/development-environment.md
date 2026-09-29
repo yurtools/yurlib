@@ -2,7 +2,7 @@
 
 **Project:** Yurlib  
 **Status:** Active bootstrap baseline
-**Version:** 0.7
+**Version:** 0.8
 **Last Updated:** 2026-09-28  
 **Repository Path:** `docs/architecture/development-environment.md`
 
@@ -804,6 +804,14 @@ Messaging infrastructure should be selected only when an actual product requirem
 The first product feature should validate the complete factory.
 
 > Configure one library root and display discovered EPUB, FB2, and MOBI books in a persistent catalog.
+
+The approved implementation design is recorded in:
+
+```text
+docs/architecture/local-library-vertical-slice.md
+contracts/openapi/yurlib-v1.yaml
+docs/adr/0003-first-local-library-slice-boundaries.md
+```
 
 Expected behavior:
 
