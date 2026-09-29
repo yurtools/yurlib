@@ -44,13 +44,14 @@
 - Built and started the real Spring Boot/PostgreSQL Compose stack on temporary workstation ports because ports 5432 and 8080 were already occupied. Started the Angular development server against that backend and removed the temporary proxy override afterward.
 - Confirmed through the Angular development proxy that the application shell loads, the server advertises only `main`, the empty catalog response matches the contract, and health is `UP`.
 - Attempted the required rendered desktop/mobile inspection through the browser-control skill. No browser instance was connected to this session, so rendered visual inspection remains a documented manual verification item rather than a claimed pass.
+- After the built-in browser was connected, the owner completed rendered verification at 1440 × 900 desktop and 390 × 844 mobile. The configured-source and empty-catalog state showed no horizontal overflow, clipped controls, or Yurlib console errors. The header, source card, search, empty state, pagination, and footer rendered correctly. The only console warning was the built-in Electron browser's generic development CSP warning. A library scan was not started during this visual pass.
 
 ### 2026-09-29 — Delivery
 
 - Committed the implementation as `46f149a` (`feat: add local library web workflow (#26)`).
 - Pushed `feature/26-angular-local-library-workflow` to `origin`.
 - Opened draft pull request [#39](https://github.com/yurtools/yurlib/pull/39), linked to close issue #26 after merge.
-- Kept the pull request in draft state until desktop/mobile rendered inspection is completed.
+- Kept the pull request in draft state until desktop/mobile rendered inspection was completed, then marked it ready for review.
 
 ## Verification
 
@@ -58,7 +59,7 @@
 - `npm --prefix web/yurlib-web test -- --watch=false` — passed, 7 tests across 2 files.
 - Focused backend tests — passed, 8 tests covering the endpoint, sorted/redacted registry response, and complete OpenAPI path set. The first contract run correctly exposed an outdated exact path-count assertion; the assertion was changed to verify the complete reviewed path set.
 - Live proxy smoke check — passed for the shell document, mount list, empty catalog, and backend health.
-- Rendered browser check — blocked because no browser instance was connected; desktop/mobile visual inspection remains pending.
+- Rendered browser check — passed at 1440 × 900 and 390 × 844 for the configured-source and empty-catalog state. No overflow, clipped controls, or Yurlib console errors were observed. Scan-state rendering remains covered by automated component tests rather than this manual pass.
 - `./mvnw verify` — passed; 72 tests, JaCoCo thresholds, PMD, SpotBugs, formatting, architecture rules, migrations, and the backward-compatible OpenAPI diff all passed.
 - `npm --prefix web/yurlib-web ci` — passed; 267 packages installed and 0 vulnerabilities reported.
 - `npm --prefix web/yurlib-web test -- --watch=false` — passed, 7 tests across 2 files.
@@ -68,4 +69,4 @@
 
 ## Result
 
-Draft pull request #39 is open. Automated verification and live relative-route smoke checks pass; rendered desktop/mobile inspection remains pending because no browser instance was connected to this session.
+Pull request #39 is ready for review. Automated verification, live relative-route smoke checks, and rendered desktop/mobile inspection pass.
