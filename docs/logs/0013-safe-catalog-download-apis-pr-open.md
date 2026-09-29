@@ -55,6 +55,7 @@
 - `npm --prefix web/yurlib-web run build` — passed.
 - `docker compose config` — passed.
 - `git diff --check` — passed.
+- GitHub Actions run [36629232093](https://github.com/yurtools/yurlib/actions/runs/36629232093) — passed all backend, frontend, dependency-review, and Compose jobs for pull request #38.
 - An earlier full Maven run found two PMD literal-comparison findings; both were corrected before the final successful run.
 
 ## Result
