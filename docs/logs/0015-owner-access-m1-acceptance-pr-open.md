@@ -1,6 +1,6 @@
 # Owner Access and M1 Acceptance
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `feature/22-owner-access-m1-acceptance`
 - Issue: [#22](https://github.com/yurtools/yurlib/issues/22)
@@ -65,7 +65,8 @@
 - Angular production build passes.
 - `docker compose config` passes and confirms loopback host bindings.
 - Updated owner-access visual acceptance is pending because no browser instance was connected.
+- Pull request [#40](https://github.com/yurtools/yurlib/pull/40) is open and linked to close issue #22 after merge.
 
 ## Result
 
-Implementation is in progress.
+Implementation is committed and pushed. Pull request #40 is open; CI and updated owner-access visual acceptance remain pending.
