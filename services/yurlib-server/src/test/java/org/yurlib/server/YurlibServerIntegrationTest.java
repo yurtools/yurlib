@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.yurlib.server.library.application.AssetContentStore;
 import org.yurlib.server.library.application.CatalogQuery;
 import org.yurlib.server.library.application.CatalogReconciliation;
 import org.yurlib.server.library.application.CatalogStore;
@@ -52,6 +53,9 @@ class YurlibServerIntegrationTest {
 
     @Autowired
     private CatalogQuery catalogQuery;
+
+    @Autowired
+    private AssetContentStore assetContentStore;
 
     @Test
     void appliesFlywayMigrations() {
@@ -273,6 +277,27 @@ class YurlibServerIntegrationTest {
         assertThatThrownBy(() -> catalogQuery.search("query", 0, 101)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> catalogQuery.search("x".repeat(201), 0, 25))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void loadsAStoredDownloadLocationByOpaqueAssetIdentifier() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "download", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("A Book", 123)));
+        var assetId = JdbcClient.create(dataSource)
+                .sql("SELECT id FROM asset")
+                .query(UUID.class)
+                .single();
+
+        assertThat(assetContentStore.findByAssetId(assetId)).hasValueSatisfying(location -> {
+            assertThat(location.assetId()).isEqualTo(assetId);
+            assertThat(location.rootId()).isEqualTo(root.id());
+            assertThat(location.normalizedRelativePath()).isEqualTo("fiction/book.epub");
+            assertThat(location.byteSize()).isEqualTo(123);
+            assertThat(location.fileKey()).isEqualTo("file-key");
+            assertThat(location.availability())
+                    .isEqualTo(org.yurlib.server.library.domain.AssetLocation.Availability.AVAILABLE);
+        });
     }
 
     @Test
