@@ -52,6 +52,14 @@ app-root {
     color: var(--accent);
     padding: 0.65rem 0.9rem;
   }
+  .owner-identity {
+    color: var(--muted);
+    font-size: 0.76rem;
+  }
+  .owner-identity strong {
+    color: var(--ink);
+    font-weight: 800;
+  }
   .development-mode {
     color: var(--muted);
     font-size: 0.7rem;

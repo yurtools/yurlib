@@ -14,6 +14,10 @@
 
 > approve ADR-0004
 
+### Visual acceptance correction
+
+> proceed
+
 ## Plan
 
 1. Confirm pull request #39 and issue #26 completion, synchronize protected `main`, and rename the completed process log to its merged lifecycle.
@@ -67,6 +71,14 @@
 - Updated owner-access visual acceptance is pending because no browser instance was connected.
 - Pull request [#40](https://github.com/yurtools/yurlib/pull/40) is open and linked to close issue #22 after merge.
 - Pull request CI passed: backend, frontend, Compose configuration, and dependency review are green.
+
+### 2026-09-29 — Visual acceptance correction
+
+- Recorded the failed PR #40 visual checks: literal authentication failure details, unreliable keyboard submission, missing owner identity, and stale validation after sign-out.
+- Replaced literal 401 details with useful generic credential guidance, added explicit Enter/Space form activation, displayed the authenticated owner identity, and reset Signal Form interaction state after sign-in attempts and sign-out.
+- Added regression coverage for the credential message, password clearing, Enter/Space activation, owner identity, and clean validation after sign-out.
+- Re-ran the full baseline: Maven verification passed with 88 tests and all quality gates; a clean npm install reported no vulnerabilities; 9 Angular tests, the production build, and Compose validation passed.
+- Kept visual acceptance incomplete pending repetition of the desktop and mobile browser checklist against these corrections.
 
 ## Result
 

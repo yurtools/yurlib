@@ -7,6 +7,7 @@
       <span class="health-dot" aria-hidden="true"></span>Backend health
     </a>
     @if (session()?.authenticated && session()?.mode === 'OWNER') {
+      <span class="owner-identity">Signed in as <strong>{{ session()?.username }}</strong></span>
       <button class="sign-out" type="button" (click)="signOut()" [disabled]="signingOut()">
         {{ signingOut() ? 'Signing out…' : 'Sign out' }}
       </button>
@@ -29,7 +30,7 @@
         <h1 id="access-heading">Enter the workbench.</h1>
         <p>Sign in with the owner credential configured for this Yurlib deployment.</p>
       </div>
-      <form class="login-form" (submit)="signIn($event)" novalidate>
+      <form class="login-form" (submit)="signIn($event)" (keydown.enter)="signIn($event)" novalidate>
         <label>
           <span>Username</span>
           <input autocomplete="username" [formField]="loginForm.username" />
@@ -47,7 +48,11 @@
         @if (accessError()) {
           <p class="notice notice-error" role="alert">{{ accessError() }}</p>
         }
-        <button type="submit" [disabled]="loginForm().invalid() || signingIn()">
+        <button
+          type="submit"
+          (keydown.space)="signIn($event)"
+          [disabled]="loginForm().invalid() || signingIn()"
+        >
           {{ signingIn() ? 'Signing in…' : 'Sign in' }}
         </button>
         <p class="credential-note">

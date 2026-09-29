@@ -71,6 +71,7 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(element.querySelector('#workspace')).not.toBeNull();
+    expect(element.querySelector('.owner-identity')?.textContent).toContain('owner');
     expect(element.textContent).not.toContain('not-retained');
 
     element.querySelector<HTMLButtonElement>('.sign-out')?.click();
@@ -79,6 +80,53 @@ describe('App', () => {
     expect(
       element.querySelector<HTMLInputElement>('.login-form input[type="password"]')?.value,
     ).toBe('');
+    expect(element.querySelector('.field-error')).toBeNull();
+  });
+
+  it('submits by keyboard and presents a useful generic credential error', async () => {
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: false,
+      username: null,
+    });
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const password = element.querySelector<HTMLInputElement>('.login-form input[type="password"]')!;
+    setInput(password, 'incorrect');
+    await fixture.whenStable();
+
+    password.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
+    http.expectOne('/api/v1/session').flush(
+      {
+        detail: 'Owner authentication is required.',
+        code: 'AUTHENTICATION_REQUIRED',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await fixture.whenStable();
+
+    expect(element.querySelector('.notice-error')?.textContent).toContain(
+      'Sign-in failed. Check the owner credentials and try again.',
+    );
+    expect(element.textContent).not.toContain('AUTHENTICATION_REQUIRED');
+    expect(password.value).toBe('');
+    expect(element.querySelector('.field-error')).toBeNull();
+
+    setInput(password, 'incorrect-again');
+    await fixture.whenStable();
+    element
+      .querySelector<HTMLButtonElement>('.login-form button')!
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }),
+      );
+    http.expectOne('/api/v1/session').flush(
+      { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await fixture.whenStable();
+    expect(password.value).toBe('');
   });
 
   it('validates root input and sends the selected alias without a backend host', async () => {

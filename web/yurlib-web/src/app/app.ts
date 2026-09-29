@@ -136,8 +136,9 @@ export class App {
     void this.loadSession();
   }
 
-  protected signIn(event: SubmitEvent) {
+  protected signIn(event: Event) {
     event.preventDefault();
+    if (this.signingIn()) return;
     submit(this.loginForm, async () => {
       this.signingIn.set(true);
       this.accessError.set('');
@@ -148,9 +149,10 @@ export class App {
         this.session.set(session);
         if (session.authenticated) await this.loadWorkspace();
       } catch (error) {
-        this.accessError.set(this.problemMessage(error, 'Sign-in failed. Check the credentials.'));
+        this.accessError.set(this.signInMessage(error));
       } finally {
         this.loginModel.update((model) => ({ ...model, password: '' }));
+        this.loginForm().reset();
         this.signingIn.set(false);
       }
     });
@@ -162,6 +164,8 @@ export class App {
     try {
       await firstValueFrom(this.api.logout());
       this.clearWorkspace();
+      this.loginModel.update((model) => ({ ...model, password: '' }));
+      this.loginForm().reset();
       this.session.set({ mode: 'OWNER', authenticated: false, username: null });
     } catch (error) {
       this.accessError.set(this.problemMessage(error, 'Sign-out failed. Try again.'));
@@ -330,5 +334,12 @@ export class App {
     const detail = problem?.detail ?? problem?.title;
     const code = problem?.code;
     return detail && code ? `${detail} (${code})` : detail || fallback;
+  }
+
+  private signInMessage(error: unknown) {
+    if (error instanceof HttpErrorResponse && error.status === 401) {
+      return 'Sign-in failed. Check the owner credentials and try again.';
+    }
+    return this.problemMessage(error, 'Sign-in failed. Try again.');
   }
 }
