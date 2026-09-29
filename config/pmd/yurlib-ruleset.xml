@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         name="Yurlib Java rules"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>
+        Yurlib's maintained Java ruleset. The quickstart rules provide broad correctness and
+        maintainability checks; the security category adds explicit cryptography safeguards.
+    </description>
+
+    <rule ref="rulesets/java/quickstart.xml"/>
+    <rule ref="category/java/security.xml"/>
+</ruleset>

@@ -331,11 +331,11 @@ AI agents may propose architectural changes, but they should not silently introd
 
 ## Local development
 
-Prerequisites are Java 26, Maven 3.9, Node.js 26, npm 12, and Docker with Compose.
+Prerequisites are Java 26, Node.js 26, npm 12, and Docker with Compose. The checked-in Maven Wrapper provides Maven 3.9.11.
 
 ```bash
 docker compose up -d postgres
-mvn verify
+./mvnw verify
 npm --prefix web/yurlib-web ci
 npm --prefix web/yurlib-web test -- --watch=false
 npm --prefix web/yurlib-web run build
@@ -348,7 +348,7 @@ mkdir -p .local/library
 printf '%s\n' 'replace-with-a-private-random-token' > .local/library/.yurlib-root-id
 export YURLIB_LIBRARY_MOUNTS_0_ALIAS=main
 export YURLIB_LIBRARY_MOUNTS_0_PATH="$PWD/.local/library"
-mvn -pl services/yurlib-server spring-boot:run
+./mvnw -pl services/yurlib-server spring-boot:run
 npm --prefix web/yurlib-web start
 ```
 

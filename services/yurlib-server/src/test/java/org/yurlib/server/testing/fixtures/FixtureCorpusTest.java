@@ -23,7 +23,8 @@ class FixtureCorpusTest {
         assertThat(root.resolve("valid/minimal.fb2")).isRegularFile();
         assertThat(root.resolve("valid/日本語.fb2")).isRegularFile();
         assertThat(root.resolve("malformed/broken.fb2")).isRegularFile();
-        assertThat(root.resolve("security/xxe.fb2")).content(StandardCharsets.UTF_8)
+        assertThat(root.resolve("security/xxe.fb2"))
+                .content(StandardCharsets.UTF_8)
                 .contains("<!ENTITY xxe SYSTEM");
         assertThat(root.resolve("valid/minimal.epub")).isRegularFile();
         assertThat(root.resolve("valid/minimal.mobi")).isRegularFile();
@@ -41,7 +42,8 @@ class FixtureCorpusTest {
         var root = FixtureCorpus.materialize(temporaryDirectory.resolve("library"));
 
         try (var traversal = new ZipFile(root.resolve("security/traversal.epub").toFile());
-                var expansion = new ZipFile(root.resolve("security/decompression-limit.epub").toFile())) {
+                var expansion = new ZipFile(
+                        root.resolve("security/decompression-limit.epub").toFile())) {
             assertThat(traversal.getEntry("../escaped.txt")).isNotNull();
             var oversized = expansion.getEntry("OEBPS/oversized.txt");
             assertThat(oversized.getSize()).isEqualTo(2L * 1024 * 1024);

@@ -2,10 +2,17 @@ package org.yurlib.server.library.application;
 
 public final class LibraryRootFailure extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     private final Code code;
 
     public LibraryRootFailure(Code code, String safeMessage) {
         super(safeMessage);
+        this.code = code;
+    }
+
+    public LibraryRootFailure(Code code, String safeMessage, Throwable cause) {
+        super(safeMessage, cause);
         this.code = code;
     }
 

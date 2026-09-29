@@ -4,8 +4,7 @@ import java.util.Objects;
 
 final class DomainAssertions {
 
-    private DomainAssertions() {
-    }
+    private DomainAssertions() {}
 
     static <T> T required(T value, String name) {
         return Objects.requireNonNull(value, name + " is required");
@@ -43,7 +42,7 @@ final class DomainAssertions {
             throw new IllegalArgumentException(name + " must be a normalized relative path");
         }
         for (var segment : value.split("/")) {
-            if (segment.equals(".") || segment.equals("..")) {
+            if (".".equals(segment) || "..".equals(segment)) {
                 throw new IllegalArgumentException(name + " must be a normalized relative path");
             }
         }

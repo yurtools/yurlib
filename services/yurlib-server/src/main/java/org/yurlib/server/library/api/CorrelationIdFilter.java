@@ -16,10 +16,8 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Correlation-ID";
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         var supplied = request.getHeader(HEADER);
         var correlationId = canonicalCorrelationId(supplied);
         request.setAttribute(ATTRIBUTE, correlationId);

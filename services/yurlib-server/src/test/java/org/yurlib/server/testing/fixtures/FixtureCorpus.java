@@ -22,8 +22,7 @@ public final class FixtureCorpus {
     private static final int PDB_HEADER_LENGTH = 78;
     private static final int RECORD_DIRECTORY_LENGTH = 16;
 
-    private FixtureCorpus() {
-    }
+    private FixtureCorpus() {}
 
     public static Map<String, String> sourceHashes() throws IOException {
         var hashes = new LinkedHashMap<String, String>();
@@ -53,8 +52,7 @@ public final class FixtureCorpus {
     }
 
     private static Path sourceRoot() {
-        return RepositoryPaths.root()
-                .resolve("services/yurlib-server/src/test/resources/fixtures/source");
+        return RepositoryPaths.root().resolve("services/yurlib-server/src/test/resources/fixtures/source");
     }
 
     private static void copyTextSources(Path libraryRoot) throws IOException {

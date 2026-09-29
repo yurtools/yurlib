@@ -37,15 +37,14 @@ public final class FilesystemRootVerifier implements RootLocationVerifier {
             }
             var observedToken = Files.readString(marker, StandardCharsets.UTF_8).strip();
             if (!MessageDigest.isEqual(
-                    observedToken.getBytes(StandardCharsets.UTF_8),
-                    identityToken.getBytes(StandardCharsets.UTF_8))) {
+                    observedToken.getBytes(StandardCharsets.UTF_8), identityToken.getBytes(StandardCharsets.UTF_8))) {
                 throw new LibraryRootFailure(
                         LibraryRootFailure.Code.ROOT_IDENTITY_MISMATCH,
                         "The library root identity marker does not match.");
             }
             return new VerifiedRootLocation(resolved.normalizedRelativePath(), sha256(identityToken));
         } catch (IOException exception) {
-            throw unavailable();
+            throw unavailable(exception);
         }
     }
 
@@ -60,13 +59,16 @@ public final class FilesystemRootVerifier implements RootLocationVerifier {
 
     private static LibraryRootFailure unavailable() {
         return new LibraryRootFailure(
-                LibraryRootFailure.Code.ROOT_UNAVAILABLE,
-                "The configured library root is unavailable.");
+                LibraryRootFailure.Code.ROOT_UNAVAILABLE, "The configured library root is unavailable.");
+    }
+
+    private static LibraryRootFailure unavailable(IOException cause) {
+        return new LibraryRootFailure(
+                LibraryRootFailure.Code.ROOT_UNAVAILABLE, "The configured library root is unavailable.", cause);
     }
 
     private static LibraryRootFailure pathEscape() {
         return new LibraryRootFailure(
-                LibraryRootFailure.Code.PATH_ESCAPE,
-                "The library root identity marker escapes its allowed root.");
+                LibraryRootFailure.Code.PATH_ESCAPE, "The library root identity marker escapes its allowed root.");
     }
 }

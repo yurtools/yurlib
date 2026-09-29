@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project
+        xmlns="http://maven.apache.org/POM/4.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -26,46 +27,28 @@
         </license>
     </licenses>
 
-    <properties>
-        <!-- Build with the workstation JDK 26 while targeting the latest supported LTS bytecode. -->
-        <java.version>25</java.version>
-        <archunit.version>1.5.1</archunit.version>
-        <jacoco.version>0.8.15</jacoco.version>
-        <maven-pmd.version>3.28.0</maven-pmd.version>
-        <openapi-diff.version>2.1.4</openapi-diff.version>
-        <pmd.version>7.28.0</pmd.version>
-        <spotbugs-maven.version>4.10.4.1</spotbugs-maven.version>
-        <swagger-parser.version>2.1.48</swagger-parser.version>
-    </properties>
-
     <modules>
         <module>services/yurlib-server</module>
     </modules>
 
+    <properties>
+        <!-- Build with the workstation JDK 26 while targeting the latest supported LTS bytecode. -->
+        <java.version>25</java.version>
+        <archunit.version>1.5.1</archunit.version>
+        <findsecbugs.version>1.14.0</findsecbugs.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <maven-enforcer.version>3.6.3</maven-enforcer.version>
+        <maven-pmd.version>3.28.0</maven-pmd.version>
+        <openapi-diff.version>2.1.4</openapi-diff.version>
+        <palantir-java-format.version>2.98.0</palantir-java-format.version>
+        <pmd.version>7.28.0</pmd.version>
+        <prettier.version>3.9.9</prettier.version>
+        <spotless.version>3.10.3</spotless.version>
+        <spotbugs-maven.version>4.10.4.1</spotbugs-maven.version>
+        <swagger-parser.version>2.1.48</swagger-parser.version>
+    </properties>
+
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.openapitools.openapidiff</groupId>
-                <artifactId>openapi-diff-maven</artifactId>
-                <version>${openapi-diff.version}</version>
-                <inherited>false</inherited>
-                <executions>
-                    <execution>
-                        <id>reject-breaking-api-changes</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>diff</goal>
-                        </goals>
-                        <configuration>
-                            <oldSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/baseline/yurlib-v1.yaml</oldSpec>
-                            <newSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/yurlib-v1.yaml</newSpec>
-                            <failOnIncompatible>true</failOnIncompatible>
-                            <failOnChanged>false</failOnChanged>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -75,8 +58,27 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <showWarnings>true</showWarnings>
+                        <compilerArgs>
+                            <arg>-Xlint:all</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
                     <version>${maven-pmd.version}</version>
+                    <configuration>
+                        <analysisCache>true</analysisCache>
+                        <failOnViolation>true</failOnViolation>
+                        <linkXRef>false</linkXRef>
+                        <printFailingErrors>true</printFailingErrors>
+                        <rulesets>
+                            <ruleset>${maven.multiModuleProjectDirectory}/config/pmd/yurlib-ruleset.xml</ruleset>
+                        </rulesets>
+                    </configuration>
                     <dependencies>
                         <dependency>
                             <groupId>net.sourceforge.pmd</groupId>
@@ -88,24 +90,139 @@
                             <artifactId>pmd-java</artifactId>
                             <version>${pmd.version}</version>
                         </dependency>
-                        <dependency>
-                            <groupId>net.sourceforge.pmd</groupId>
-                            <artifactId>pmd-javascript</artifactId>
-                            <version>${pmd.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>net.sourceforge.pmd</groupId>
-                            <artifactId>pmd-jsp</artifactId>
-                            <version>${pmd.version}</version>
-                        </dependency>
                     </dependencies>
                 </plugin>
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
                     <artifactId>spotbugs-maven-plugin</artifactId>
                     <version>${spotbugs-maven.version}</version>
+                    <configuration>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/config/spotbugs/exclude-filter.xml</excludeFilterFile>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.h3xstream.findsecbugs</groupId>
+                            <artifactId>findsecbugs-plugin</artifactId>
+                            <version>${findsecbugs.version}</version>
+                        </dependency>
+                    </dependencies>
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-supported-toolchain</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,27)</version>
+                                    <message>Yurlib requires JDK 25 or 26.</message>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.9.11,4.0.0)</version>
+                                    <message>Use ./mvnw so Yurlib builds with its supported Maven version.</message>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <inherited>false</inherited>
+                <configuration>
+                    <formats>
+                        <format>
+                            <includes>
+                                <include>.github/**/*.md</include>
+                                <include>.github/**/*.yaml</include>
+                                <include>.github/**/*.yml</include>
+                                <include>.prettierrc.json</include>
+                                <include>AGENTS.md</include>
+                                <include>README.md</include>
+                                <include>compose.yaml</include>
+                                <include>contracts/**/*.md</include>
+                                <include>contracts/**/*.yaml</include>
+                                <include>contracts/**/*.yml</include>
+                                <include>docs/**/*.md</include>
+                                <include>web/yurlib-web/*.json</include>
+                            </includes>
+                            <excludes>
+                                <exclude>docs/logs/**/*.md</exclude>
+                            </excludes>
+                            <prettier>
+                                <prettierVersion>${prettier.version}</prettierVersion>
+                                <configFile>${maven.multiModuleProjectDirectory}/.prettierrc.json</configFile>
+                            </prettier>
+                        </format>
+                    </formats>
+                    <java>
+                        <includes>
+                            <include>services/**/*.java</include>
+                        </includes>
+                        <palantirJavaFormat>
+                            <version>${palantir-java-format.version}</version>
+                            <style>PALANTIR</style>
+                            <formatJavadoc>true</formatJavadoc>
+                        </palantirJavaFormat>
+                        <formatAnnotations/>
+                    </java>
+                    <pom>
+                        <includes>
+                            <include>pom.xml</include>
+                            <include>services/**/pom.xml</include>
+                        </includes>
+                        <sortPom>
+                            <expandEmptyElements>false</expandEmptyElements>
+                            <keepBlankLines>true</keepBlankLines>
+                            <endWithNewline>true</endWithNewline>
+                            <nrOfIndentSpace>4</nrOfIndentSpace>
+                            <indentAttribute>all</indentAttribute>
+                            <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
+                        </sortPom>
+                    </pom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-formatting</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools.openapidiff</groupId>
+                <artifactId>openapi-diff-maven</artifactId>
+                <version>${openapi-diff.version}</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>reject-breaking-api-changes</id>
+                        <goals>
+                            <goal>diff</goal>
+                        </goals>
+                        <phase>verify</phase>
+                        <configuration>
+                            <oldSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/baseline/yurlib-v1.yaml</oldSpec>
+                            <newSpec>${maven.multiModuleProjectDirectory}/contracts/openapi/yurlib-v1.yaml</newSpec>
+                            <failOnIncompatible>true</failOnIncompatible>
+                            <failOnChanged>false</failOnChanged>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

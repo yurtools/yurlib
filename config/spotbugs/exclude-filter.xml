@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- FindSecBugs uses this marker to identify endpoints for manual review; it is not a defect. -->
+    <Match>
+        <Bug pattern="SPRING_ENDPOINT"/>
+    </Match>
+
+    <!-- The filter parses the untrusted header as a UUID and emits only its canonical representation. -->
+    <Match>
+        <Class name="org.yurlib.server.library.api.CorrelationIdFilter"/>
+        <Bug pattern="SERVLET_HEADER"/>
+    </Match>
+</FindBugsFilter>

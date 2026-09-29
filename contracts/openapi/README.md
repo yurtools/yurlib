@@ -5,7 +5,7 @@
 When a contract change is intentional:
 
 1. edit and review the active contract;
-2. run `mvn verify` and assess the compatibility report;
+2. run `./mvnw verify` and assess the compatibility report;
 3. obtain approval for any breaking change through the repository's contract-review process;
 4. only then update the baseline in the same reviewed change.
 
