@@ -1,6 +1,6 @@
 # Catalog Reconciliation and Search
 
-- Status: Committed
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `feature/24-catalog-reconciliation-search`
 - Issue: [#24](https://github.com/yurtools/yurlib/issues/24)
@@ -64,4 +64,4 @@
 
 ## Result
 
-Implementation and local verification are complete in commit `2e38743` (`feat: add catalog reconciliation and search (#24)`). Push, pull-request, and remote-check references are pending.
+Implementation and local verification are complete in commit `2e38743` (`feat: add catalog reconciliation and search (#24)`). The branch is pushed and pull request [#35](https://github.com/yurtools/yurlib/pull/35) is open for protected-branch review.
