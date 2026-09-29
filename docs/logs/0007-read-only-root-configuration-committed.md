@@ -58,7 +58,8 @@
 - Runtime smoke test on alternate host ports — PostgreSQL became healthy, the server health endpoint returned `UP`, the root API accepted the configured alias and marker, and the response omitted both token and digest.
 - Runtime write test — `touch /library/main/should-not-write` as container root failed with `Read-only file system`.
 - `git diff --check` — passed.
+- Protected CI run [36588782730](https://github.com/yurtools/yurlib/actions/runs/36588782730) — Backend, Frontend, Compose Configuration, and Dependency Review passed.
 
 ## Result
 
-Implementation and local verification complete in commit `09159fa` (`feat: secure read-only library roots (#23)`). Pull request [#30](https://github.com/yurtools/yurlib/pull/30) is open; protected-branch checks are pending.
+Implementation and local verification complete in commit `09159fa` (`feat: secure read-only library roots (#23)`). Pull request [#30](https://github.com/yurtools/yurlib/pull/30) passed the protected-branch checks and is ready for squash merge.
