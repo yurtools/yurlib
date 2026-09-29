@@ -1,6 +1,6 @@
 # First Vertical Slice Planning
 
-- Status: In progress
+- Status: Committed
 - Started: 2026-09-29
 - Initial branch: `dev`
 - Repository: `yurtools/yurlib`
@@ -73,14 +73,21 @@ The prompt approves the recommended next-step design from the preceding exchange
 - Added all nine M1 issues to the public `Yurlib Engineering` project.
 - Updated issue #3 with the approved artifacts and complete implementation backlog and moved it to `In Progress` pending merge of the planning pull request.
 
+### 2026-09-29 — Planning pull request
+
+- Committed the accepted design, OpenAPI contract, architecture updates, backlog references, and this process log as `51622c9` (`Plan first local-library vertical slice (#3)`).
+- Pushed `feature/3-local-library-slice-plan` and opened pull request #28, `Plan first local-library vertical slice`.
+- Configured pull request #28 to close planning issue #3 and bootstrap parent issue #11 when it is merged.
+- Required CI run `36580650177` passed: `Backend`, `Frontend`, `Compose Configuration`, and `Dependency Review`.
+
 ## Verification
 
 - Angular unit tests: one file and three tests passed.
 - Angular production build: passed.
 - OpenAPI YAML: parsed successfully as OpenAPI 3.1 with five paths.
 - `git diff --check`: passed before the planning commit.
-- Pull-request CI for the planning branch: pending.
+- Pull-request CI run `36580650177`: all four required checks passed.
 
 ## Result
 
-The bootstrap merge, Angular correction, approved design, initial API contract, and M1 implementation backlog are complete. Planning-branch commit, pull request, and CI verification remain.
+The bootstrap merge, Angular correction, approved design, initial API contract, M1 implementation backlog, planning commit, pull request, and required CI verification are complete. Pull request #28 is ready for its protected-branch squash merge.
