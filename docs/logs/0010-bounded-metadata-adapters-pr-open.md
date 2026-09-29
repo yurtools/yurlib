@@ -1,6 +1,6 @@
 # Bounded EPUB, FB2, and MOBI Metadata Adapters
 
-- Status: Committed
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `feature/16-bounded-metadata-adapters`
 - Issue: [#16](https://github.com/yurtools/yurlib/issues/16)
@@ -68,4 +68,4 @@
 
 ## Result
 
-Implementation and local verification are complete in commit `2e6bcd8` (`feat: add bounded metadata adapters (#16)`). Push and pull request creation are pending.
+Implementation and local verification are complete in commit `2e6bcd8` (`feat: add bounded metadata adapters (#16)`). The branch is pushed and pull request [#34](https://github.com/yurtools/yurlib/pull/34) is open for protected-branch review.
