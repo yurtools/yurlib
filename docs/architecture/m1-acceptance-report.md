@@ -1,6 +1,6 @@
 # M1 Walking-Skeleton Acceptance Report
 
-- Status: In progress
+- Status: Complete
 - Date: 2026-09-29
 - Scope: Issue [#22](https://github.com/yurtools/yurlib/issues/22)
 - Design authority: ADR-0003, ADR-0004, and `local-library-vertical-slice.md`
@@ -35,11 +35,13 @@ These observations describe one development workstation run. They are not latenc
 
 ## Human acceptance
 
-The earlier unauthenticated empty-catalog workbench passed visual verification at 1440×900 and 390×844 without overflow, clipped controls, or Yurlib console errors. Because ADR-0004 adds a new sign-in state and issue #22 requires the full walking-skeleton workflow, final human verification must cover owner sign-in, root configuration, scan progress/failures, catalog results, original download, sign-out, and both desktop and mobile layouts.
+The owner-access workbench passed final visual verification at 1440×900 and 390×844. Verified states included initial loading, signed-out login, incorrect credentials, password clearing, keyboard sign-in, authenticated owner identity, the configured source, search, empty catalog, pagination, footer, sign-out, refresh in both session states, and visible keyboard focus. Both viewports had no overflow, clipping, overlap, unusable spacing, or Yurlib console errors. The only console message was the built-in Electron browser's generic development CSP warning.
+
+The visual run did not start a library scan or alter the configured source. Scan execution, progress/failure behavior, catalog reconciliation, original download, and unchanged rescan are covered by the automated evidence above.
 
 ## Completion gate
 
 - Full repository verification: passed (`./mvnw verify`, 88 tests; formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs gates all passed).
-- Frontend and deployment verification: passed (clean npm install with no reported vulnerabilities, 8 Angular tests, production build, and `docker compose config`).
-- Updated owner-access visual and workflow verification: pending.
+- Frontend and deployment verification: passed (clean npm install with no reported vulnerabilities, 9 Angular tests, production build, and `docker compose config`).
+- Updated owner-access visual verification: passed at 1440×900 and 390×844; the automated walking-skeleton workflow verification also passed.
 - CI pull-request checks: passed on pull request #40 (backend, frontend, Compose configuration, and dependency review).

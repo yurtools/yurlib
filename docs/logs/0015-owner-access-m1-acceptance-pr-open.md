@@ -18,6 +18,10 @@
 
 > proceed
 
+### Final visual acceptance
+
+> PR #40’s visual-acceptance checklist item can now be marked **complete**.
+
 ## Plan
 
 1. Confirm pull request #39 and issue #26 completion, synchronize protected `main`, and rename the completed process log to its merged lifecycle.
@@ -65,7 +69,7 @@
 - The PostgreSQL-backed M1 walking-skeleton acceptance test passes.
 - Full Maven verification passes: 88 tests with formatting, OpenAPI compatibility, JaCoCo, PMD, and SpotBugs gates green.
 - Clean npm install passes with no reported vulnerabilities.
-- Angular tests pass: 8 tests.
+- Angular tests pass: 9 tests.
 - Angular production build passes.
 - `docker compose config` passes and confirms loopback host bindings.
 - Updated owner-access visual acceptance is pending because no browser instance was connected.
@@ -80,6 +84,14 @@
 - Re-ran the full baseline: Maven verification passed with 88 tests and all quality gates; a clean npm install reported no vulnerabilities; 9 Angular tests, the production build, and Compose validation passed.
 - Kept visual acceptance incomplete pending repetition of the desktop and mobile browser checklist against these corrections.
 
+### 2026-09-29 — Final visual acceptance
+
+- Repeated the owner-access visual checklist at 1440×900 and 390×844 after commit `745abee`.
+- Passed loading, signed-out and incorrect-password states, password clearing, keyboard sign-in, owner identity, configured source, search, empty catalog, pagination/footer, sign-out, session refresh, and keyboard-focus checks at both viewports.
+- Confirmed no overflow, clipping, overlap, unusable mobile spacing, or Yurlib console errors. The only console message was the permitted Electron development CSP warning.
+- Confirmed cleanup: Angular and Compose stopped, the temporary proxy removed, no scan started, the configured source unchanged, and the worktree clean.
+- Marked PR #40 visual acceptance complete. Scan and download acceptance remain covered by the PostgreSQL-backed automated walking-skeleton test rather than this visual run.
+
 ## Result
 
-Implementation is committed and pushed. Pull request #40 is open with green CI; updated owner-access visual acceptance remains pending.
+Implementation is committed and pushed. Pull request #40 is open with green CI and complete automated and visual acceptance evidence.
