@@ -12,12 +12,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.yurlib.server.library.application.LibraryRootStore;
+import org.yurlib.server.library.domain.LibraryRoot;
 
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
+@Transactional
 class YurlibServerIntegrationTest {
 
     @Container
@@ -27,6 +31,9 @@ class YurlibServerIntegrationTest {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private LibraryRootStore libraryRootStore;
+
     @Test
     void appliesFlywayMigrations() {
         var value = JdbcClient.create(dataSource).sql("""
@@ -35,7 +42,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("2");
+        assertThat(value).isEqualTo("3");
     }
 
     @Test
@@ -93,6 +100,31 @@ class YurlibServerIntegrationTest {
                 .param("digest", "0".repeat(64))
                 .update())
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void persistsOnlyTheIdentityDigestForAConfiguredRoot() {
+        var identityDigest = "a".repeat(64);
+        var saved = libraryRootStore.save(new LibraryRoot(
+                UUID.randomUUID(),
+                "Main library",
+                "main",
+                "books",
+                identityDigest,
+                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Availability.AVAILABLE,
+                null));
+
+        assertThat(libraryRootStore.findAll()).containsExactly(saved);
+        var storedDigest = JdbcClient.create(dataSource).sql("""
+                SELECT expected_identity_digest
+                FROM library_root
+                WHERE id = :id
+                """)
+                .param("id", saved.id())
+                .query(String.class)
+                .single();
+        assertThat(storedDigest).isEqualTo(identityDigest);
     }
 
     private static void insertQueuedScan(JdbcClient client, UUID rootId, UUID jobId) {

@@ -1,6 +1,29 @@
 name: yurlib
 
 services:
+  server:
+    build:
+      context: .
+      dockerfile: services/yurlib-server/Dockerfile
+    environment:
+      YURLIB_DB_URL: jdbc:postgresql://postgres:5432/${YURLIB_DB_NAME:-yurlib}
+      YURLIB_DB_USERNAME: ${YURLIB_DB_USERNAME:-yurlib}
+      YURLIB_DB_PASSWORD: ${YURLIB_DB_PASSWORD:-yurlib-dev-only}
+      YURLIB_LIBRARY_MOUNTS_0_ALIAS: main
+      YURLIB_LIBRARY_MOUNTS_0_PATH: /library/main
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${YURLIB_SERVER_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ${YURLIB_LIBRARY_MAIN_PATH:-./.local/library}
+        target: /library/main
+        read_only: true
+        bind:
+          create_host_path: false
+
   postgres:
     image: postgres:18-alpine
     environment:
@@ -15,7 +38,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - yurlib-postgres-data:/var/lib/postgresql/data
+      - yurlib-postgres-data:/var/lib/postgresql
 
 volumes:
   yurlib-postgres-data:

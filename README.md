@@ -344,9 +344,15 @@ npm --prefix web/yurlib-web run build
 Run the applications during development with:
 
 ```bash
+mkdir -p .local/library
+printf '%s\n' 'replace-with-a-private-random-token' > .local/library/.yurlib-root-id
+export YURLIB_LIBRARY_MOUNTS_0_ALIAS=main
+export YURLIB_LIBRARY_MOUNTS_0_PATH="$PWD/.local/library"
 mvn -pl services/yurlib-server spring-boot:run
 npm --prefix web/yurlib-web start
 ```
+
+The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`; Compose mounts that directory at `/library/main` with `read_only: true` and exposes it through the `main` alias.
 
 The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
 

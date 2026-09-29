@@ -22,4 +22,17 @@ class ArchitectureTest {
                         "..infrastructure..")
                 .check(classes);
     }
+
+    @Test
+    void applicationDoesNotDependOnFrameworkDeliveryOrInfrastructure() {
+        noClasses()
+                .that().resideInAPackage("..application..")
+                .should().dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.springframework..",
+                        "jakarta.persistence..",
+                        "..api..",
+                        "..infrastructure..")
+                .check(classes);
+    }
 }
