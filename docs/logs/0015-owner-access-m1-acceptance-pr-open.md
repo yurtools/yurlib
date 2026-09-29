@@ -66,7 +66,8 @@
 - `docker compose config` passes and confirms loopback host bindings.
 - Updated owner-access visual acceptance is pending because no browser instance was connected.
 - Pull request [#40](https://github.com/yurtools/yurlib/pull/40) is open and linked to close issue #22 after merge.
+- Pull request CI passed: backend, frontend, Compose configuration, and dependency review are green.
 
 ## Result
 
-Implementation is committed and pushed. Pull request #40 is open; CI and updated owner-access visual acceptance remain pending.
+Implementation is committed and pushed. Pull request #40 is open with green CI; updated owner-access visual acceptance remains pending.

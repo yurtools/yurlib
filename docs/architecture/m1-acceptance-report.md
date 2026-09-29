@@ -42,4 +42,4 @@ The earlier unauthenticated empty-catalog workbench passed visual verification a
 - Full repository verification: passed (`./mvnw verify`, 88 tests; formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs gates all passed).
 - Frontend and deployment verification: passed (clean npm install with no reported vulnerabilities, 8 Angular tests, production build, and `docker compose config`).
 - Updated owner-access visual and workflow verification: pending.
-- CI pull-request checks: pending.
+- CI pull-request checks: passed on pull request #40 (backend, frontend, Compose configuration, and dependency review).
