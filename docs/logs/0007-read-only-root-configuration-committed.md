@@ -61,4 +61,4 @@
 
 ## Result
 
-Implementation and local verification complete in commit `09159fa` (`feat: secure read-only library roots (#23)`). Pull request and protected-branch checks are pending.
+Implementation and local verification complete in commit `09159fa` (`feat: secure read-only library roots (#23)`). Pull request [#30](https://github.com/yurtools/yurlib/pull/30) is open; protected-branch checks are pending.
