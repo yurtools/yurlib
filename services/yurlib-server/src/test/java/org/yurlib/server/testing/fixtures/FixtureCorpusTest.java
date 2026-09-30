@@ -31,6 +31,7 @@ class FixtureCorpusTest {
                 .contains("<!ENTITY xxe SYSTEM");
         assertThat(root.resolve("valid/minimal.epub")).isRegularFile();
         assertThat(root.resolve("valid/minimal.mobi")).isRegularFile();
+        assertThat(root.resolve("valid/updated-title.mobi")).isRegularFile();
         assertThat(root.resolve("security/traversal.epub")).isRegularFile();
         assertThat(root.resolve("security/decompression-limit.epub")).isRegularFile();
         assertThat(root.resolve("security/symlink-escape")).isSymbolicLink();

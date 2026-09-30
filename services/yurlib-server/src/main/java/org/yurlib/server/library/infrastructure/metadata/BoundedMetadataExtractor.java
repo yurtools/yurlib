@@ -12,7 +12,7 @@ import org.yurlib.server.library.application.MetadataExtractor;
 
 public final class BoundedMetadataExtractor implements MetadataExtractor {
 
-    public static final String EXTRACTION_VERSION = "bounded-metadata-v1";
+    public static final String EXTRACTION_VERSION = "bounded-metadata-v2";
     private static final String CORRUPT_DIAGNOSTIC = "The book file could not be read safely.";
 
     private final FileFactsReader factsReader;

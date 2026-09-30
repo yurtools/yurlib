@@ -81,11 +81,14 @@ class M1WalkingSkeletonAcceptanceTest {
         assertThat(worker.runNext()).isTrue();
         var completed = scans.get(first.id()).job();
         assertThat(completed.state()).isEqualTo(ScanJob.State.SUCCEEDED);
-        assertThat(completed.processedCount()).isEqualTo(5);
+        assertThat(completed.processedCount()).isEqualTo(6);
 
         var firstCatalog = catalog.search(null, 0, 25);
-        assertThat(firstCatalog.totalElements()).isEqualTo(5);
-        assertThat(catalog.search("тестова", 0, 25).items()).singleElement().satisfies(work -> {
+        assertThat(firstCatalog.totalElements()).isEqualTo(6);
+        assertThat(firstCatalog.items())
+                .extracting(CatalogQuery.WorkSummary::title)
+                .contains("Кириллическая MOBI книга", "Updated title");
+        assertThat(catalog.search("тестова", 0, 25).items()).anySatisfy(work -> {
             assertThat(work.title()).isEqualTo("Кириллическая книга");
             assertThat(work.contributors()).containsExactly("Анна Тестова");
         });
@@ -124,7 +127,7 @@ class M1WalkingSkeletonAcceptanceTest {
         assertThat(rescanned.processedCount())
                 .as("second scan outcomes: %s", outcomes)
                 .isZero();
-        assertThat(rescanned.skippedCount()).isEqualTo(5);
+        assertThat(rescanned.skippedCount()).isEqualTo(6);
         assertThat(catalog.search(null, 0, 25).items().stream()
                         .flatMap(work -> work.assets().stream())
                         .map(CatalogQuery.AssetSummary::id)
