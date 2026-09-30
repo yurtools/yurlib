@@ -73,3 +73,15 @@ The owner requested verification that EPUB files were imported and that their me
 - The rejected EPUB has five embedded `.bmp` entries over the current 1 MiB per-entry limit; its largest entry is 16,178,278 bytes. The complete source is 8,132,599 bytes, total declared expansion is 28,317,396 bytes, and its maximum compression ratio is 6.3:1.
 - The rejected archive remains within the separately accepted 256 MiB source, 64 MiB total expansion, and 100:1 ratio limits. Its `PARSE_LIMIT_EXCEEDED` result is therefore caused only by applying the 1 MiB XML-oriented entry limit to unparsed image resources.
 - No EPUB parser change was made in this pull request. Relaxing or separating the accepted per-entry bound changes a documented security boundary and requires an explicit follow-up decision and regression fixture.
+
+### EPUB metadata-quality clarification
+
+The equality check above establishes extraction fidelity only; it does not establish bibliographic correctness. A subsequent semantic review confirmed the owner's observation that the displayed metadata still looks incorrect:
+
+- The source EPUB packages contain OCR/importer metadata with inconsistent title capitalization and punctuation, mixed two- and three-letter language codes, and creator names stored in display-unfriendly source order.
+- One imported EPUB contains no `dc:creator`, so the missing contributor is faithful to the package but incomplete as catalog metadata.
+- Archive access text, opaque source identifiers, ARKs, and ISBNs are all currently retained under positional keys such as `identifier-1`; the EPUB adapter does not classify or normalize identifier types.
+- The adapter selects the first title and language and preserves creator text verbatim. M1 intentionally exposes these as provisional observations and does not infer replacements from filenames or descriptions.
+- Therefore the parser is faithfully preserving the available package fields, while metadata normalization, provenance-aware resolution, and owner curation remain required to produce reliable display metadata. Those concerns belong in the M2 curation design rather than being silently rewritten during ingestion.
+
+After one additional source file was added and scanned, the live catalog contained three imported EPUB assets and one safely rejected EPUB. The new import followed the same source-faithful behavior described above.
