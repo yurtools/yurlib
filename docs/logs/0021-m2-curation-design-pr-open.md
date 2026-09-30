@@ -1,8 +1,10 @@
 # M2 Curation Design
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `docs/41-m2-curation-design`
+- Pull request: [#62](https://github.com/yurtools/yurlib/pull/62)
+- Design commit: `7ba599f`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Repository: `yurtools/yurlib`
 
@@ -118,3 +120,4 @@ The final follow-up asked who may edit shared catalog data and whether tags and 
 - `./mvnw -B verify` passed 91 tests plus formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs checks.
 - `git diff --check` passed.
 - Frontend tests/build and Compose validation were not rerun because this change affects only Markdown design records and GitHub work records; the unrelated local Angular analytics preference was preserved unchanged.
+- Committed the design as `7ba599f`, pushed the short-lived branch, and opened pull request #62 against protected `main` for owner approval.
