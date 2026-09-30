@@ -34,7 +34,7 @@
 
 ## Executed actions
 
-- Created issue [#49](https://github.com/yurtools/yurlib/issues/49), assigned it to milestone `M2 — Curation`, labeled it `engineering` and `m2`, added it to the Yurlib Engineering project, and set its status to Todo.
+- Created issue [#49](https://github.com/yurtools/yurlib/issues/49), made it a sub-issue of Design M2 issue #41, assigned it to milestone `M2 — Curation`, labeled it `engineering` and `m2`, added it to the Yurlib Engineering project, and set its status to Todo.
 - Updated Design M2 issue #41 with dedicated metadata-quality and bounded-streaming sections plus acceptance criteria that make issue #49 required input.
 - Updated the M2 milestone description to include provenance-aware normalization and bounded streaming for every supported format.
 - Updated the product milestone summary and recorded issue #49 as the required successor to the accepted M1 metadata-adapter limits.
