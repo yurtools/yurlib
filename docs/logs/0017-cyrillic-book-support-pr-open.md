@@ -1,9 +1,10 @@
 # Cyrillic Book Support Verification
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-29
 - Branch: `test/43-cyrillic-book-support`
 - Issue: [#43](https://github.com/yurtools/yurlib/issues/43)
+- Pull request: [#44](https://github.com/yurtools/yurlib/pull/44)
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -48,4 +49,4 @@
 - Catalog search matches Cyrillic title, contributor, and filename fragments across tested upper/lowercase forms.
 - The Angular workbench renders Cyrillic title/contributor text and sends Cyrillic search input unchanged.
 - Transliteration, accent folding, language filtering, localized UI strings, and broader locale-specific collation behavior remain outside this verification scope.
-- Commit, push, pull request, and merge results are pending.
+- Implementation was committed as `6d4d262`, pushed, and opened as pull request #44. Merge results are pending.
