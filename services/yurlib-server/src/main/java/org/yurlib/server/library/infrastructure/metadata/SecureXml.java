@@ -16,12 +16,13 @@ final class SecureXml {
 
     private SecureXml() {}
 
-    static Document parse(InputStream input, int maximumBytes) throws IOException, MetadataParsingException {
+    static Document parse(InputStream input, MetadataResourceBudget budget)
+            throws IOException, MetadataParsingException {
+        var maximumBytes = budget.limits().maximumXmlBytes();
+        budget.recordControlledBuffer(maximumBytes + 1);
         var bytes = input.readNBytes(maximumBytes + 1);
         if (bytes.length > maximumBytes) {
-            throw new MetadataParsingException(
-                    MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED,
-                    "An XML metadata document exceeds the configured parsing limit.");
+            throw MetadataParsingException.limit("xml-metadata", maximumBytes, "bytes");
         }
         try {
             var factory = DocumentBuilderFactory.newInstance();
@@ -40,6 +41,10 @@ final class SecureXml {
         } catch (ParserConfigurationException exception) {
             throw new IllegalStateException("The Java runtime does not support secure XML parsing.", exception);
         } catch (SAXException exception) {
+            var metadataFailure = MetadataParsingException.causedBy(exception);
+            if (metadataFailure != null) {
+                throw metadataFailure;
+            }
             throw new MetadataParsingException(
                     MetadataExtractionResult.ErrorCode.CORRUPT_ASSET,
                     "The book contains invalid or prohibited XML.",
@@ -47,12 +52,13 @@ final class SecureXml {
         }
     }
 
-    static String firstText(Document document, String localName) {
+    static String firstText(Document document, String localName, MetadataResourceBudget budget)
+            throws MetadataParsingException {
         var nodes = document.getElementsByTagNameNS("*", localName);
         if (nodes.getLength() == 0) {
             return null;
         }
-        return normalized(nodes.item(0).getTextContent());
+        return normalizedSelected(nodes.item(0).getTextContent(), budget);
     }
 
     static String normalized(String value) {
@@ -61,6 +67,13 @@ final class SecureXml {
         }
         var normalized = value.strip().replaceAll("\\s+", " ");
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    static String normalizedSelected(String value, MetadataResourceBudget budget) throws MetadataParsingException {
+        if (value != null) {
+            budget.checkSelectedValueBytes(value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+        }
+        return normalized(value);
     }
 
     private static final ErrorHandler THROWING_ERROR_HANDLER = new ErrorHandler() {

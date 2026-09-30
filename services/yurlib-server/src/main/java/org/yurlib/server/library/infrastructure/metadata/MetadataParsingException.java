@@ -1,9 +1,10 @@
 package org.yurlib.server.library.infrastructure.metadata;
 
+import java.io.IOException;
 import java.io.Serial;
 import org.yurlib.server.library.application.MetadataExtractionResult;
 
-final class MetadataParsingException extends Exception {
+final class MetadataParsingException extends IOException {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -22,5 +23,27 @@ final class MetadataParsingException extends Exception {
 
     MetadataExtractionResult.ErrorCode code() {
         return code;
+    }
+
+    static MetadataParsingException limit(String resource, long bound, String unit) {
+        return new MetadataParsingException(
+                MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED,
+                "Metadata extraction exceeded the " + resource + " limit (" + bound + " " + unit + ").");
+    }
+
+    static MetadataParsingException limit(String resource, long bound, String unit, Throwable cause) {
+        return new MetadataParsingException(
+                MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED,
+                "Metadata extraction exceeded the " + resource + " limit (" + bound + " " + unit + ").",
+                cause);
+    }
+
+    static MetadataParsingException causedBy(Throwable failure) {
+        for (var cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof MetadataParsingException metadataFailure) {
+                return metadataFailure;
+            }
+        }
+        return null;
     }
 }
