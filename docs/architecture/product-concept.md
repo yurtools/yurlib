@@ -275,12 +275,12 @@ Include partial copies, renamed files, unreachable roots, symlinks, malicious ar
 
 The following phasing is a proposal, not a removal of requested capabilities. V1 is the combined usable product across M1–M3; M1 alone is an early milestone, not a claim that the complete concept has shipped.
 
-| Stage                  | Outcome                                                                                                                                                                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M0 — Foundation        | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks.                                     |
-| M1 — Local library     | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads.                                   |
-| M2 — Curation          | Author aliases and manual merge with history/recovery; tags and collections; duplicate review; supported format conversion; managed output storage; backup/restore verification.                                  |
-| M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow. |
+| Stage                  | Outcome                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 — Foundation        | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks.                                                                                                                                    |
+| M1 — Local library     | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads.                                                                                                                                  |
+| M2 — Curation          | Provenance-aware metadata normalization and owner curation; bounded streaming extraction and parallel ingestion; safe covers; author aliases and merge recovery; personal library state; tags, collections, duplicate review, supported databases, conversion, managed outputs, and backup/restore verification. |
+| M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow.                                                                                                |
 
 ### Follow-on scope
 

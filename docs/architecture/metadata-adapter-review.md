@@ -51,3 +51,9 @@ The application boundary distinguishes:
 - `PARSE_LIMIT_EXCEEDED`.
 
 Plain `.fb2` is supported. `.fb2.zip` and other general archive ingestion remain excluded.
+
+## M2 follow-up
+
+Issue [#49](https://github.com/yurtools/yurlib/issues/49) must replace the coarse M1 limits with an accepted cross-format resource-budget contract. EPUB, FB2, and MOBI metadata extraction must stream or seek only bounded structures and must never materialize the complete ebook in heap memory. The follow-up must retain safe `PARSE_LIMIT_EXCEEDED` outcomes while distinguishing limits for source facts, metadata XML, archive or record structures, selected values, decoded images, and aggregate parallel-ingestion memory.
+
+Until that design and implementation are reviewed, the numeric limits above remain the accepted M1 baseline. In particular, a limit must not be relaxed merely to admit a sample file without deterministic evidence that bytes read and allocations remain bounded.
