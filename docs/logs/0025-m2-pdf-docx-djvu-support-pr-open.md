@@ -1,10 +1,11 @@
 # M2 PDF, DOCX, and DjVu Support
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `feat/51-pdf-docx-djvu`
 - Issue: [#51](https://github.com/yurtools/yurlib/issues/51)
 - Repository: `yurtools/yurlib`
+- Pull request: [#66](https://github.com/yurtools/yurlib/pull/66)
 
 ## Prompt
 
@@ -47,7 +48,8 @@
 - `npm --prefix web/yurlib-web ci`, `test -- --watch=false`, and `run build` passed; 12 Angular tests passed and the production bundle completed.
 - `docker compose config` and `docker compose --profile worker config` passed. Both `server` and `document-worker` images built successfully from clean container contexts.
 - `git diff --check` passed, and the unrelated local Angular analytics preference remained excluded from this work.
+- Committed the implementation as `c5e6f5e`, pushed `feat/51-pdf-docx-djvu`, and opened pull request #66 with `Closes #51`.
 
 ## Blockers
 
-- None. Pull-request publication remains in progress.
+- None. Pull request #66 awaits review and merge.
