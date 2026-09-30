@@ -1,8 +1,10 @@
 # M2 Persisted Users and Root Authorization
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `feat/54-persisted-users-root-authorization`
+- Pull request: [#64](https://github.com/yurtools/yurlib/pull/64)
+- Implementation commit: `121cf2d`
 - Issue: [#54](https://github.com/yurtools/yurlib/issues/54)
 - Repository: `yurtools/yurlib`
 
@@ -33,6 +35,7 @@
 - Updated the active and approved OpenAPI baseline together for the accepted M2 contract changes, including persisted-session fields, administration routes, multiple root modes, and all six M2 formats.
 - Added PostgreSQL/MockMvc acceptance coverage for owner bootstrap, normalized reader creation, default visibility, explicit deny, mixed-root filtering, denied downloads/jobs, stale-session invalidation, independent capability grants, audit events, and owner recovery.
 - Renamed log 0022 to its merged lifecycle state and recorded pull request #63's squash merge commit.
+- Committed the implementation as `121cf2d`, pushed the short-lived branch, and opened pull request #64 against protected `main` with `Closes #54`.
 
 ## Verification
 
