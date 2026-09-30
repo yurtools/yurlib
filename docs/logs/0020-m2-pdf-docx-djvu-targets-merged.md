@@ -1,10 +1,11 @@
 # M2 PDF, DOCX and DjVu Targets
 
-- Status: Pull request open
+- Status: Merged
 - Date: 2026-09-30
 - Branch: `docs/41-add-pdf-docx-djvu`
 - Pull request: [#52](https://github.com/yurtools/yurlib/pull/52)
 - Planning commit: `f378096`
+- Squash-merge commit: `556db0f`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Format issue: [#51](https://github.com/yurtools/yurlib/issues/51)
 - Repository: `yurtools/yurlib`
@@ -50,3 +51,4 @@
 - `git diff --check` passed.
 - Frontend tests/build and Compose validation were not rerun because this change affects only Markdown planning documents and GitHub work records; the unrelated local Angular analytics preference was preserved unchanged.
 - Pull request #52 required checks determine merge readiness.
+- Pull request #52 passed its required checks and was squash-merged into protected `main` as `556db0f`.
