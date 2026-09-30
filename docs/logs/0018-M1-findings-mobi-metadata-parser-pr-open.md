@@ -62,3 +62,14 @@
 - Existing assets recorded with `bounded-metadata-v1` will be parsed again by the next scan under `bounded-metadata-v2` without changing source files.
 - Issue #47 contains the acceptance criteria and is tracked as In Progress in the Yurlib Engineering project.
 - Pull request #48 is open against `main`; its required checks determine merge readiness.
+
+## EPUB verification follow-up
+
+The owner requested verification that EPUB files were imported and that their metadata and scan errors were correct. The running local stack was inspected read-only without recording private titles, contributors, filenames, or physical paths.
+
+- The latest scans discovered three EPUB candidates. Two were imported and one was recorded as a safe per-file failure.
+- For both imported EPUBs, the persisted title and language exactly matched the normalized package metadata. Persisted contributor and identifier counts also exactly matched their package metadata.
+- Focused generated-fixture verification passed 11 tests across `BoundedMetadataExtractorTest` and `M1WalkingSkeletonAcceptanceTest`. This covers EPUB extraction, catalog publication, original-byte download, unchanged rescan, unsafe ZIP paths, decompression limits, and encrypted EPUB classification.
+- The rejected EPUB has five embedded `.bmp` entries over the current 1 MiB per-entry limit; its largest entry is 16,178,278 bytes. The complete source is 8,132,599 bytes, total declared expansion is 28,317,396 bytes, and its maximum compression ratio is 6.3:1.
+- The rejected archive remains within the separately accepted 256 MiB source, 64 MiB total expansion, and 100:1 ratio limits. Its `PARSE_LIMIT_EXCEEDED` result is therefore caused only by applying the 1 MiB XML-oriented entry limit to unparsed image resources.
+- No EPUB parser change was made in this pull request. Relaxing or separating the accepted per-entry bound changes a documented security boundary and requires an explicit follow-up decision and regression fixture.
