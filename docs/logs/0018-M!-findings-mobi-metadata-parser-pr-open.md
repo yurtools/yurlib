@@ -1,9 +1,11 @@
 # M! Findings — MOBI Metadata Parser
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `fix/47-mobi-metadata`
 - Issue: [#47](https://github.com/yurtools/yurlib/issues/47)
+- Pull request: [#48](https://github.com/yurtools/yurlib/pull/48)
+- Implementation commit: `51711a8`
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -59,3 +61,4 @@
 - Cyrillic MOBI titles and contributors are covered by generated-fixture and walking-skeleton tests.
 - Existing assets recorded with `bounded-metadata-v1` will be parsed again by the next scan under `bounded-metadata-v2` without changing source files.
 - Issue #47 contains the acceptance criteria and is tracked as In Progress in the Yurlib Engineering project.
+- Pull request #48 is open against `main`; its required checks determine merge readiness.
