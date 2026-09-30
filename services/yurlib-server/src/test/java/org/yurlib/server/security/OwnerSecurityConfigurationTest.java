@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.yurlib.server.api.SystemController;
@@ -50,6 +52,25 @@ class OwnerSecurityConfigurationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private JdbcUserAccountStore users;
+
+    @BeforeEach
+    void persistedOwner() {
+        var owner = new PersistedUserPrincipal(
+                java.util.UUID.fromString("086d1f87-2268-48a4-ab30-8b3dc46e72df"),
+                "owner",
+                org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder()
+                        .encode("correct horse battery staple"),
+                true,
+                true,
+                1,
+                java.util.Set.of(Capability.MANAGE_INGESTION_SOURCES, Capability.CURATE_CATALOG));
+        org.mockito.Mockito.when(users.hasOwner()).thenReturn(true);
+        org.mockito.Mockito.when(users.loadUserByUsername("owner")).thenReturn(owner);
+        org.mockito.Mockito.when(users.findById(owner.userId())).thenReturn(java.util.Optional.of(owner));
+    }
 
     @Test
     void publishesSessionStateAndCsrfCookieWithoutAuthenticating() throws Exception {

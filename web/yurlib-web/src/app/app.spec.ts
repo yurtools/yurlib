@@ -34,7 +34,7 @@ describe('App', () => {
     expect(labels.some((label) => label === 'Library name')).toBe(true);
     expect(labels.some((label) => label?.startsWith('Allowed mount'))).toBe(true);
     expect(labels.some((label) => label?.startsWith('Identity token'))).toBe(true);
-    expect(options).toEqual(['archive', 'main']);
+    expect(options).toEqual(['Read-only source', 'Managed output', 'archive', 'main']);
     expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
   });
 
@@ -47,7 +47,7 @@ describe('App', () => {
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('#workspace')).toBeNull();
-    expect(element.querySelector('.access-panel')?.textContent).toContain('Owner access');
+    expect(element.querySelector('.access-panel')?.textContent).toContain('Library access');
 
     const password = element.querySelector<HTMLInputElement>('.login-form input[type="password"]')!;
     setInput(password, 'not-retained');
@@ -62,12 +62,15 @@ describe('App', () => {
       mode: 'OWNER',
       authenticated: true,
       username: 'owner',
+      owner: true,
+      capabilities: ['MANAGE_INGESTION_SOURCES', 'CURATE_CATALOG'],
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne('/api/v1/library-mounts').flush([{ alias: 'main' }]);
     http.expectOne('/api/v1/library-roots').flush([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
     expect(element.querySelector('#workspace')).not.toBeNull();
@@ -81,6 +84,27 @@ describe('App', () => {
       element.querySelector<HTMLInputElement>('.login-form input[type="password"]')?.value,
     ).toBe('');
     expect(element.querySelector('.field-error')).toBeNull();
+  });
+
+  it('loads a reader catalog without disclosing source-management controls', async () => {
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: true,
+      username: 'reader',
+      owner: false,
+      capabilities: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('#workspace')).not.toBeNull();
+    expect(element.querySelector('.setup-section')).toBeNull();
+    http.expectNone('/api/v1/library-mounts');
+    http.expectNone('/api/v1/library-roots');
   });
 
   it('submits by keyboard and presents a useful generic credential error', async () => {
@@ -108,7 +132,7 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(element.querySelector('.notice-error')?.textContent).toContain(
-      'Sign-in failed. Check the owner credentials and try again.',
+      'Sign-in failed. Check the credentials and try again.',
     );
     expect(element.textContent).not.toContain('AUTHENTICATION_REQUIRED');
     expect(password.value).toBe('');
@@ -145,6 +169,7 @@ describe('App', () => {
       mountAlias: 'main',
       relativePath: '',
       identityToken: 'private-token-1234',
+      mode: 'READ_ONLY_SOURCE',
     });
     request.flush(root());
     await fixture.whenStable();
@@ -305,6 +330,8 @@ describe('App', () => {
       mode: 'OWNER',
       authenticated: true,
       username: 'owner',
+      owner: true,
+      capabilities: ['MANAGE_INGESTION_SOURCES', 'CURATE_CATALOG'],
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne('/api/v1/library-mounts').flush(mounts);
@@ -325,7 +352,7 @@ describe('App', () => {
       name: 'Main library',
       mountAlias: 'main',
       relativePath: 'books',
-      mode: 'READ_ONLY',
+      mode: 'READ_ONLY_SOURCE',
       availability: 'AVAILABLE',
     };
   }

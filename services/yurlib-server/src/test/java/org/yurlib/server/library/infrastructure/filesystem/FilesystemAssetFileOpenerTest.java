@@ -50,7 +50,7 @@ class FilesystemAssetFileOpenerTest {
                 "main",
                 verified.normalizedRelativePath(),
                 verified.identityDigest(),
-                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Mode.READ_ONLY_SOURCE,
                 LibraryRoot.Availability.AVAILABLE,
                 null);
         opener = new FilesystemAssetFileOpener(rootVerifier);

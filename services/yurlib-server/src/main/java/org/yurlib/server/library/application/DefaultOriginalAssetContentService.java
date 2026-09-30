@@ -1,5 +1,6 @@
 package org.yurlib.server.library.application;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.UUID;
 import org.yurlib.server.library.domain.AssetLocation;
 
@@ -9,6 +10,9 @@ public final class DefaultOriginalAssetContentService implements OriginalAssetCo
     private final LibraryRootStore roots;
     private final AssetFileOpener opener;
 
+    @SuppressFBWarnings(
+            value = "EI_EXPOSE_REP2",
+            justification = "The composition root owns these application ports for the service lifetime.")
     public DefaultOriginalAssetContentService(
             AssetContentStore assets, LibraryRootStore roots, AssetFileOpener opener) {
         this.assets = assets;

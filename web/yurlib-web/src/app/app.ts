@@ -15,6 +15,7 @@ import { EMPTY, Subscription, expand, firstValueFrom, switchMap, timer } from 'r
 import { LibraryApi } from './library-api';
 import {
   CatalogPage,
+  CreateLibraryRootRequest,
   LibraryMount,
   LibraryRoot,
   OwnerSession,
@@ -45,11 +46,12 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
   private pollSubscription?: Subscription;
 
-  protected readonly rootModel = signal({
+  protected readonly rootModel = signal<CreateLibraryRootRequest>({
     name: 'Main library',
     mountAlias: '',
     relativePath: '',
     identityToken: '',
+    mode: 'READ_ONLY_SOURCE',
   });
   protected readonly rootForm = form(this.rootModel, (schema) => {
     required(schema.name, { message: 'Enter a library name.' });
@@ -121,6 +123,11 @@ export class App {
   protected readonly selectedRoot = computed(() =>
     this.roots().find((root) => root.id === this.selectedRootId()),
   );
+  protected readonly canManageSources = computed(
+    () =>
+      this.session()?.mode === 'LOOPBACK_DEVELOPMENT' ||
+      this.session()?.capabilities?.includes('MANAGE_INGESTION_SOURCES'),
+  );
   protected readonly catalogStart = computed(() =>
     this.catalog().totalElements === 0 ? 0 : this.catalog().page * this.catalog().size + 1,
   );
@@ -166,7 +173,13 @@ export class App {
       this.clearWorkspace();
       this.loginModel.update((model) => ({ ...model, password: '' }));
       this.loginForm().reset();
-      this.session.set({ mode: 'OWNER', authenticated: false, username: null });
+      this.session.set({
+        mode: 'OWNER',
+        authenticated: false,
+        username: null,
+        owner: false,
+        capabilities: [],
+      });
     } catch (error) {
       this.accessError.set(this.problemMessage(error, 'Sign-out failed. Try again.'));
     } finally {
@@ -181,7 +194,7 @@ export class App {
       this.rootError.set('');
       try {
         const root = await firstValueFrom(this.api.createRoot(this.rootModel()));
-        this.roots.set([root]);
+        this.roots.update((roots) => [...roots, root]);
         this.selectedRootId.set(root.id);
         this.rootModel.update((model) => ({ ...model, identityToken: '' }));
       } catch (error) {
@@ -239,16 +252,18 @@ export class App {
     this.loadingWorkspace.set(true);
     this.workspaceError.set('');
     try {
-      const [mounts, roots] = await Promise.all([
-        firstValueFrom(this.api.listMounts()),
-        firstValueFrom(this.api.listRoots()),
-      ]);
-      this.mounts.set(mounts);
-      this.roots.set(roots);
-      if (this.rootModel().mountAlias === '' && mounts.length > 0) {
-        this.rootModel.update((model) => ({ ...model, mountAlias: mounts[0].alias }));
+      if (this.canManageSources()) {
+        const [mounts, roots] = await Promise.all([
+          firstValueFrom(this.api.listMounts()),
+          firstValueFrom(this.api.listRoots()),
+        ]);
+        this.mounts.set(mounts);
+        this.roots.set(roots);
+        if (this.rootModel().mountAlias === '' && mounts.length > 0) {
+          this.rootModel.update((model) => ({ ...model, mountAlias: mounts[0].alias }));
+        }
+        if (roots.length > 0) this.selectedRootId.set(roots[0].id);
       }
-      if (roots.length > 0) this.selectedRootId.set(roots[0].id);
     } catch (error) {
       this.workspaceError.set(
         this.problemMessage(error, 'The library workspace could not be loaded.'),
@@ -328,7 +343,13 @@ export class App {
     if (!(error instanceof HttpErrorResponse)) return fallback;
     if (error.status === 401 && this.session()?.mode === 'OWNER') {
       this.clearWorkspace();
-      this.session.set({ mode: 'OWNER', authenticated: false, username: null });
+      this.session.set({
+        mode: 'OWNER',
+        authenticated: false,
+        username: null,
+        owner: false,
+        capabilities: [],
+      });
     }
     const problem = error.error as ProblemDetails | undefined;
     const detail = problem?.detail ?? problem?.title;
@@ -338,7 +359,7 @@ export class App {
 
   private signInMessage(error: unknown) {
     if (error instanceof HttpErrorResponse && error.status === 401) {
-      return 'Sign-in failed. Check the owner credentials and try again.';
+      return 'Sign-in failed. Check the credentials and try again.';
     }
     return this.problemMessage(error, 'Sign-in failed. Try again.');
   }

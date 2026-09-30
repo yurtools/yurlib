@@ -7,6 +7,7 @@ export interface CreateLibraryRootRequest {
   mountAlias: string;
   relativePath: string;
   identityToken: string;
+  mode: 'READ_ONLY_SOURCE' | 'MANAGED_OUTPUT';
 }
 
 export interface LibraryRoot {
@@ -14,7 +15,7 @@ export interface LibraryRoot {
   name: string;
   mountAlias: string;
   relativePath: string;
-  mode: 'READ_ONLY';
+  mode: 'READ_ONLY_SOURCE' | 'MANAGED_OUTPUT';
   availability: 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'IDENTITY_MISMATCH';
   lastSuccessfulScanAt?: string | null;
 }
@@ -45,7 +46,7 @@ export interface ScanJob {
 
 export interface CatalogAsset {
   id: string;
-  format: 'EPUB' | 'FB2' | 'MOBI';
+  format: 'EPUB' | 'FB2' | 'MOBI' | 'PDF' | 'DOCX' | 'DJVU';
   size: number;
   availability: 'AVAILABLE' | 'UNAVAILABLE';
   original: true;
@@ -77,4 +78,6 @@ export interface OwnerSession {
   mode: 'OWNER' | 'LOOPBACK_DEVELOPMENT';
   authenticated: boolean;
   username: string | null;
+  owner: boolean;
+  capabilities: Array<'MANAGE_INGESTION_SOURCES' | 'CURATE_CATALOG'>;
 }

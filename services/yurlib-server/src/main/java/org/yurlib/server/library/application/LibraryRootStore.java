@@ -14,4 +14,6 @@ public interface LibraryRootStore {
     Optional<LibraryRoot> findById(UUID rootId);
 
     List<LibraryRoot> findAll();
+
+    void delete(UUID rootId);
 }

@@ -25,17 +25,7 @@ public class LibraryRootPersistenceAdapter implements LibraryRootStore {
 
     @Override
     public LibraryRoot save(LibraryRoot root) {
-        try {
-            return repository.saveAndFlush(new LibraryRootEntity(root)).toDomain();
-        } catch (DataIntegrityViolationException exception) {
-            if (!isSingleRootConstraintViolation(exception)) {
-                throw exception;
-            }
-            throw new LibraryRootFailure(
-                    LibraryRootFailure.Code.ROOT_ALREADY_CONFIGURED,
-                    "A library root is already configured for this deployment.",
-                    exception);
-        }
+        return repository.saveAndFlush(new LibraryRootEntity(root)).toDomain();
     }
 
     @Override
@@ -50,12 +40,16 @@ public class LibraryRootPersistenceAdapter implements LibraryRootStore {
                 .toList();
     }
 
-    private static boolean isSingleRootConstraintViolation(Throwable failure) {
-        for (Throwable current = failure; current != null; current = current.getCause()) {
-            if (current.getMessage() != null && current.getMessage().contains("library_root_singleton_unique")) {
-                return true;
-            }
+    @Override
+    public void delete(UUID rootId) {
+        try {
+            repository.deleteById(rootId);
+            repository.flush();
+        } catch (DataIntegrityViolationException failure) {
+            throw new LibraryRootFailure(
+                    LibraryRootFailure.Code.ROOT_IN_USE,
+                    "A library root with catalog or job history cannot be removed.",
+                    failure);
         }
-        return false;
     }
 }

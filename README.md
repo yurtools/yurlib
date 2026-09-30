@@ -353,7 +353,18 @@ export YURLIB_LIBRARY_MOUNTS_0_PATH="$PWD/.local/library"
 npm --prefix web/yurlib-web start
 ```
 
-The `loopback-dev` profile binds the backend to `127.0.0.1`; startup fails if that profile is combined with a wildcard or non-loopback address. To exercise owner access over local HTTP instead, omit the profile and set `YURLIB_OWNER_USERNAME`, `YURLIB_OWNER_PASSWORD`, and `YURLIB_SESSION_COOKIE_SECURE=false`. Shared-network deployments must keep the secure-cookie default and terminate TLS at Yurlib or a trusted reverse proxy.
+The `loopback-dev` profile binds the backend to `127.0.0.1`; startup fails if that profile is combined with a wildcard or non-loopback address. To exercise persisted-user access over local HTTP instead, omit the profile and set `YURLIB_OWNER_USERNAME`, `YURLIB_OWNER_PASSWORD`, and `YURLIB_SESSION_COOKIE_SECURE=false`. The first shared-mode start creates the persisted owner. PostgreSQL credentials are authoritative after that transaction, so changing the deployment owner password does not change the login. Shared-network deployments must keep the secure-cookie default and terminate TLS at Yurlib or a trusted reverse proxy.
+
+An operator with local deployment and database access can reset the persisted owner without starting the HTTP server. Stop the normal server, supply the database variables and a new password through the environment, run the recovery main class once, then remove the recovery variable:
+
+```bash
+export YURLIB_OWNER_RECOVERY_PASSWORD='replace-with-a-new-private-password'
+./mvnw -pl services/yurlib-server spring-boot:run \
+  -Dspring-boot.run.main-class=org.yurlib.server.security.OwnerRecoveryCommand
+unset YURLIB_OWNER_RECOVERY_PASSWORD
+```
+
+Recovery increments the owner's authorization version, invalidates existing sessions, records an audit event, and does not log the password.
 
 The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the library at `/library/main` with `read_only: true`, exposes it through the `main` alias, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
 

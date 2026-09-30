@@ -38,6 +38,8 @@ yurlib:
     owner:
       username: ${YURLIB_OWNER_USERNAME:owner}
       password: ${YURLIB_OWNER_PASSWORD:}
+      recovery-mode: false
+      recovery-password: ${YURLIB_OWNER_RECOVERY_PASSWORD:}
   library:
     mounts: []
     scan:

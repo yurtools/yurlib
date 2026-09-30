@@ -29,8 +29,10 @@ public class LibraryRootProblemHandler {
     ProblemDetail handleLibraryRootFailure(LibraryRootFailure failure, HttpServletRequest request) {
         var status =
                 switch (failure.code()) {
-                    case ROOT_NOT_ALLOWED, PATH_ESCAPE -> HttpStatus.BAD_REQUEST;
-                    case ROOT_UNAVAILABLE, ROOT_IDENTITY_MISMATCH, ROOT_ALREADY_CONFIGURED -> HttpStatus.CONFLICT;
+                    case ROOT_NOT_ALLOWED, ROOT_MODE_INVALID, PATH_ESCAPE -> HttpStatus.BAD_REQUEST;
+                    case ROOT_NOT_FOUND -> HttpStatus.NOT_FOUND;
+                    case ROOT_UNAVAILABLE, ROOT_IDENTITY_MISMATCH, ROOT_ALREADY_CONFIGURED, ROOT_OVERLAP, ROOT_IN_USE ->
+                        HttpStatus.CONFLICT;
                 };
         return problem(status, failure.code().name(), failure.getMessage(), request);
     }
@@ -81,8 +83,11 @@ public class LibraryRootProblemHandler {
             case "ROOT_UNAVAILABLE" -> "Library root unavailable";
             case "ROOT_IDENTITY_MISMATCH" -> "Library root identity mismatch";
             case "ROOT_ALREADY_CONFIGURED" -> "Library root already configured";
-            case "PATH_ESCAPE" -> "Library path rejected";
             case "ROOT_NOT_FOUND" -> "Library root not found";
+            case "ROOT_OVERLAP" -> "Library roots overlap";
+            case "ROOT_IN_USE" -> "Library root in use";
+            case "ROOT_MODE_INVALID" -> "Library root mode invalid";
+            case "PATH_ESCAPE" -> "Library path rejected";
             case "JOB_NOT_FOUND" -> "Scan job not found";
             case "SCAN_ALREADY_ACTIVE" -> "Scan already active";
             case "ASSET_NOT_FOUND" -> "Original asset not found";

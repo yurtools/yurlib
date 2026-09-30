@@ -15,6 +15,7 @@ import org.yurlib.server.library.application.ConfigureLibraryRootService;
 import org.yurlib.server.library.application.DefaultCatalogCandidateReconciler;
 import org.yurlib.server.library.application.DefaultOriginalAssetContentService;
 import org.yurlib.server.library.application.DefaultScanJobService;
+import org.yurlib.server.library.application.LibraryRootAccess;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.LibraryRootUseCases;
 import org.yurlib.server.library.application.MetadataExtractor;
@@ -74,8 +75,12 @@ public class LibraryRootConfiguration {
 
     @Bean
     ScanJobUseCases scanJobUseCases(
-            LibraryRootStore roots, ScanJobStore jobs, MetadataExtractor extractor, Clock clock) {
-        return new DefaultScanJobService(roots, jobs, extractor, clock);
+            LibraryRootStore roots,
+            ScanJobStore jobs,
+            LibraryRootAccess access,
+            MetadataExtractor extractor,
+            Clock clock) {
+        return new DefaultScanJobService(roots, jobs, access, extractor, clock);
     }
 
     @Bean
