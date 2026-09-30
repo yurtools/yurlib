@@ -6,7 +6,7 @@ It is designed for people who already have books stored on local disks or NAS de
 
 Yurlib is also being developed as an **AI-native software engineering project**: architecture, requirements, implementation, testing, review, and delivery are designed to work well with modern coding agents while keeping important technical decisions under human control.
 
-> **Project status:** Engineering bootstrap and the first local-library walking skeleton are implemented. M1 acceptance and owner-access verification are in progress.
+> **Project status:** M1 — Local Library is complete. Yurlib can securely configure and scan one read-only source, persist and search a provisional EPUB/FB2/MOBI catalog, report progress and safe failures, and download original assets. M2 curation design is the next planned step.
 
 ---
 

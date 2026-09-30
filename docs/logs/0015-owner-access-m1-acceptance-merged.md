@@ -1,6 +1,6 @@
 # Owner Access and M1 Acceptance
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
 - Branch: `feature/22-owner-access-m1-acceptance`
 - Issue: [#22](https://github.com/yurtools/yurlib/issues/22)
@@ -94,4 +94,4 @@
 
 ## Result
 
-Implementation is committed and pushed. Pull request #40 is open with green CI and complete automated and visual acceptance evidence.
+Implementation was squash-merged through pull request #40 as commit `0aec9dd`, with green CI and complete automated and visual acceptance evidence. Issue #22 is closed.
