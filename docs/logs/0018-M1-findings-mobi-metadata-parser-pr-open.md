@@ -1,4 +1,4 @@
-# M! Findings — MOBI Metadata Parser
+# M1 Findings — MOBI Metadata Parser
 
 - Status: Pull request open
 - Started: 2026-09-30
