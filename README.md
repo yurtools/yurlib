@@ -8,6 +8,8 @@ Yurlib is also being developed as an **AI-native software engineering project**:
 
 > **Project status:** M1 — Local Library is complete. Yurlib can securely configure and scan one read-only source, persist and search a provisional EPUB/FB2/MOBI catalog, report progress and safe failures, and download original assets. M2 curation design is the next planned step.
 
+M2 also targets secure PDF, DOCX, and DjVu discovery, bounded metadata extraction, cataloging, search, and original downloads. Full-text indexing, editing, active-content execution, and conversion routes require separate approved design.
+
 ---
 
 ## Goals
