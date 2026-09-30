@@ -1,11 +1,13 @@
 # M1 Findings — MOBI Metadata Parser
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-30
 - Branch: `fix/47-mobi-metadata`
 - Issue: [#47](https://github.com/yurtools/yurlib/issues/47)
 - Pull request: [#48](https://github.com/yurtools/yurlib/pull/48)
+- Reconciliation pull request: [#50](https://github.com/yurtools/yurlib/pull/50)
 - Implementation commit: `51711a8`
+- Squash-merge commit: `866e059`
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -60,8 +62,8 @@
 - EXTH metadata is detected using the correct flag field, restoring contributor, language, identifier, and updated-title extraction.
 - Cyrillic MOBI titles and contributors are covered by generated-fixture and walking-skeleton tests.
 - Existing assets recorded with `bounded-metadata-v1` will be parsed again by the next scan under `bounded-metadata-v2` without changing source files.
-- Issue #47 contains the acceptance criteria and is tracked as In Progress in the Yurlib Engineering project.
-- Pull request #48 is open against `main`; its required checks determine merge readiness.
+- Issue #47 is closed and its Yurlib Engineering project item is Done.
+- Pull request #48 passed all required checks and was squash-merged into protected `main` as `866e059`.
 
 ## EPUB verification follow-up
 
