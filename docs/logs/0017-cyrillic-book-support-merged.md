@@ -1,7 +1,8 @@
 # Cyrillic Book Support Verification
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-29
+- Merged: 2026-09-30
 - Branch: `test/43-cyrillic-book-support`
 - Issue: [#43](https://github.com/yurtools/yurlib/issues/43)
 - Pull request: [#44](https://github.com/yurtools/yurlib/pull/44)
@@ -33,6 +34,12 @@
 - Added parser, PostgreSQL integration, and walking-skeleton assertions for Cyrillic metadata and search.
 - Added an Angular component test for Cyrillic catalog rendering and unchanged query transport.
 
+### 2026-09-30 — Merge completion
+
+- Pull request #44 passed backend, frontend, Compose, and dependency-review CI.
+- Pull request #44 was squash-merged into `main` as `ce04a27`.
+- Issue #43 closed automatically and its Yurlib Engineering project item moved to Done.
+
 ## Verification
 
 - `./mvnw -B -pl services/yurlib-server -am spotless:apply test -Dtest=BoundedMetadataExtractorTest,FixtureCorpusTest,YurlibServerIntegrationTest,M1WalkingSkeletonAcceptanceTest -Dsurefire.failIfNoSpecifiedTests=false` — passed, 26 focused tests.
@@ -49,4 +56,4 @@
 - Catalog search matches Cyrillic title, contributor, and filename fragments across tested upper/lowercase forms.
 - The Angular workbench renders Cyrillic title/contributor text and sends Cyrillic search input unchanged.
 - Transliteration, accent folding, language filtering, localized UI strings, and broader locale-specific collation behavior remain outside this verification scope.
-- Implementation was committed as `6d4d262`, pushed, and opened as pull request #44. Merge results are pending.
+- Implementation was committed as `6d4d262`, pushed, and squash-merged through pull request #44 as `ce04a27`.
