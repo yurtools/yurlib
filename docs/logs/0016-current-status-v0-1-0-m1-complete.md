@@ -97,6 +97,21 @@ npm --prefix web/yurlib-web ci
 npm --prefix web/yurlib-web start
 ```
 
+If the default PostgreSQL or backend host ports are unavailable, use alternate host ports instead:
+
+```bash
+export YURLIB_DB_PORT=55432
+export YURLIB_SERVER_PORT=18080
+docker compose up -d --build
+npm --prefix web/yurlib-web ci
+sed 's|http://localhost:8080|http://localhost:18080|g' \
+  web/yurlib-web/proxy.conf.json > .local/proxy.manual.json
+npm --prefix web/yurlib-web start -- \
+  --proxy-config ../../.local/proxy.manual.json
+```
+
+With these overrides, the backend health endpoint is `http://localhost:18080/actuator/health`. The browser URL remains `http://localhost:4200/`. The database container still listens on port 5432 inside the Compose network; only its workstation host port changes.
+
 Open `http://localhost:4200/`, sign in as `owner`, and keep the terminal output available for safe correlation identifiers. Never paste the password or root token into an issue.
 
 ### 3. Exercise the primary journey
@@ -137,7 +152,8 @@ Useful feedback questions include:
 
 ```bash
 docker compose down
-unset YURLIB_OWNER_PASSWORD YURLIB_TEST_ROOT_TOKEN
+rm -f .local/proxy.manual.json
+unset YURLIB_DB_PORT YURLIB_SERVER_PORT YURLIB_OWNER_PASSWORD YURLIB_TEST_ROOT_TOKEN
 ```
 
 Delete disposable source material only when it is no longer needed. The PostgreSQL volume is intentionally retained unless the tester explicitly chooses to remove it.
