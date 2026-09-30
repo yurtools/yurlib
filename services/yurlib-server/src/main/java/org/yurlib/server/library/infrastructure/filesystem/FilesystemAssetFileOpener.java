@@ -6,7 +6,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.temporal.ChronoUnit;
+import java.time.Duration;
 import org.yurlib.server.library.application.AssetContentFailure;
 import org.yurlib.server.library.application.AssetContentLocation;
 import org.yurlib.server.library.application.AssetFileOpener;
@@ -70,11 +70,8 @@ public final class FilesystemAssetFileOpener implements AssetFileOpener {
     }
 
     private static boolean samePersistedTimestamp(BasicFileAttributes attributes, AssetContentLocation location) {
-        return attributes
-                .lastModifiedTime()
-                .toInstant()
-                .truncatedTo(ChronoUnit.MICROS)
-                .equals(location.modifiedAt().truncatedTo(ChronoUnit.MICROS));
+        var current = attributes.lastModifiedTime().toInstant();
+        return Duration.between(current, location.modifiedAt()).abs().compareTo(Duration.ofNanos(1_000)) <= 0;
     }
 
     private static boolean fileKeyChanged(String stored, String current) {

@@ -18,12 +18,25 @@ describe('LibraryApi', () => {
   afterEach(() => http.verify());
 
   it('uses relative URLs for every workflow operation', () => {
+    api.session().subscribe();
+    api.login('owner', 'secret').subscribe();
+    api.logout().subscribe();
     api.listMounts().subscribe();
     api.listRoots().subscribe();
     api.startScan('root id').subscribe();
     api.getJob('job id').subscribe();
     api.searchCatalog('book', 2, 12).subscribe();
 
+    expect(
+      http.expectOne((request) => request.url === '/api/v1/session' && request.method === 'GET')
+        .request.url,
+    ).not.toContain('://');
+    const login = http.expectOne(
+      (request) => request.url === '/api/v1/session' && request.method === 'POST',
+    );
+    expect(login.request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded');
+    expect(login.request.body.toString()).toBe('username=owner&password=secret');
+    expect(http.expectOne('/api/v1/session/logout').request.url).not.toContain('://');
     expect(http.expectOne('/api/v1/library-mounts').request.url).not.toContain('://');
     expect(http.expectOne('/api/v1/library-roots').request.url).not.toContain('://');
     expect(http.expectOne('/api/v1/library-roots/root id/scans').request.url).not.toContain('://');

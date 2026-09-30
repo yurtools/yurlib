@@ -2,250 +2,312 @@
   <a class="brand" href="#workspace" aria-label="Yurlib workspace">
     <span class="brand-mark" aria-hidden="true">Y</span><span>Yurlib</span>
   </a>
-  <a class="health-link" href="/actuator/health">
-    <span class="health-dot" aria-hidden="true"></span>Backend health
-  </a>
+  <div class="topbar-actions">
+    <a class="health-link" href="/actuator/health">
+      <span class="health-dot" aria-hidden="true"></span>Backend health
+    </a>
+    @if (session()?.authenticated && session()?.mode === 'OWNER') {
+      <span class="owner-identity">Signed in as <strong>{{ session()?.username }}</strong></span>
+      <button class="sign-out" type="button" (click)="signOut()" [disabled]="signingOut()">
+        {{ signingOut() ? 'Signing out…' : 'Sign out' }}
+      </button>
+    } @else if (session()?.mode === 'LOOPBACK_DEVELOPMENT') {
+      <span class="development-mode">Loopback development</span>
+    }
+  </div>
 </header>
 
-<main id="workspace">
-  <header class="workspace-heading">
-    <div>
-      <p class="eyebrow">Local library</p>
-      <h1>Library workbench</h1>
-    </div>
-    <p class="workspace-summary">
-      Configure one read-only source, follow its scan, then browse and download the original books.
-    </p>
-  </header>
-
-  @if (workspaceError()) {
-    <p class="notice notice-error" role="alert">{{ workspaceError() }}</p>
-  }
-
-  <section class="workspace-section setup-section" aria-labelledby="source-heading">
-    <div class="section-heading">
-      <p class="step">01</p>
-      <div>
-        <h2 id="source-heading">Library source</h2>
-        <p>Yurlib reads this location without modifying the source files.</p>
+@if (checkingSession()) {
+  <main class="access-shell" aria-live="polite">
+    <p class="eyebrow">Owner access</p>
+    <h1>Opening your library…</h1>
+  </main>
+} @else if (!session()?.authenticated) {
+  <main class="access-shell">
+    <section class="access-panel" aria-labelledby="access-heading">
+      <div class="access-intro">
+        <p class="eyebrow">Owner access</p>
+        <h1 id="access-heading">Enter the workbench.</h1>
+        <p>Sign in with the owner credential configured for this Yurlib deployment.</p>
       </div>
-    </div>
-
-    @if (loadingWorkspace()) {
-      <p class="loading" aria-live="polite">Loading configured sources…</p>
-    } @else if (selectedRoot(); as root) {
-      <div class="source-summary">
-        <div>
-          <p class="summary-label">Configured root</p>
-          <p class="source-name">{{ root.name }}</p>
-          <p class="source-path">
-            {{ root.mountAlias }}{{ root.relativePath ? '/' + root.relativePath : '' }}
-          </p>
-        </div>
-        <div class="source-actions">
-          <span class="status" [attr.data-state]="root.availability">
-            {{ formatState(root.availability) }}
-          </span>
-          <button type="button" (click)="startScan()" [disabled]="startingScan()">
-            {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
-          </button>
-        </div>
-      </div>
-      @if (scanError()) {
-        <p class="notice notice-error" role="alert">{{ scanError() }}</p>
-      }
-    } @else {
-      <form class="root-form" (submit)="configureRoot($event)" novalidate>
+      <form class="login-form" (submit)="signIn($event)" (keydown.enter)="signIn($event)" novalidate>
         <label>
-          <span>Library name</span>
-          <input autocomplete="off" [formField]="rootForm.name" />
-          @if (rootForm.name().touched() && rootForm.name().errors()[0]; as error) {
+          <span>Username</span>
+          <input autocomplete="username" [formField]="loginForm.username" />
+          @if (loginForm.username().touched() && loginForm.username().errors()[0]; as error) {
             <small class="field-error">{{ error.message }}</small>
           }
         </label>
-
         <label>
-          <span>Allowed mount</span>
-          <select [formField]="rootForm.mountAlias">
-            @if (mounts().length === 0) {
-              <option value="">No mounts advertised</option>
-            }
-            @for (mount of mounts(); track mount.alias) {
-              <option [value]="mount.alias">{{ mount.alias }}</option>
-            }
-          </select>
-          @if (rootForm.mountAlias().touched() && rootForm.mountAlias().errors()[0]; as error) {
+          <span>Password</span>
+          <input type="password" autocomplete="current-password" [formField]="loginForm.password" />
+          @if (loginForm.password().touched() && loginForm.password().errors()[0]; as error) {
             <small class="field-error">{{ error.message }}</small>
           }
         </label>
-
-        <label>
-          <span>Path within mount <em>optional</em></span>
-          <input autocomplete="off" placeholder="books" [formField]="rootForm.relativePath" />
-          @if (rootForm.relativePath().touched() && rootForm.relativePath().errors()[0]; as error) {
-            <small class="field-error">{{ error.message }}</small>
-          }
-        </label>
-
-        <label>
-          <span>Identity token</span>
-          <input type="password" autocomplete="off" [formField]="rootForm.identityToken" />
-          <small>Must match the private token stored in <code>.yurlib-root-id</code>.</small>
-          @if (
-            rootForm.identityToken().touched() && rootForm.identityToken().errors()[0];
-            as error
-          ) {
-            <small class="field-error">{{ error.message }}</small>
-          }
-        </label>
-
-        <div class="form-action">
-          <button
-            type="submit"
-            [disabled]="rootForm().invalid() || savingRoot() || mounts().length === 0"
-          >
-            {{ savingRoot() ? 'Verifying source…' : 'Configure source' }}
-          </button>
-          <p>The identity token is verified and never returned by the server.</p>
-        </div>
+        @if (accessError()) {
+          <p class="notice notice-error" role="alert">{{ accessError() }}</p>
+        }
+        <button
+          type="submit"
+          (keydown.space)="signIn($event)"
+          [disabled]="loginForm().invalid() || signingIn()"
+        >
+          {{ signingIn() ? 'Signing in…' : 'Sign in' }}
+        </button>
+        <p class="credential-note">
+          Credentials stay in this request and are never stored by the browser.
+        </p>
       </form>
-      @if (rootError()) {
-        <p class="notice notice-error" role="alert">{{ rootError() }}</p>
-      }
-    }
-  </section>
+    </section>
+  </main>
+} @else {
+  <main id="workspace">
+    <header class="workspace-heading">
+      <div>
+        <p class="eyebrow">Local library</p>
+        <h1>Library workbench</h1>
+      </div>
+      <p class="workspace-summary">
+        Configure one read-only source, follow its scan, then browse and download the original
+        books.
+      </p>
+    </header>
 
-  @if (job(); as currentJob) {
-    <section class="workspace-section" aria-labelledby="scan-heading" aria-live="polite">
+    @if (workspaceError()) {
+      <p class="notice notice-error" role="alert">{{ workspaceError() }}</p>
+    }
+
+    <section class="workspace-section setup-section" aria-labelledby="source-heading">
       <div class="section-heading">
-        <p class="step">02</p>
+        <p class="step">01</p>
         <div>
-          <h2 id="scan-heading">Scan progress</h2>
-          <p>Job {{ currentJob.id }}</p>
+          <h2 id="source-heading">Library source</h2>
+          <p>Yurlib reads this location without modifying the source files.</p>
         </div>
-        <span class="status scan-state" [attr.data-state]="currentJob.state">
-          {{ formatState(currentJob.state) }}
-        </span>
       </div>
 
-      <dl class="scan-counts">
-        <div>
-          <dt>Discovered</dt>
-          <dd>{{ currentJob.discoveredCount }}</dd>
+      @if (loadingWorkspace()) {
+        <p class="loading" aria-live="polite">Loading configured sources…</p>
+      } @else if (selectedRoot(); as root) {
+        <div class="source-summary">
+          <div>
+            <p class="summary-label">Configured root</p>
+            <p class="source-name">{{ root.name }}</p>
+            <p class="source-path">
+              {{ root.mountAlias }}{{ root.relativePath ? '/' + root.relativePath : '' }}
+            </p>
+          </div>
+          <div class="source-actions">
+            <span class="status" [attr.data-state]="root.availability">
+              {{ formatState(root.availability) }}
+            </span>
+            <button type="button" (click)="startScan()" [disabled]="startingScan()">
+              {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
+            </button>
+          </div>
         </div>
-        <div>
-          <dt>Processed</dt>
-          <dd>{{ currentJob.processedCount }}</dd>
-        </div>
-        <div>
-          <dt>Skipped</dt>
-          <dd>{{ currentJob.skippedCount }}</dd>
-        </div>
-        <div>
-          <dt>Failed</dt>
-          <dd>{{ currentJob.failedCount }}</dd>
-        </div>
-      </dl>
-
-      @if (currentJob.failures.length > 0) {
-        <div class="failures">
-          <h3>File failures</h3>
-          <ul>
-            @for (failure of currentJob.failures; track failure.relativePath + failure.code) {
-              <li>
-                <code>{{ failure.relativePath }}</code
-                ><strong>{{ failure.code }}</strong>
-                <span>{{ failure.detail }}</span>
-              </li>
+        @if (scanError()) {
+          <p class="notice notice-error" role="alert">{{ scanError() }}</p>
+        }
+      } @else {
+        <form class="root-form" (submit)="configureRoot($event)" novalidate>
+          <label>
+            <span>Library name</span>
+            <input autocomplete="off" [formField]="rootForm.name" />
+            @if (rootForm.name().touched() && rootForm.name().errors()[0]; as error) {
+              <small class="field-error">{{ error.message }}</small>
             }
-          </ul>
-        </div>
+          </label>
+
+          <label>
+            <span>Allowed mount</span>
+            <select [formField]="rootForm.mountAlias">
+              @if (mounts().length === 0) {
+                <option value="">No mounts advertised</option>
+              }
+              @for (mount of mounts(); track mount.alias) {
+                <option [value]="mount.alias">{{ mount.alias }}</option>
+              }
+            </select>
+            @if (rootForm.mountAlias().touched() && rootForm.mountAlias().errors()[0]; as error) {
+              <small class="field-error">{{ error.message }}</small>
+            }
+          </label>
+
+          <label>
+            <span>Path within mount <em>optional</em></span>
+            <input autocomplete="off" placeholder="books" [formField]="rootForm.relativePath" />
+            @if (
+              rootForm.relativePath().touched() && rootForm.relativePath().errors()[0];
+              as error
+            ) {
+              <small class="field-error">{{ error.message }}</small>
+            }
+          </label>
+
+          <label>
+            <span>Identity token</span>
+            <input type="password" autocomplete="off" [formField]="rootForm.identityToken" />
+            <small>Must match the private token stored in <code>.yurlib-root-id</code>.</small>
+            @if (
+              rootForm.identityToken().touched() && rootForm.identityToken().errors()[0];
+              as error
+            ) {
+              <small class="field-error">{{ error.message }}</small>
+            }
+          </label>
+
+          <div class="form-action">
+            <button
+              type="submit"
+              [disabled]="rootForm().invalid() || savingRoot() || mounts().length === 0"
+            >
+              {{ savingRoot() ? 'Verifying source…' : 'Configure source' }}
+            </button>
+            <p>The identity token is verified and never returned by the server.</p>
+          </div>
+        </form>
+        @if (rootError()) {
+          <p class="notice notice-error" role="alert">{{ rootError() }}</p>
+        }
       }
     </section>
-  }
 
-  <section class="workspace-section catalog-section" aria-labelledby="catalog-heading">
-    <div class="section-heading catalog-heading">
-      <p class="step">03</p>
-      <div>
-        <h2 id="catalog-heading">Catalog</h2>
-        <p>{{ catalogStart() }}–{{ catalogEnd() }} of {{ catalog().totalElements }} works</p>
-      </div>
-      <form class="search" (submit)="searchCatalog($event)" role="search">
-        <label for="catalog-query">Search catalog</label>
-        <div>
-          <input
-            id="catalog-query"
-            type="search"
-            placeholder="Title, contributor, file…"
-            [formField]="searchForm.query"
-          />
-          <button type="submit" [disabled]="searchForm().invalid() || loadingCatalog()">
-            Search
-          </button>
+    @if (job(); as currentJob) {
+      <section class="workspace-section" aria-labelledby="scan-heading" aria-live="polite">
+        <div class="section-heading">
+          <p class="step">02</p>
+          <div>
+            <h2 id="scan-heading">Scan progress</h2>
+            <p>Job {{ currentJob.id }}</p>
+          </div>
+          <span class="status scan-state" [attr.data-state]="currentJob.state">
+            {{ formatState(currentJob.state) }}
+          </span>
         </div>
-        @if (searchForm.query().touched() && searchForm.query().errors()[0]; as error) {
-          <small class="field-error">{{ error.message }}</small>
-        }
-      </form>
-    </div>
 
-    @if (catalogError()) {
-      <p class="notice notice-error" role="alert">{{ catalogError() }}</p>
-    } @else if (loadingCatalog()) {
-      <p class="loading" aria-live="polite">Loading catalog…</p>
-    } @else {
-      <div class="catalog-list">
-        @for (work of catalog().items; track work.id) {
-          <article class="work-row">
-            <div class="work-copy">
-              <p class="work-kicker">
-                @if (work.provisional) {
-                  <span class="provisional">Provisional</span>
-                } @else {
-                  <span>Cataloged</span>
-                }
-                · {{ work.assets.length }} {{ work.assets.length === 1 ? 'file' : 'files' }}
-              </p>
-              <h3>{{ work.title || 'Untitled work' }}</h3>
-              <p class="contributors">
-                {{
-                  work.contributors?.length ? work.contributors?.join(', ') : 'Contributor unknown'
-                }}
-              </p>
-            </div>
-            <ul class="asset-list" aria-label="Available files">
-              @for (asset of work.assets; track asset.id) {
+        <dl class="scan-counts">
+          <div>
+            <dt>Discovered</dt>
+            <dd>{{ currentJob.discoveredCount }}</dd>
+          </div>
+          <div>
+            <dt>Processed</dt>
+            <dd>{{ currentJob.processedCount }}</dd>
+          </div>
+          <div>
+            <dt>Skipped</dt>
+            <dd>{{ currentJob.skippedCount }}</dd>
+          </div>
+          <div>
+            <dt>Failed</dt>
+            <dd>{{ currentJob.failedCount }}</dd>
+          </div>
+        </dl>
+
+        @if (currentJob.failures.length > 0) {
+          <div class="failures">
+            <h3>File failures</h3>
+            <ul>
+              @for (failure of currentJob.failures; track failure.relativePath + failure.code) {
                 <li>
-                  <span
-                    ><strong>{{ asset.format }}</strong> · {{ formatBytes(asset.size) }}</span
-                  >
-                  @if (asset.availability === 'AVAILABLE') {
-                    <a [href]="downloadUrl(asset.id)" download>Download original</a>
-                  } @else {
-                    <span class="unavailable">Unavailable</span>
-                  }
+                  <code>{{ failure.relativePath }}</code
+                  ><strong>{{ failure.code }}</strong>
+                  <span>{{ failure.detail }}</span>
                 </li>
               }
             </ul>
-          </article>
-        } @empty {
-          <div class="empty-state">
-            <p class="empty-title">No works found</p>
-            <p>Configure a source and complete a scan, or try a different search.</p>
           </div>
         }
+      </section>
+    }
+
+    <section class="workspace-section catalog-section" aria-labelledby="catalog-heading">
+      <div class="section-heading catalog-heading">
+        <p class="step">03</p>
+        <div>
+          <h2 id="catalog-heading">Catalog</h2>
+          <p>{{ catalogStart() }}–{{ catalogEnd() }} of {{ catalog().totalElements }} works</p>
+        </div>
+        <form class="search" (submit)="searchCatalog($event)" role="search">
+          <label for="catalog-query">Search catalog</label>
+          <div>
+            <input
+              id="catalog-query"
+              type="search"
+              placeholder="Title, contributor, file…"
+              [formField]="searchForm.query"
+            />
+            <button type="submit" [disabled]="searchForm().invalid() || loadingCatalog()">
+              Search
+            </button>
+          </div>
+          @if (searchForm.query().touched() && searchForm.query().errors()[0]; as error) {
+            <small class="field-error">{{ error.message }}</small>
+          }
+        </form>
       </div>
 
-      <nav class="pagination" aria-label="Catalog pages">
-        <button type="button" (click)="previousPage()" [disabled]="!hasPreviousPage()">
-          Previous
-        </button>
-        <span>Page {{ catalog().page + 1 }}</span>
-        <button type="button" (click)="nextPage()" [disabled]="!hasNextPage()">Next</button>
-      </nav>
-    }
-  </section>
-</main>
+      @if (catalogError()) {
+        <p class="notice notice-error" role="alert">{{ catalogError() }}</p>
+      } @else if (loadingCatalog()) {
+        <p class="loading" aria-live="polite">Loading catalog…</p>
+      } @else {
+        <div class="catalog-list">
+          @for (work of catalog().items; track work.id) {
+            <article class="work-row">
+              <div class="work-copy">
+                <p class="work-kicker">
+                  @if (work.provisional) {
+                    <span class="provisional">Provisional</span>
+                  } @else {
+                    <span>Cataloged</span>
+                  }
+                  · {{ work.assets.length }} {{ work.assets.length === 1 ? 'file' : 'files' }}
+                </p>
+                <h3>{{ work.title || 'Untitled work' }}</h3>
+                <p class="contributors">
+                  {{
+                    work.contributors?.length
+                      ? work.contributors?.join(', ')
+                      : 'Contributor unknown'
+                  }}
+                </p>
+              </div>
+              <ul class="asset-list" aria-label="Available files">
+                @for (asset of work.assets; track asset.id) {
+                  <li>
+                    <span
+                      ><strong>{{ asset.format }}</strong> · {{ formatBytes(asset.size) }}</span
+                    >
+                    @if (asset.availability === 'AVAILABLE') {
+                      <a [href]="downloadUrl(asset.id)" download>Download original</a>
+                    } @else {
+                      <span class="unavailable">Unavailable</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </article>
+          } @empty {
+            <div class="empty-state">
+              <p class="empty-title">No works found</p>
+              <p>Configure a source and complete a scan, or try a different search.</p>
+            </div>
+          }
+        </div>
+
+        <nav class="pagination" aria-label="Catalog pages">
+          <button type="button" (click)="previousPage()" [disabled]="!hasPreviousPage()">
+            Previous
+          </button>
+          <span>Page {{ catalog().page + 1 }}</span>
+          <button type="button" (click)="nextPage()" [disabled]="!hasNextPage()">Next</button>
+        </nav>
+      }
+    </section>
+  </main>
+}
 
 <footer><span>Yurlib</span><span>Original files remain read-only.</span></footer>

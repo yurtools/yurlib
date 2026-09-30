@@ -186,15 +186,16 @@ The UI must not embed backend hosts. Development and deployment routing provide 
 
 ## 11. Access model
 
-An explicit loopback-development profile may bypass login only when the server binds to loopback. Any non-loopback listener requires authenticated owner access before M1 release. Administrative root configuration and scan start operations require owner authority; catalog read/download policy remains owner-only for M1.
+ADR-0004 selects Spring Security server-side sessions for one deployment-defined owner. An explicit `loopback-dev` profile may bypass login only when the server binds to loopback; startup rejects wildcard or non-loopback addresses in that profile. Every non-loopback deployment requires owner credentials supplied outside Git and TLS at Yurlib or a trusted reverse proxy.
 
-Authentication implementation is a separate M1 issue so that the walking skeleton can prove ingestion locally without pretending that LAN access is authorization.
+All `/api/**` operations other than session discovery and login require owner authority. Spring Security CSRF protection uses the `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` header convention used by Angular. Health and readiness remain public, while other actuator endpoints require the owner.
 
 ## 12. Observability
 
 - Preserve or accept a correlation ID at the API boundary and attach it to scan creation.
 - Log root IDs and safe relative paths only at restricted diagnostic levels; do not log physical prefixes or identity tokens.
 - Emit job duration, discovered/processed/skipped/failed counts, parser failure counts, and current queue depth.
+- M1 emits `yurlib.scan.duration`, `yurlib.scan.jobs`, `yurlib.scan.files`, `yurlib.scan.parser.failures`, and `yurlib.scan.queue.depth`; metric tags are bounded state or error-code values.
 - Health remains process health; readiness fails when required PostgreSQL connectivity is unavailable, not merely because a library root is disconnected.
 - Root availability and scan health are domain/API state, not application liveness.
 

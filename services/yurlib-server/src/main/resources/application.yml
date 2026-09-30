@@ -26,8 +26,18 @@ management:
 
 server:
   shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${YURLIB_SESSION_COOKIE_SECURE:true}
 
 yurlib:
+  security:
+    owner:
+      username: ${YURLIB_OWNER_USERNAME:owner}
+      password: ${YURLIB_OWNER_PASSWORD:}
   library:
     mounts: []
     scan:

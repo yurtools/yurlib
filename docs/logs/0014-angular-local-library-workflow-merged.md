@@ -1,6 +1,6 @@
 # Angular Local-Library Workflow
 
-- Status: Pull request open (draft)
+- Status: Merged
 - Started: 2026-09-29
 - Branch: `feature/26-angular-local-library-workflow`
 - Issue: [#26](https://github.com/yurtools/yurlib/issues/26)
@@ -53,6 +53,11 @@
 - Opened draft pull request [#39](https://github.com/yurtools/yurlib/pull/39), linked to close issue #26 after merge.
 - Kept the pull request in draft state until desktop/mobile rendered inspection was completed, then marked it ready for review.
 
+### 2026-09-29 — Merge reconciliation
+
+- Confirmed pull request #39 was squash-merged to protected `main` as `ddd310e`.
+- Confirmed issue #26 closed automatically and its Yurlib Engineering project item moved to `Done`.
+
 ## Verification
 
 - `npm --prefix web/yurlib-web run build` — passed; production bundle completed without budget warnings.
@@ -69,4 +74,4 @@
 
 ## Result
 
-Pull request #39 is ready for review. Automated verification, live relative-route smoke checks, and rendered desktop/mobile inspection pass.
+Pull request #39 was squash-merged as `ddd310e`; issue #26 is closed and its project item is `Done`.

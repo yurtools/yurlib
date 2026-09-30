@@ -1,6 +1,7 @@
 package org.yurlib.server.library.application;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.UUID;
 
 public final class DefaultCatalogCandidateReconciler implements CatalogCandidateReconciler {
@@ -45,8 +46,12 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
     private static boolean unchanged(
             CatalogLocationSnapshot location, ScanDiscovery.Candidate candidate, String extractionVersion) {
         return location.byteSize() == candidate.byteSize()
-                && location.modifiedAt().equals(candidate.modifiedAt())
+                && timestampMatches(location.modifiedAt(), candidate.modifiedAt())
                 && location.extractionVersion().equals(extractionVersion);
+    }
+
+    private static boolean timestampMatches(java.time.Instant first, java.time.Instant second) {
+        return Duration.between(first, second).abs().compareTo(Duration.ofNanos(1_000)) <= 0;
     }
 
     private static CandidateReconciliationResult failedExtraction(MetadataExtractionResult extraction) {

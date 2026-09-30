@@ -17,6 +17,7 @@ import {
   CatalogPage,
   LibraryMount,
   LibraryRoot,
+  OwnerSession,
   ProblemDetails,
   ScanJob,
   ScanState,
@@ -85,6 +86,14 @@ export class App {
     maxLength(schema.query, 200, { message: 'Use 200 characters or fewer.' });
   });
 
+  protected readonly loginModel = signal({ username: 'owner', password: '' });
+  protected readonly loginForm = form(this.loginModel, (schema) => {
+    required(schema.username, { message: 'Enter the owner username.' });
+    maxLength(schema.username, 100, { message: 'Use 100 characters or fewer.' });
+    required(schema.password, { message: 'Enter the owner password.' });
+    maxLength(schema.password, 1024, { message: 'Use 1024 characters or fewer.' });
+  });
+
   protected readonly mounts = signal<LibraryMount[]>([]);
   protected readonly roots = signal<LibraryRoot[]>([]);
   protected readonly selectedRootId = signal('');
@@ -103,6 +112,11 @@ export class App {
   protected readonly rootError = signal('');
   protected readonly scanError = signal('');
   protected readonly catalogError = signal('');
+  protected readonly session = signal<OwnerSession | undefined>(undefined);
+  protected readonly checkingSession = signal(true);
+  protected readonly signingIn = signal(false);
+  protected readonly signingOut = signal(false);
+  protected readonly accessError = signal('');
 
   protected readonly selectedRoot = computed(() =>
     this.roots().find((root) => root.id === this.selectedRootId()),
@@ -119,7 +133,45 @@ export class App {
   );
 
   constructor() {
-    void this.loadWorkspace();
+    void this.loadSession();
+  }
+
+  protected signIn(event: Event) {
+    event.preventDefault();
+    if (this.signingIn()) return;
+    submit(this.loginForm, async () => {
+      this.signingIn.set(true);
+      this.accessError.set('');
+      const credentials = this.loginModel();
+      try {
+        await firstValueFrom(this.api.login(credentials.username.trim(), credentials.password));
+        const session = await firstValueFrom(this.api.session());
+        this.session.set(session);
+        if (session.authenticated) await this.loadWorkspace();
+      } catch (error) {
+        this.accessError.set(this.signInMessage(error));
+      } finally {
+        this.loginModel.update((model) => ({ ...model, password: '' }));
+        this.loginForm().reset();
+        this.signingIn.set(false);
+      }
+    });
+  }
+
+  protected async signOut() {
+    this.signingOut.set(true);
+    this.accessError.set('');
+    try {
+      await firstValueFrom(this.api.logout());
+      this.clearWorkspace();
+      this.loginModel.update((model) => ({ ...model, password: '' }));
+      this.loginForm().reset();
+      this.session.set({ mode: 'OWNER', authenticated: false, username: null });
+    } catch (error) {
+      this.accessError.set(this.problemMessage(error, 'Sign-out failed. Try again.'));
+    } finally {
+      this.signingOut.set(false);
+    }
   }
 
   protected configureRoot(event: SubmitEvent) {
@@ -207,6 +259,29 @@ export class App {
     await this.loadCatalog(0);
   }
 
+  private async loadSession() {
+    this.checkingSession.set(true);
+    this.accessError.set('');
+    try {
+      const session = await firstValueFrom(this.api.session());
+      this.session.set(session);
+      if (session.authenticated) await this.loadWorkspace();
+    } catch (error) {
+      this.accessError.set(this.problemMessage(error, 'Yurlib access could not be checked.'));
+    } finally {
+      this.checkingSession.set(false);
+    }
+  }
+
+  private clearWorkspace() {
+    this.pollSubscription?.unsubscribe();
+    this.mounts.set([]);
+    this.roots.set([]);
+    this.selectedRootId.set('');
+    this.job.set(undefined);
+    this.catalog.set({ items: [], page: 0, size: App.CATALOG_PAGE_SIZE, totalElements: 0 });
+  }
+
   private async loadCatalog(page: number) {
     this.loadingCatalog.set(true);
     this.catalogError.set('');
@@ -251,9 +326,20 @@ export class App {
 
   private problemMessage(error: unknown, fallback: string) {
     if (!(error instanceof HttpErrorResponse)) return fallback;
+    if (error.status === 401 && this.session()?.mode === 'OWNER') {
+      this.clearWorkspace();
+      this.session.set({ mode: 'OWNER', authenticated: false, username: null });
+    }
     const problem = error.error as ProblemDetails | undefined;
     const detail = problem?.detail ?? problem?.title;
     const code = problem?.code;
     return detail && code ? `${detail} (${code})` : detail || fallback;
+  }
+
+  private signInMessage(error: unknown) {
+    if (error instanceof HttpErrorResponse && error.status === 401) {
+      return 'Sign-in failed. Check the owner credentials and try again.';
+    }
+    return this.problemMessage(error, 'Sign-in failed. Try again.');
   }
 }

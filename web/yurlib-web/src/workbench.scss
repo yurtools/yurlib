@@ -41,6 +41,32 @@ app-root {
     display: inline-flex;
     text-decoration: none;
   }
+  .topbar-actions {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+  }
+  .sign-out {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--accent);
+    padding: 0.65rem 0.9rem;
+  }
+  .owner-identity {
+    color: var(--muted);
+    font-size: 0.76rem;
+  }
+  .owner-identity strong {
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .development-mode {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .brand {
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 1.35rem;
@@ -73,6 +99,54 @@ app-root {
   }
   main {
     padding-block: clamp(2.5rem, 6vw, 6rem) 5rem;
+  }
+  .access-shell {
+    align-items: center;
+    display: flex;
+    min-height: calc(100vh - 10rem);
+  }
+  .access-shell > .eyebrow {
+    margin-right: 1.5rem;
+  }
+  .access-shell > h1 {
+    font-size: clamp(2.4rem, 6vw, 5.4rem);
+  }
+  .access-panel {
+    align-items: end;
+    border-block: 1px solid var(--line);
+    display: grid;
+    gap: clamp(3rem, 9vw, 9rem);
+    grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+    padding-block: clamp(3rem, 7vw, 6rem);
+    width: 100%;
+  }
+  .access-intro h1 {
+    font-size: clamp(3.25rem, 8vw, 7rem);
+    max-width: 10ch;
+  }
+  .access-intro > p:last-child {
+    color: var(--muted);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    max-width: 34rem;
+  }
+  .login-form {
+    display: grid;
+    gap: 1.4rem;
+  }
+  .login-form .notice {
+    margin: 0;
+  }
+  .login-form button {
+    justify-self: start;
+    min-width: 7.5rem;
+  }
+  .credential-note {
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.5;
+    margin: 0;
   }
   .workspace-heading {
     align-items: end;
@@ -449,6 +523,7 @@ app-root {
       padding-top: 2rem;
     }
     .workspace-heading,
+    .access-panel,
     .section-heading,
     .catalog-heading,
     .work-row {
@@ -456,6 +531,19 @@ app-root {
     }
     .workspace-heading {
       gap: 1.25rem;
+    }
+    .access-shell {
+      min-height: calc(100vh - 8rem);
+    }
+    .access-panel {
+      align-items: start;
+      gap: 2.5rem;
+    }
+    .access-intro h1 {
+      font-size: clamp(3rem, 16vw, 5rem);
+    }
+    .health-link {
+      display: none;
     }
     h1 {
       font-size: clamp(3.2rem, 18vw, 5.6rem);

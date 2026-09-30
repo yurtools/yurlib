@@ -23,6 +23,7 @@ import org.yurlib.server.library.application.OriginalAssetContentUseCases;
 import org.yurlib.server.library.application.RootLocationVerifier;
 import org.yurlib.server.library.application.ScanDiscovery;
 import org.yurlib.server.library.application.ScanJobStore;
+import org.yurlib.server.library.application.ScanJobTelemetry;
 import org.yurlib.server.library.application.ScanJobUseCases;
 import org.yurlib.server.library.application.ScanJobWorker;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemAssetFileOpener;
@@ -102,7 +103,9 @@ public class LibraryRootConfiguration {
             CatalogCandidateReconciler candidateReconciler,
             MissingLocationReconciler reconciler,
             Clock clock,
+            ScanJobTelemetry telemetry,
             @Value("${yurlib.library.scan.lease-timeout:PT1M}") Duration leaseTimeout) {
-        return new ScanJobWorker(roots, jobs, discovery, candidateReconciler, reconciler, clock, leaseTimeout);
+        return new ScanJobWorker(
+                roots, jobs, discovery, candidateReconciler, reconciler, clock, leaseTimeout, telemetry);
     }
 }

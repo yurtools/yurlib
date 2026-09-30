@@ -5,12 +5,28 @@ import {
   CreateLibraryRootRequest,
   LibraryMount,
   LibraryRoot,
+  OwnerSession,
   ScanJob,
 } from './library.model';
 
 @Injectable({ providedIn: 'root' })
 export class LibraryApi {
   private readonly http = inject(HttpClient);
+
+  session() {
+    return this.http.get<OwnerSession>('/api/v1/session');
+  }
+
+  login(username: string, password: string) {
+    const body = new HttpParams().set('username', username).set('password', password);
+    return this.http.post<void>('/api/v1/session', body, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+  }
+
+  logout() {
+    return this.http.post<void>('/api/v1/session/logout', undefined);
+  }
 
   listMounts() {
     return this.http.get<LibraryMount[]>('/api/v1/library-mounts');

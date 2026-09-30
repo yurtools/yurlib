@@ -14,6 +14,7 @@ public final class ScanJobWorker {
     private final MissingLocationReconciler reconciler;
     private final Clock clock;
     private final Duration leaseTimeout;
+    private final ScanJobTelemetry telemetry;
 
     public ScanJobWorker(
             LibraryRootStore roots,
@@ -22,7 +23,8 @@ public final class ScanJobWorker {
             CatalogCandidateReconciler candidateReconciler,
             MissingLocationReconciler reconciler,
             Clock clock,
-            Duration leaseTimeout) {
+            Duration leaseTimeout,
+            ScanJobTelemetry telemetry) {
         this.roots = roots;
         this.jobs = jobs;
         this.discovery = discovery;
@@ -30,6 +32,7 @@ public final class ScanJobWorker {
         this.reconciler = reconciler;
         this.clock = clock;
         this.leaseTimeout = leaseTimeout;
+        this.telemetry = telemetry;
     }
 
     public boolean runNext() {
@@ -40,17 +43,23 @@ public final class ScanJobWorker {
         }
 
         var job = claimed.get();
+        telemetry.started(job);
         try {
             var root = roots.findById(job.libraryRootId()).orElseThrow();
             var listener = new PersistingDiscoveryListener(
-                    root.id(), job.id(), job.extractionVersion(), jobs, candidateReconciler, clock);
+                    root.id(), job.id(), job.extractionVersion(), jobs, candidateReconciler, clock, telemetry);
             var result = discovery.discover(root, listener);
             if (result.coverageComplete()) {
                 reconciler.reconcileAfterCompleteScan(root.id(), job.id());
             }
-            jobs.complete(job.id(), result.coverageComplete(), clock.instant());
+            var completedAt = clock.instant();
+            var completed = jobs.complete(job.id(), result.coverageComplete(), completedAt);
+            telemetry.completed(completed, Duration.between(claimedAt, completedAt));
         } catch (RuntimeException failure) {
-            jobs.fail(job.id(), safeSummary(failure), clock.instant());
+            var failedAt = clock.instant();
+            var summary = safeSummary(failure);
+            var failed = jobs.fail(job.id(), summary, failedAt);
+            telemetry.failed(failed, summary, Duration.between(claimedAt, failedAt));
         }
         return true;
     }
@@ -70,6 +79,7 @@ public final class ScanJobWorker {
         private final ScanJobStore jobs;
         private final CatalogCandidateReconciler candidateReconciler;
         private final Clock clock;
+        private final ScanJobTelemetry telemetry;
 
         private PersistingDiscoveryListener(
                 UUID rootId,
@@ -77,13 +87,15 @@ public final class ScanJobWorker {
                 String extractionVersion,
                 ScanJobStore jobs,
                 CatalogCandidateReconciler candidateReconciler,
-                Clock clock) {
+                Clock clock,
+                ScanJobTelemetry telemetry) {
             this.rootId = rootId;
             this.jobId = jobId;
             this.extractionVersion = extractionVersion;
             this.jobs = jobs;
             this.candidateReconciler = candidateReconciler;
             this.clock = clock;
+            this.telemetry = telemetry;
         }
 
         @Override
@@ -94,6 +106,9 @@ public final class ScanJobWorker {
         @Override
         public void discovered(ScanDiscovery.Candidate candidate) {
             var result = candidateReconciler.reconcile(rootId, jobId, extractionVersion, candidate);
+            if (result.state() == CandidateReconciliationResult.State.FAILED) {
+                telemetry.fileFailed(result.errorCode());
+            }
             jobs.recordOutcome(new FileOutcome(
                     jobId,
                     candidate.normalizedRelativePath(),
@@ -106,6 +121,7 @@ public final class ScanJobWorker {
 
         @Override
         public void failed(String normalizedRelativePath, String code, String safeDiagnostic) {
+            telemetry.fileFailed(code);
             jobs.recordOutcome(new FileOutcome(
                     jobId, normalizedRelativePath, FileOutcome.State.FAILED, code, safeDiagnostic, 1, clock.instant()));
         }

@@ -38,6 +38,97 @@ describe('App', () => {
     expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
   });
 
+  it('gates the workspace behind owner sign-in and clears the password', async () => {
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: false,
+      username: null,
+    });
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('#workspace')).toBeNull();
+    expect(element.querySelector('.access-panel')?.textContent).toContain('Owner access');
+
+    const password = element.querySelector<HTMLInputElement>('.login-form input[type="password"]')!;
+    setInput(password, 'not-retained');
+    await fixture.whenStable();
+    element.querySelector<HTMLFormElement>('.login-form')?.dispatchEvent(new SubmitEvent('submit'));
+
+    const login = http.expectOne('/api/v1/session');
+    expect(login.request.body.toString()).toBe('username=owner&password=not-retained');
+    login.flush(null, { status: 204, statusText: 'No Content' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: true,
+      username: 'owner',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne('/api/v1/library-mounts').flush([{ alias: 'main' }]);
+    http.expectOne('/api/v1/library-roots').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    await fixture.whenStable();
+
+    expect(element.querySelector('#workspace')).not.toBeNull();
+    expect(element.querySelector('.owner-identity')?.textContent).toContain('owner');
+    expect(element.textContent).not.toContain('not-retained');
+
+    element.querySelector<HTMLButtonElement>('.sign-out')?.click();
+    http.expectOne('/api/v1/session/logout').flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+    expect(
+      element.querySelector<HTMLInputElement>('.login-form input[type="password"]')?.value,
+    ).toBe('');
+    expect(element.querySelector('.field-error')).toBeNull();
+  });
+
+  it('submits by keyboard and presents a useful generic credential error', async () => {
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: false,
+      username: null,
+    });
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const password = element.querySelector<HTMLInputElement>('.login-form input[type="password"]')!;
+    setInput(password, 'incorrect');
+    await fixture.whenStable();
+
+    password.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
+    http.expectOne('/api/v1/session').flush(
+      {
+        detail: 'Owner authentication is required.',
+        code: 'AUTHENTICATION_REQUIRED',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await fixture.whenStable();
+
+    expect(element.querySelector('.notice-error')?.textContent).toContain(
+      'Sign-in failed. Check the owner credentials and try again.',
+    );
+    expect(element.textContent).not.toContain('AUTHENTICATION_REQUIRED');
+    expect(password.value).toBe('');
+    expect(element.querySelector('.field-error')).toBeNull();
+
+    setInput(password, 'incorrect-again');
+    await fixture.whenStable();
+    element
+      .querySelector<HTMLButtonElement>('.login-form button')!
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }),
+      );
+    http.expectOne('/api/v1/session').flush(
+      { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await fixture.whenStable();
+    expect(password.value).toBe('');
+  });
+
   it('validates root input and sends the selected alias without a backend host', async () => {
     await initialize([], emptyCatalog(), [{ alias: 'main' }]);
     const element = fixture.nativeElement as HTMLElement;
@@ -178,6 +269,12 @@ describe('App', () => {
     catalog: CatalogPage,
     mounts = [{ alias: 'main' }],
   ) {
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: true,
+      username: 'owner',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne('/api/v1/library-mounts').flush(mounts);
     http.expectOne('/api/v1/library-roots').flush(roots);
     await new Promise((resolve) => setTimeout(resolve, 0));

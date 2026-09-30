@@ -658,7 +658,7 @@ Docker Compose should provide required infrastructure such as PostgreSQL and obs
 
 Application services may run directly from the IDE/build tool or in containers.
 
-Library storage is deployment-owned. Each allowed source is configured as a lowercase mount alias plus a canonical host path; API clients submit only the alias and a normalized relative path. The supported Compose deployment binds the source at `/library/<alias>` read-only. A `.yurlib-root-id` marker is verified without modification, and only its SHA-256 digest is persisted. PostgreSQL 18 data is mounted at `/var/lib/postgresql` so its version-specific data directory remains upgrade-compatible.
+Library storage is deployment-owned. Each allowed source is configured as a lowercase mount alias plus a canonical host path; API clients submit only the alias and a normalized relative path. The supported Compose deployment binds the source at `/library/<alias>` read-only and publishes server and database ports on the host loopback interface by default. A `.yurlib-root-id` marker is verified without modification, and only its SHA-256 digest is persisted. PostgreSQL 18 data is mounted at `/var/lib/postgresql` so its version-specific data directory remains upgrade-compatible.
 
 Kubernetes is optional future functionality.
 
@@ -867,6 +867,7 @@ Observability
 | Kubernetes             | Deferred / optional                                                                |
 | Terraform              | Deferred; infrastructure provisioning only                                         |
 | Human authority        | Required for architectural changes                                                 |
+| Owner access           | Spring Security server-side session for one deployment owner (ADR-0004)            |
 
 ---
 
@@ -875,7 +876,6 @@ Observability
 Deferred until needed:
 
 - message broker;
-- authentication model;
 - Kubernetes support;
 - cloud deployment;
 - dedicated search engine;
