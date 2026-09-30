@@ -34,6 +34,9 @@ public record ExtractedBookMetadata(
     public enum Format {
         EPUB,
         FB2,
-        MOBI
+        MOBI,
+        PDF,
+        DOCX,
+        DJVU
     }
 }

@@ -1,6 +1,6 @@
 # ADR-0007: Use Bounded PostgreSQL-Backed Staged Work Queues
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-30
 - Decider: Yurlib project owner
 

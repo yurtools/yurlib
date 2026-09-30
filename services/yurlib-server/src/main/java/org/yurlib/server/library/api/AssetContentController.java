@@ -45,6 +45,10 @@ public class AssetContentController {
             case EPUB -> MediaType.parseMediaType("application/epub+zip");
             case FB2 -> MediaType.APPLICATION_XML;
             case MOBI -> MediaType.parseMediaType("application/x-mobipocket-ebook");
+            case PDF -> MediaType.APPLICATION_PDF;
+            case DOCX ->
+                MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            case DJVU -> MediaType.parseMediaType("image/vnd.djvu");
         };
     }
 

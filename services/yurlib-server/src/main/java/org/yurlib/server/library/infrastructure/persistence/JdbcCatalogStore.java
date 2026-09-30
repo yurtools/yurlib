@@ -162,7 +162,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .param("assetId", existing.assetId())
                 .update();
         updateLocation(existing.locationId(), existing.assetId(), reconciliation);
-        replaceObservations(existing.workId(), existing.editionId(), existing.assetId(), reconciliation);
+        appendObservations(existing.workId(), existing.editionId(), existing.assetId(), reconciliation);
     }
 
     private void insertCatalog(LocationRow existing, CatalogReconciliation reconciliation) {
@@ -171,8 +171,11 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         var assetId = UUID.randomUUID();
         var metadata = reconciliation.metadata();
         jdbc.sql("""
-                INSERT INTO work (id, provisional_title, resolution_state, created_at, updated_at)
-                VALUES (:id, :title, 'PROVISIONAL', :observedAt, :observedAt)
+                INSERT INTO work (
+                    id, provisional_title, content_kind, resolution_state, created_at, updated_at
+                ) VALUES (
+                    :id, :title, 'BOOK', 'PROVISIONAL', :observedAt, :observedAt
+                )
                 """)
                 .param("id", workId)
                 .param("title", title(metadata, reconciliation.normalizedRelativePath()))
@@ -211,7 +214,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         } else {
             updateLocation(existing.locationId(), assetId, reconciliation);
         }
-        insertObservations(workId, editionId, assetId, reconciliation);
+        appendObservations(workId, editionId, assetId, reconciliation);
     }
 
     private void insertLocation(UUID assetId, CatalogReconciliation reconciliation) {
@@ -259,35 +262,77 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .update();
     }
 
-    private void replaceObservations(UUID workId, UUID editionId, UUID assetId, CatalogReconciliation reconciliation) {
-        jdbc.sql("""
-                DELETE FROM metadata_observation
-                WHERE (subject_type = 'WORK' AND subject_id = :workId)
-                   OR (subject_type = 'EDITION' AND subject_id = :editionId)
-                   OR (subject_type = 'ASSET' AND subject_id = :assetId)
-                """)
-                .param("workId", workId)
-                .param("editionId", editionId)
-                .param("assetId", assetId)
-                .update();
-        insertObservations(workId, editionId, assetId, reconciliation);
+    private void appendObservations(UUID workId, UUID editionId, UUID assetId, CatalogReconciliation reconciliation) {
+        var observationSetId = insertObservationSet(assetId, reconciliation);
+        var metadata = reconciliation.metadata();
+        insertObservation(observationSetId, assetId, workId, "WORK", "title", metadata.title(), 0, reconciliation);
+        for (var index = 0; index < metadata.contributors().size(); index++) {
+            insertObservation(
+                    observationSetId,
+                    assetId,
+                    workId,
+                    "WORK",
+                    "contributor",
+                    metadata.contributors().get(index),
+                    index,
+                    reconciliation);
+        }
+        insertObservation(
+                observationSetId, assetId, editionId, "EDITION", "language", metadata.language(), 0, reconciliation);
+        metadata.identifiers().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> insertObservation(
+                        observationSetId,
+                        assetId,
+                        editionId,
+                        "EDITION",
+                        "identifier:" + entry.getKey(),
+                        entry.getValue(),
+                        0,
+                        reconciliation));
+        insertObservation(
+                observationSetId,
+                assetId,
+                assetId,
+                "ASSET",
+                "format",
+                metadata.format().name(),
+                0,
+                reconciliation);
     }
 
-    private void insertObservations(UUID workId, UUID editionId, UUID assetId, CatalogReconciliation reconciliation) {
+    private UUID insertObservationSet(UUID assetId, CatalogReconciliation reconciliation) {
+        var observationSetId = UUID.randomUUID();
         var metadata = reconciliation.metadata();
-        insertObservation(workId, "WORK", "title", metadata.title(), reconciliation);
-        for (var contributor : metadata.contributors()) {
-            insertObservation(workId, "WORK", "contributor", contributor, reconciliation);
-        }
-        insertObservation(editionId, "EDITION", "language", metadata.language(), reconciliation);
-        metadata.identifiers()
-                .forEach((type, value) ->
-                        insertObservation(editionId, "EDITION", "identifier:" + type, value, reconciliation));
-        insertObservation(assetId, "ASSET", "format", metadata.format().name(), reconciliation);
+        jdbc.sql("""
+                INSERT INTO metadata_observation_set (
+                    id, source_asset_id, source_root_id, parser_name, parser_version,
+                    extraction_version, observed_at, created_at
+                ) VALUES (
+                    :id, :assetId, :rootId, :parserName, :parserVersion,
+                    :extractionVersion, :observedAt, :observedAt
+                )
+                """)
+                .param("id", observationSetId)
+                .param("assetId", assetId)
+                .param("rootId", reconciliation.rootId())
+                .param("parserName", metadata.parserName())
+                .param("parserVersion", metadata.parserVersion())
+                .param("extractionVersion", reconciliation.extractionVersion())
+                .param("observedAt", timestamp(reconciliation.observedAt()))
+                .update();
+        return observationSetId;
     }
 
     private void insertObservation(
-            UUID subjectId, String subjectType, String fieldName, String value, CatalogReconciliation reconciliation) {
+            UUID observationSetId,
+            UUID sourceAssetId,
+            UUID subjectId,
+            String subjectType,
+            String fieldName,
+            String value,
+            int valueOrdinal,
+            CatalogReconciliation reconciliation) {
         if (value == null || value.isBlank()) {
             return;
         }
@@ -295,10 +340,12 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         jdbc.sql("""
                 INSERT INTO metadata_observation (
                     id, subject_id, subject_type, field_name, observed_value,
-                    source, parser_name, parser_version, observed_at
+                    source, parser_name, parser_version, observed_at,
+                    observation_set_id, source_asset_id, source_root_id, value_ordinal
                 ) VALUES (
                     :id, :subjectId, :subjectType, :fieldName, :value,
-                    'FILE', :parserName, :parserVersion, :observedAt
+                    'FILE', :parserName, :parserVersion, :observedAt,
+                    :observationSetId, :sourceAssetId, :sourceRootId, :valueOrdinal
                 )
                 """)
                 .param("id", UUID.randomUUID())
@@ -309,6 +356,10 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .param("parserName", metadata.parserName())
                 .param("parserVersion", metadata.parserVersion())
                 .param("observedAt", timestamp(reconciliation.observedAt()))
+                .param("observationSetId", observationSetId)
+                .param("sourceAssetId", sourceAssetId)
+                .param("sourceRootId", reconciliation.rootId())
+                .param("valueOrdinal", valueOrdinal)
                 .update();
     }
 

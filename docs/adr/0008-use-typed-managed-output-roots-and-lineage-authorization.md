@@ -1,6 +1,6 @@
 # ADR-0008: Use Typed Managed-Output Roots and Lineage Authorization
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-30
 - Decider: Yurlib project owner
 

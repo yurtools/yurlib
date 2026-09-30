@@ -8,13 +8,15 @@ public record Edition(
         UUID workId,
         String observedLanguage,
         Map<String, String> identifiers,
-        ResolutionState resolutionState) {
+        ResolutionState resolutionState,
+        long version) {
 
     public Edition {
         DomainAssertions.required(id, "id");
         DomainAssertions.required(workId, "workId");
         identifiers = Map.copyOf(DomainAssertions.required(identifiers, "identifiers"));
         DomainAssertions.required(resolutionState, "resolutionState");
+        DomainAssertions.nonNegative(version, "version");
     }
 
     public enum ResolutionState {

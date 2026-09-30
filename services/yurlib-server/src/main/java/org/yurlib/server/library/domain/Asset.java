@@ -10,7 +10,8 @@ public record Asset(
         long byteSize,
         Derivation derivation,
         String contentHash,
-        String extractionVersion) {
+        String extractionVersion,
+        long version) {
 
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
 
@@ -21,9 +22,7 @@ public record Asset(
         DomainAssertions.nonNegative(byteSize, "byteSize");
         DomainAssertions.required(derivation, "derivation");
         DomainAssertions.notBlank(extractionVersion, "extractionVersion");
-        if (derivation != Derivation.ORIGINAL) {
-            throw new IllegalArgumentException("the first slice supports original assets only");
-        }
+        DomainAssertions.nonNegative(version, "version");
         if (contentHash != null && !SHA_256.matcher(contentHash).matches()) {
             throw new IllegalArgumentException("contentHash must be a lowercase SHA-256 digest");
         }
@@ -32,10 +31,14 @@ public record Asset(
     public enum Format {
         EPUB,
         FB2,
-        MOBI
+        MOBI,
+        PDF,
+        DOCX,
+        DJVU
     }
 
     public enum Derivation {
-        ORIGINAL
+        ORIGINAL,
+        DERIVED
     }
 }
