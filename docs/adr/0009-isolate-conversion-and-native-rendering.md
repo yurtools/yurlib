@@ -1,6 +1,6 @@
 # ADR-0009: Isolate Conversion and Native Rendering
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-30
 - Decider: Yurlib project owner
 

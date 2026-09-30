@@ -1,10 +1,11 @@
 # M2 Curation Design
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-30
 - Branch: `docs/41-m2-curation-design`
 - Pull request: [#62](https://github.com/yurtools/yurlib/pull/62)
 - Design commit: `7ba599f`
+- Squash-merge commit: `8438dbb`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Repository: `yurtools/yurlib`
 
@@ -121,3 +122,4 @@ The final follow-up asked who may edit shared catalog data and whether tags and 
 - `git diff --check` passed.
 - Frontend tests/build and Compose validation were not rerun because this change affects only Markdown design records and GitHub work records; the unrelated local Angular analytics preference was preserved unchanged.
 - Committed the design as `7ba599f`, pushed the short-lived branch, and opened pull request #62 against protected `main` for owner approval.
+- Pull request #62 passed its required checks and was squash-merged into protected `main` as `8438dbb`; this owner approval accepted ADR-0005 through ADR-0010 and unlocked the ordered implementation backlog.

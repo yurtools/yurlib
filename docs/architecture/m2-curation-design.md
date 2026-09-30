@@ -1,6 +1,6 @@
 # M2 Curation Design
 
-- Status: Proposed for owner approval
+- Status: Approved
 - Date: 2026-09-30
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Baseline: `v0.1.0-m1`, ADR-0002 through ADR-0004
@@ -9,7 +9,7 @@
 
 M2 turns the safe M1 local-library skeleton into a multi-user, curated library without weakening source preservation or bounded processing. This document defines the component boundaries, state ownership, contracts, threats, failure behavior, acceptance evidence, walking skeleton, and implementation order.
 
-This document and ADR-0005 through ADR-0010 remain proposed until the owner approves the design pull request. No dependent M2 implementation issue moves to In Progress before that approval. Exact parser, renderer, and converter versions still require dependency and license review in their implementation issues.
+The owner approved this document and ADR-0005 through ADR-0010 by merging pull request #62. Exact parser, renderer, and converter versions still require dependency and license review in their implementation issues.
 
 ## 2. Approved scope
 
@@ -296,12 +296,12 @@ Each implementation issue must preserve a deployable, releasable `main` and incl
 
 | ADR      | Status   | Decision                                                                      |
 | -------- | -------- | ----------------------------------------------------------------------------- |
-| ADR-0005 | Proposed | Preserve observations and separate normalized, resolved, and curated metadata |
-| ADR-0006 | Proposed | Use persisted users, independent capabilities, and explicit root denies       |
-| ADR-0007 | Proposed | Use bounded PostgreSQL-backed staged work queues                              |
-| ADR-0008 | Proposed | Use typed managed-output roots and lineage authorization                      |
-| ADR-0009 | Proposed | Isolate conversion and native rendering in an optional worker                 |
-| ADR-0010 | Proposed | Normalize covers and representative document images                           |
+| ADR-0005 | Accepted | Preserve observations and separate normalized, resolved, and curated metadata |
+| ADR-0006 | Accepted | Use persisted users, independent capabilities, and explicit root denies       |
+| ADR-0007 | Accepted | Use bounded PostgreSQL-backed staged work queues                              |
+| ADR-0008 | Accepted | Use typed managed-output roots and lineage authorization                      |
+| ADR-0009 | Accepted | Isolate conversion and native rendering in an optional worker                 |
+| ADR-0010 | Accepted | Normalize covers and representative document images                           |
 
 ## 19. Deferred decisions
 

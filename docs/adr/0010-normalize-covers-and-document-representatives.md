@@ -1,6 +1,6 @@
 # ADR-0010: Normalize Covers and Document Representatives
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-30
 - Decider: Yurlib project owner
 

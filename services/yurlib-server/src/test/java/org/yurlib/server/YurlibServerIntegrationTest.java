@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("3");
+        assertThat(value).isEqualTo("4");
     }
 
     @Test
@@ -85,7 +86,19 @@ class YurlibServerIntegrationTest {
                         "edition",
                         "asset",
                         "asset_location",
-                        "metadata_observation"));
+                        "metadata_observation",
+                        "metadata_observation_set",
+                        "metadata_normalized_fact",
+                        "metadata_resolved_value",
+                        "metadata_curated_override",
+                        "contributor",
+                        "contributor_alias",
+                        "work_contributor",
+                        "edition_contributor",
+                        "edition_identifier",
+                        "asset_derivation_source",
+                        "catalog_redirect",
+                        "catalog_audit_event"));
     }
 
     @Test
@@ -239,6 +252,168 @@ class YurlibServerIntegrationTest {
     }
 
     @Test
+    void appendsSourceLinkedObservationsDuringReprocessing() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "append-only", "bounded-metadata-v1", java.time.Instant.now());
+
+        catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("A Book", 123)));
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("A Better Book", 123)));
+
+        var client = JdbcClient.create(dataSource);
+        assertThat(tableCount(client, "metadata_observation_set")).isEqualTo(2);
+        assertThat(tableCount(client, "metadata_observation")).isEqualTo(10);
+        assertThat(client.sql("""
+                        SELECT count(*)
+                        FROM metadata_observation observation
+                        JOIN metadata_observation_set observation_set
+                          ON observation_set.id = observation.observation_set_id
+                        WHERE observation.source_asset_id = observation_set.source_asset_id
+                          AND observation.source_root_id = observation_set.source_root_id
+                          AND observation.parser_name = observation_set.parser_name
+                          AND observation.parser_version = observation_set.parser_version
+                        """).query(Long.class).single()).isEqualTo(10);
+    }
+
+    @Test
+    void rejectsMutationOfRawObservations() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "immutable", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("A Book", 123)));
+        var observationId = JdbcClient.create(dataSource)
+                .sql("SELECT id FROM metadata_observation ORDER BY id LIMIT 1")
+                .query(UUID.class)
+                .single();
+
+        assertThatThrownBy(() -> JdbcClient.create(dataSource)
+                        .sql("UPDATE metadata_observation SET observed_value = 'rewritten' WHERE id = :id")
+                        .param("id", observationId)
+                        .update())
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("append-only");
+    }
+
+    @Test
+    void appliesCuratedResolvedAndObservedDisplayPrecedence() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "precedence", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("Observed", 123)));
+        var client = JdbcClient.create(dataSource);
+        var observation = client.sql("""
+                        SELECT id, subject_id
+                        FROM metadata_observation
+                        WHERE subject_type = 'WORK' AND field_name = 'title'
+                        """).query().singleRow();
+        var factId = UUID.randomUUID();
+        client.sql("""
+                INSERT INTO metadata_normalized_fact (
+                    id, source_observation_id, subject_id, subject_type, field_name,
+                    value_state, normalized_value, value_type, normalizer_name,
+                    normalizer_version, confidence
+                ) VALUES (
+                    :id, :observationId, :subjectId, 'WORK', 'title',
+                    'PRESENT', 'Normalized', 'TEXT', 'title-normalizer', '1', 'HIGH'
+                )
+                """)
+                .param("id", factId)
+                .param("observationId", observation.get("id"))
+                .param("subjectId", observation.get("subject_id"))
+                .update();
+        var resolvedId = UUID.randomUUID();
+        client.sql("""
+                INSERT INTO metadata_resolved_value (
+                    id, subject_id, subject_type, field_name, outcome, resolved_value,
+                    selected_fact_id, resolver_name, resolver_version, confidence,
+                    resolution_version
+                ) VALUES (
+                    :id, :subjectId, 'WORK', 'title', 'PRESENT', 'Resolved',
+                    :factId, 'title-resolver', '1', 'HIGH', 1
+                )
+                """)
+                .param("id", resolvedId)
+                .param("subjectId", observation.get("subject_id"))
+                .param("factId", factId)
+                .update();
+
+        assertThat(displayTitle(client))
+                .containsEntry("display_value", "Resolved")
+                .containsEntry("metadata_source", "RESOLVED");
+
+        client.sql("UPDATE metadata_resolved_value SET active = FALSE WHERE id = :id")
+                .param("id", resolvedId)
+                .update();
+        client.sql("""
+                INSERT INTO metadata_resolved_value (
+                    id, subject_id, subject_type, field_name, outcome, alternatives,
+                    resolver_name, resolver_version, confidence, resolution_version,
+                    supersedes_value_id
+                ) VALUES (
+                    :id, :subjectId, 'WORK', 'title', 'CONFLICT',
+                    CAST(:alternatives AS jsonb), 'title-resolver', '1', 'UNKNOWN', 2,
+                    :supersedesId
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("subjectId", observation.get("subject_id"))
+                .param("alternatives", "[\"Normalized\",\"Other title\"]")
+                .param("supersedesId", resolvedId)
+                .update();
+
+        assertThat(displayTitle(client))
+                .containsEntry("display_value", null)
+                .containsEntry("metadata_source", "RESOLVED")
+                .containsEntry("value_state", "CONFLICT");
+
+        var curatedId = UUID.randomUUID();
+        var actorId = UUID.randomUUID();
+        client.sql("""
+                INSERT INTO metadata_curated_override (
+                    id, subject_id, subject_type, field_name, value_state, curated_value,
+                    actor_id, reason, override_version
+                ) VALUES (
+                    :id, :subjectId, 'WORK', 'title', 'PRESENT', 'Curated',
+                    :actorId, 'Owner correction', 1
+                )
+                """)
+                .param("id", curatedId)
+                .param("subjectId", observation.get("subject_id"))
+                .param("actorId", actorId)
+                .update();
+
+        assertThat(displayTitle(client))
+                .containsEntry("display_value", "Curated")
+                .containsEntry("metadata_source", "CURATED")
+                .containsEntry("value_state", "PRESENT");
+
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("Reprocessed", 123)));
+        assertThat(displayTitle(client)).containsEntry("display_value", "Curated");
+
+        client.sql("UPDATE metadata_curated_override SET active = FALSE WHERE id = :id")
+                .param("id", curatedId)
+                .update();
+        client.sql("""
+                INSERT INTO metadata_curated_override (
+                    id, subject_id, subject_type, field_name, value_state,
+                    actor_id, reason, override_version, supersedes_override_id
+                ) VALUES (
+                    :id, :subjectId, 'WORK', 'title', 'ABSENT',
+                    :actorId, 'Suppress incorrect source titles', 2, :supersedesId
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("subjectId", observation.get("subject_id"))
+                .param("actorId", actorId)
+                .param("supersedesId", curatedId)
+                .update();
+
+        assertThat(displayTitle(client))
+                .containsEntry("display_value", null)
+                .containsEntry("metadata_source", "CURATED")
+                .containsEntry("value_state", "ABSENT");
+    }
+
+    @Test
     void searchesCatalogByTitleContributorFilenameAndIdentifierWithBoundedPagination() {
         var root = saveRoot();
         var job = scanJobStore.queue(root.id(), "search", "bounded-metadata-v1", java.time.Instant.now());
@@ -250,6 +425,10 @@ class YurlibServerIntegrationTest {
                 "poetry/always-coming-home.epub",
                 "bounded-metadata-v1",
                 metadata("Always Coming Home", 456)));
+
+        assertThat(tableCount(JdbcClient.create(dataSource), "work"))
+                .as("similar contributor and identifier metadata must not merge Works")
+                .isEqualTo(2);
 
         for (var query : List.of("left hand", "ursula", "fiction/book.epub", "9780000000001")) {
             var page = catalogQuery.search(query, 0, 25);
@@ -277,6 +456,52 @@ class YurlibServerIntegrationTest {
         assertThatThrownBy(() -> catalogQuery.search("query", 0, 101)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> catalogQuery.search("x".repeat(201), 0, 25))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void permitsOnlyOneAssetIdentityForAnExactContentHash() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "exact-hash", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "one.epub", "bounded-metadata-v1", metadata("One", 123)));
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "two.epub", "bounded-metadata-v1", metadata("Two", 123)));
+        var client = JdbcClient.create(dataSource);
+        var assetIds =
+                client.sql("SELECT id FROM asset ORDER BY id").query(UUID.class).list();
+        client.sql("UPDATE asset SET content_hash = :hash WHERE id = :id")
+                .param("hash", "b".repeat(64))
+                .param("id", assetIds.getFirst())
+                .update();
+
+        assertThatThrownBy(() -> client.sql("UPDATE asset SET content_hash = :hash WHERE id = :id")
+                        .param("hash", "b".repeat(64))
+                        .param("id", assetIds.getLast())
+                        .update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void rejectsDerivedAssetsWithoutSourceLineageAtCommitBoundary() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "lineage", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("Source", 123)));
+        var client = JdbcClient.create(dataSource);
+        var editionId = client.sql("SELECT id FROM edition").query(UUID.class).single();
+        client.sql("""
+                INSERT INTO asset (
+                    id, edition_id, format, byte_size, derivation, extraction_version
+                ) VALUES (
+                    :id, :editionId, 'EPUB', 100, 'DERIVED', 'converter-v1'
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("editionId", editionId)
+                .update();
+
+        assertThatThrownBy(() -> client.sql("SET CONSTRAINTS ALL IMMEDIATE").update())
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("require source lineage");
     }
 
     @Test
@@ -416,5 +641,13 @@ class YurlibServerIntegrationTest {
 
     private static long tableCount(JdbcClient client, String table) {
         return client.sql("SELECT count(*) FROM " + table).query(Long.class).single();
+    }
+
+    private static Map<String, Object> displayTitle(JdbcClient client) {
+        return client.sql("""
+                SELECT display_value, metadata_source, value_state
+                FROM catalog_metadata_display
+                WHERE subject_type = 'WORK' AND field_name = 'title'
+                """).query().singleRow();
     }
 }

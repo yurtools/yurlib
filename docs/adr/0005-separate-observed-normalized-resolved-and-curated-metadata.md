@@ -1,6 +1,6 @@
 # ADR-0005: Separate Observed, Normalized, Resolved and Curated Metadata
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-30
 - Decider: Yurlib project owner
 
