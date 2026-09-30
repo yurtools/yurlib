@@ -1,8 +1,10 @@
 # M2 PDF, DOCX and DjVu Targets
 
-- Status: In progress
+- Status: Pull request open
 - Date: 2026-09-30
 - Branch: `docs/41-add-pdf-docx-djvu`
+- Pull request: [#52](https://github.com/yurtools/yurlib/pull/52)
+- Planning commit: `f378096`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Format issue: [#51](https://github.com/yurtools/yurlib/issues/51)
 - Repository: `yurtools/yurlib`
@@ -37,6 +39,7 @@
 - Updated issue #41 to require issue #51, include all six formats in normalization and resource-budget design, and cover parser/renderer dependencies, active content, hostile fixtures, and isolation decisions.
 - Retitled issue #49 to clarify that it corrects the existing M1 EPUB/FB2/MOBI adapters and linked it to issue #51's use of the shared format-neutral resource-budget contract.
 - Updated the M2 milestone description to include secure PDF/DOCX/DjVu catalog support.
+- Committed the repository planning changes as `f378096`, pushed the short-lived branch, and opened pull request [#52](https://github.com/yurtools/yurlib/pull/52) against protected `main`.
 
 ## Verification
 
@@ -46,3 +49,4 @@
 - `./mvnw -B verify` passed 91 tests plus formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs checks.
 - `git diff --check` passed.
 - Frontend tests/build and Compose validation were not rerun because this change affects only Markdown planning documents and GitHub work records; the unrelated local Angular analytics preference was preserved unchanged.
+- Pull request #52 required checks determine merge readiness.
