@@ -2,12 +2,15 @@ package org.yurlib.server.testing.fixtures;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -53,6 +56,49 @@ public final class FixtureCorpus {
         return libraryRoot;
     }
 
+    public static void writeNearLimitEpub(Path path) throws IOException {
+        writeEpub(path, EpubKind.NEAR_LIMIT_METADATA);
+    }
+
+    public static void writeEpubWithLargeUnparsedEntry(Path path) throws IOException {
+        writeEpub(path, EpubKind.LARGE_UNRELATED_ENTRY);
+    }
+
+    public static void writeMobiWithFullName(Path path, String fullName) throws IOException {
+        writeMobi(path, fullName, null);
+    }
+
+    public static void writeLargeFb2(Path path, int binaryCharacters) throws IOException {
+        Files.createDirectories(path.getParent());
+        try (var writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            writer.write("""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+                      <description>
+                        <title-info><book-title>Large streaming FB2</book-title><lang>en</lang></title-info>
+                        <document-info><id>large-streaming-fixture</id></document-info>
+                      </description>
+                      <body><section><p>Generated content.</p></section></body>
+                      <binary id="cover" content-type="image/jpeg">
+                    """);
+            var chunk = new char[8192];
+            Arrays.fill(chunk, 'A');
+            for (var remaining = binaryCharacters; remaining > 0; remaining -= chunk.length) {
+                writer.write(chunk, 0, Math.min(chunk.length, remaining));
+            }
+            writer.write("</binary></FictionBook>");
+        }
+    }
+
+    public static Path writeSparseMobi(Path source, Path target, long size) throws IOException {
+        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        try (var channel = FileChannel.open(target, StandardOpenOption.WRITE)) {
+            channel.position(size - 1);
+            channel.write(ByteBuffer.wrap(new byte[] {0}));
+        }
+        return target;
+    }
+
     private static Path sourceRoot() {
         return RepositoryPaths.root().resolve("services/yurlib-server/src/test/resources/fixtures/source");
     }
@@ -81,7 +127,7 @@ public final class FixtureCorpus {
                       <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
                     </container>
                     """);
-            writeEntry(output, "OEBPS/content.opf", """
+            var packageDocument = """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id">
                       <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
@@ -92,14 +138,20 @@ public final class FixtureCorpus {
                       <manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest>
                       <spine><itemref idref="chapter"/></spine>
                     </package>
-                    """);
+                    """;
+            if (kind == EpubKind.DECOMPRESSION_LIMIT || kind == EpubKind.NEAR_LIMIT_METADATA) {
+                var targetBytes = 4 * 1024 * 1024 + (kind == EpubKind.DECOMPRESSION_LIMIT ? 1 : -1);
+                writeStoredEntry(output, "OEBPS/content.opf", paddedXml(packageDocument, targetBytes));
+            } else {
+                writeEntry(output, "OEBPS/content.opf", packageDocument);
+            }
             writeEntry(output, "OEBPS/chapter.xhtml", """
                     <!doctype html><html xmlns="http://www.w3.org/1999/xhtml" lang="en">
                     <head><title>Fixture</title></head><body><p>Generated test content.</p></body></html>
                     """);
             if (kind == EpubKind.TRAVERSAL) {
                 writeEntry(output, "../escaped.txt", "must never be extracted");
-            } else if (kind == EpubKind.DECOMPRESSION_LIMIT) {
+            } else if (kind == EpubKind.LARGE_UNRELATED_ENTRY) {
                 writeEntry(output, "OEBPS/oversized.txt", "A".repeat(2 * 1024 * 1024));
             }
         }
@@ -123,6 +175,15 @@ public final class FixtureCorpus {
         output.putNextEntry(new ZipEntry(name));
         output.write(value.getBytes(StandardCharsets.UTF_8));
         output.closeEntry();
+    }
+
+    private static String paddedXml(String document, int targetBytes) {
+        var wrapperBytes = "<!---->".length();
+        var padding = targetBytes - document.getBytes(StandardCharsets.US_ASCII).length - wrapperBytes;
+        if (padding < 0) {
+            throw new IllegalArgumentException("Target XML size is smaller than the fixture document.");
+        }
+        return document + "<!--" + "N".repeat(padding) + "-->";
     }
 
     private static void writeMobi(Path path, String fullName, String updatedTitle) throws IOException {
@@ -220,6 +281,8 @@ public final class FixtureCorpus {
     private enum EpubKind {
         VALID,
         TRAVERSAL,
-        DECOMPRESSION_LIMIT
+        DECOMPRESSION_LIMIT,
+        LARGE_UNRELATED_ENTRY,
+        NEAR_LIMIT_METADATA
     }
 }

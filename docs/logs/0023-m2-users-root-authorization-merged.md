@@ -1,10 +1,11 @@
 # M2 Persisted Users and Root Authorization
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-30
 - Branch: `feat/54-persisted-users-root-authorization`
 - Pull request: [#64](https://github.com/yurtools/yurlib/pull/64)
 - Implementation commit: `121cf2d`
+- Squash merge commit: `aa0446375546aa4dc4a44eb15a881ec9fd0b1831`
 - Issue: [#54](https://github.com/yurtools/yurlib/issues/54)
 - Repository: `yurtools/yurlib`
 
@@ -36,6 +37,7 @@
 - Added PostgreSQL/MockMvc acceptance coverage for owner bootstrap, normalized reader creation, default visibility, explicit deny, mixed-root filtering, denied downloads/jobs, stale-session invalidation, independent capability grants, audit events, and owner recovery.
 - Renamed log 0022 to its merged lifecycle state and recorded pull request #63's squash merge commit.
 - Committed the implementation as `121cf2d`, pushed the short-lived branch, and opened pull request #64 against protected `main` with `Closes #54`.
+- The owner merged pull request #64 on 2026-09-30; GitHub closed issue #54 and the project item moved to Done.
 
 ## Verification
 

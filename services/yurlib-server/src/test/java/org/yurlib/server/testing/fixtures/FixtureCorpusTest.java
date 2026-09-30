@@ -49,9 +49,9 @@ class FixtureCorpusTest {
                 var expansion = new ZipFile(
                         root.resolve("security/decompression-limit.epub").toFile())) {
             assertThat(traversal.getEntry("../escaped.txt")).isNotNull();
-            var oversized = expansion.getEntry("OEBPS/oversized.txt");
-            assertThat(oversized.getSize()).isEqualTo(2L * 1024 * 1024);
-            assertThat(oversized.getSize()).isGreaterThan(oversized.getCompressedSize() * 100);
+            var oversized = expansion.getEntry("OEBPS/content.opf");
+            assertThat(oversized.getSize()).isEqualTo(4L * 1024 * 1024 + 1);
+            assertThat(oversized.getCompressedSize()).isEqualTo(oversized.getSize());
         }
     }
 

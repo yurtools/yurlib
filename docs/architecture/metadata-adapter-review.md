@@ -1,42 +1,53 @@
 # Metadata Adapter Dependency and Safety Review
 
-- Status: Accepted implementation baseline
-- Scope: M1 plain EPUB, FB2, and MOBI metadata extraction
-- Related issue: [#16](https://github.com/yurtools/yurlib/issues/16)
-- Reviewed: 2026-09-29
+- Status: Accepted M2 implementation baseline
+- Scope: Plain EPUB, FB2, and MOBI metadata extraction
+- Related issues: [#16](https://github.com/yurtools/yurlib/issues/16), [#49](https://github.com/yurtools/yurlib/issues/49)
+- Reviewed: 2026-09-30
 
 ## Decision
 
 The initial adapters use only Java runtime APIs. No third-party parser dependency is added.
 
-| Format | Runtime APIs                          | Parsed surface                                                       |
-| ------ | ------------------------------------- | -------------------------------------------------------------------- |
-| EPUB   | `java.util.zip`, NIO, secure JAXP DOM | EPUB mimetype, container package reference, and Dublin Core metadata |
-| FB2    | NIO and secure JAXP DOM               | `title-info`, authors, language, document ID, and ISBN               |
-| MOBI   | bounded NIO channels and byte buffers | Palm database/MOBI headers, title, and selected EXTH metadata        |
+| Format | Runtime APIs                                  | Parsed surface                                                        |
+| ------ | --------------------------------------------- | --------------------------------------------------------------------- |
+| EPUB   | `java.util.zip`, NIO, secure bounded JAXP DOM | EPUB mimetype, container package reference, and Dublin Core metadata  |
+| FB2    | NIO and secure StAX                           | `description`, title information, contributors, document ID, and ISBN |
+| MOBI   | bounded positional NIO reads                  | Palm database/MOBI headers, title, and selected EXTH metadata         |
 
 This choice adds no license to the project's GPL-3.0-only dependency set. It also avoids general-purpose archive extraction and keeps each adapter replaceable behind `MetadataExtractor`.
 
-## Resource and input limits
+## Format-neutral resource budget
 
-| Area                   | Initial limit or rule                              |
-| ---------------------- | -------------------------------------------------- |
-| EPUB source            | 256 MiB                                            |
-| EPUB entries           | 10,000                                             |
-| EPUB central directory | 4 MiB                                              |
-| EPUB entry expansion   | 1 MiB per entry, 64 MiB total, ratio at most 100:1 |
-| EPUB XML metadata      | 1 MiB per parsed document                          |
-| FB2 source/XML         | 8 MiB                                              |
-| MOBI source            | 256 MiB                                            |
-| MOBI records           | 4,096                                              |
-| MOBI record zero       | 1 MiB                                              |
-| MOBI EXTH records      | 1,024 records and 64 KiB per selected value        |
+Every extraction receives one monotonic budget. A failure names only the consumed resource and configured bound, for example `bytes-read` or `selected-value`; it never includes a physical path or metadata value. `PARSE_LIMIT_EXCEEDED` remains the stable per-file outcome.
 
-EPUB entries are inspected in place and are never extracted to the filesystem. Absolute, backslash, dot, and parent-traversal entry names are rejected. ZIP64 structures outside these limits are rejected.
+| Resource                |                                                    M2 default | Classification                                  | Enforcement                                                                                              |
+| ----------------------- | ------------------------------------------------------------: | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Source facts            |                                           4 GiB admitted size | Hard security boundary                          | Pre-parse no-follow file facts; no buffer scales with this value                                         |
+| Bytes read              |                                         64 MiB per extraction | Deployment-tunable within this hard ceiling     | Counting streams and positional reads share one counter                                                  |
+| XML metadata            |                   4 MiB per selected document/metadata prefix | Hard security boundary                          | EPUB reads only container/OPF; FB2 stops at the end of `description`                                     |
+| Archive directory       |                                      10,000 entries and 4 MiB | Hard security boundary                          | Bounded central-directory inspection; no filesystem extraction                                           |
+| Selected scalar         |                                                  64 KiB UTF-8 | Hard security boundary                          | Checked incrementally before normalization or decoding                                                   |
+| Structural depth        |                                                    128 levels | Hard security boundary                          | Checked for streaming XML events                                                                         |
+| Open files/streams      | 4 per extraction; 32 per server in the staged-ingestion slice | Deployment-tunable permit with a hard ceiling   | Scoped leases; later composed with the server semaphore in #56                                           |
+| Metadata elapsed time   |                                                    30 seconds | Deployment-tunable deadline with a hard ceiling | Monotonic cooperative checks during reads and structural traversal                                       |
+| Encoded selected image  |                                                        32 MiB | Hard security boundary                          | No image is selected or decoded in metadata extraction; used by #57                                      |
+| Decoded selected image  |                                     40 megapixels and 128 MiB | Hard security boundary                          | Header probe before allocation in #57                                                                    |
+| Task memory reservation |               64 MiB metadata; 128 MiB archive-heavy metadata | Admission-control safeguard                     | Composed with the 512 MiB server pool in #56; current adapters expose largest controlled buffer evidence |
 
-JAXP processing enables secure processing, rejects document type declarations, disables external general and parameter entities, disables XInclude and entity expansion, and forbids external DTD/schema access.
+Raising a hard boundary requires threat review plus near-limit and over-limit fixtures. Deployment tuning can lower limits and can raise tunable defaults only up to the documented ceiling. The implementation does not claim that the Java runtime's internal parser objects are exactly equal to the task reservation; deterministic evidence therefore reports both counted input and largest application-controlled buffer, while reference runs report observed peak heap separately.
 
-MOBI parsing validates record counts, monotonic contained offsets, bounded header lengths, supported encodings, encryption state, and bounded EXTH record lengths before allocation or decoding.
+### EPUB
+
+All entry names and the bounded central directory are validated without extraction. Encryption is rejected. Only `mimetype`, `META-INF/container.xml`, and the selected OPF package are inflated. The 4 MiB selected-entry expansion bound and 100:1 compression-ratio bound apply to those operation-relevant entries; a large unparsed image or content entry is not falsely rejected by the XML limit. ZIP64 structures outside the directory and source bounds are rejected.
+
+### FB2
+
+Secure StAX processing rejects DTDs, external entities, external resolution, and over-depth structures. It retains only approved scalar fields under `description` and returns at the closing `description` element. Body text and base64 `binary` payloads are never materialized or traversed for metadata extraction.
+
+### MOBI
+
+The adapter validates at most 4,096 monotonic record offsets, a 1 MiB record-zero range, a 1 MiB EXTH structure, and 1,024 EXTH records. It reads the Palm database header, record directory, required MOBI fields, EXTH record headers, selected EXTH values, and optional full-name range with positional reads. Unselected records and payloads are not loaded. Supported encoding and encryption checks happen before selected text is decoded.
 
 ## Outcomes and provenance
 
@@ -52,8 +63,11 @@ The application boundary distinguishes:
 
 Plain `.fb2` is supported. `.fb2.zip` and other general archive ingestion remain excluded.
 
-## M2 follow-up
+## Alternatives and consequences
 
-Issue [#49](https://github.com/yurtools/yurlib/issues/49) must replace the coarse M1 limits with an accepted cross-format resource-budget contract. EPUB, FB2, and MOBI metadata extraction must stream or seek only bounded structures and must never materialize the complete ebook in heap memory. The follow-up must retain safe `PARSE_LIMIT_EXCEEDED` outcomes while distinguishing limits for source facts, metadata XML, archive or record structures, selected values, decoded images, and aggregate parallel-ingestion memory.
+- Relaxing the M1 1 MiB EPUB per-entry limit was rejected because it would preserve whole-archive reasoning and could replace a false rejection with unbounded work. Limits now follow the data actually opened.
+- Whole-file FB2 buffering and DOM construction were replaced with streaming metadata selection. The trade-off is a small format-specific state machine, covered by depth, scalar, malformed XML, and large-binary fixtures.
+- Reading complete MOBI record zero was replaced with explicit positional ranges. The trade-off is more offset validation, but read/allocation evidence is deterministic and large trailing records do not affect heap use.
+- New third-party parsers remain deferred. Java runtime APIs satisfy the current metadata surface without a new license, CVE, or native isolation obligation; PDF, DOCX, and DjVu dependency choices remain gated by #51.
 
-Until that design and implementation are reviewed, the numeric limits above remain the accepted M1 baseline. In particular, a limit must not be relaxed merely to admit a sample file without deterministic evidence that bytes read and allocations remain bounded.
+Parser provenance is now `jdk-epub` version `2`, `jdk-fb2-stax` version `2`, and `jdk-mobi-seek` version `3`. The aggregate extraction version is `bounded-metadata-v3`, so the next scan reprocesses older Assets through the existing append-only observation-set path. Unchanged files are then skipped idempotently at version 3, and active curated overrides remain separate.

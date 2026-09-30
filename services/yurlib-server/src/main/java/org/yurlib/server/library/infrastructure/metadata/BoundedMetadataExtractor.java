@@ -12,20 +12,28 @@ import org.yurlib.server.library.application.MetadataExtractor;
 
 public final class BoundedMetadataExtractor implements MetadataExtractor {
 
-    public static final String EXTRACTION_VERSION = "bounded-metadata-v2";
+    public static final String EXTRACTION_VERSION = "bounded-metadata-v3";
     private static final String CORRUPT_DIAGNOSTIC = "The book file could not be read safely.";
 
     private final FileFactsReader factsReader;
     private final Map<ExtractedBookMetadata.Format, MetadataParser> parsers;
+    private final MetadataResourceLimits limits;
 
     public BoundedMetadataExtractor() {
         this(
                 FileFactsReader.nio(),
-                List.of(new EpubMetadataParser(), new Fb2MetadataParser(), new MobiMetadataParser()));
+                List.of(new EpubMetadataParser(), new Fb2MetadataParser(), new MobiMetadataParser()),
+                MetadataResourceLimits.m2Defaults());
     }
 
     BoundedMetadataExtractor(FileFactsReader factsReader, List<MetadataParser> parserList) {
+        this(factsReader, parserList, MetadataResourceLimits.m2Defaults());
+    }
+
+    BoundedMetadataExtractor(
+            FileFactsReader factsReader, List<MetadataParser> parserList, MetadataResourceLimits limits) {
         this.factsReader = factsReader;
+        this.limits = limits;
         var configured = new EnumMap<ExtractedBookMetadata.Format, MetadataParser>(ExtractedBookMetadata.Format.class);
         for (var parser : parserList) {
             if (configured.put(parser.format(), parser) != null) {
@@ -42,6 +50,15 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
 
     @Override
     public MetadataExtractionResult extract(Path containedFile) {
+        return extractMeasured(containedFile).result();
+    }
+
+    MeasuredExtraction extractMeasured(Path containedFile) {
+        var budget = new MetadataResourceBudget(limits);
+        return new MeasuredExtraction(extract(containedFile, budget), budget.usage());
+    }
+
+    private MetadataExtractionResult extract(Path containedFile, MetadataResourceBudget budget) {
         var format = format(containedFile);
         if (format == null || !parsers.containsKey(format)) {
             return MetadataExtractionResult.failed(
@@ -52,12 +69,8 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
         var parser = parsers.get(format);
         try {
             var before = factsReader.read(containedFile);
-            if (before.size() > parser.maximumSourceBytes()) {
-                return MetadataExtractionResult.failed(
-                        MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED,
-                        "The book file exceeds the configured parsing limit.");
-            }
-            var parsed = parser.parse(containedFile);
+            budget.checkSourceSize(before.size());
+            var parsed = parser.parse(containedFile, budget);
             var after = factsReader.read(containedFile);
             if (!before.equals(after)) {
                 return MetadataExtractionResult.deferred(
@@ -81,6 +94,8 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
                     MetadataExtractionResult.ErrorCode.CORRUPT_ASSET, CORRUPT_DIAGNOSTIC);
         }
     }
+
+    record MeasuredExtraction(MetadataExtractionResult result, MetadataResourceBudget.Usage usage) {}
 
     private static ExtractedBookMetadata.Format format(Path file) {
         var fileName = file.getFileName();

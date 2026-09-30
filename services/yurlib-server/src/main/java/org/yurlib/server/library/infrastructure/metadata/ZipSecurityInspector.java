@@ -3,24 +3,20 @@ package org.yurlib.server.library.infrastructure.metadata;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import org.yurlib.server.library.application.MetadataExtractionResult;
 
 final class ZipSecurityInspector {
 
     private static final int CENTRAL_SIGNATURE = 0x02014b50;
     private static final int MAXIMUM_TRAILER_BYTES = 65_557;
-    private static final int MAXIMUM_CENTRAL_DIRECTORY_BYTES = 4 * 1024 * 1024;
 
     private ZipSecurityInspector() {}
 
-    static void rejectEncryptedEntries(Path path, int maximumEntries) throws IOException, MetadataParsingException {
-        try (var channel = FileChannel.open(path, StandardOpenOption.READ)) {
-            var trailerSize = (int) Math.min(channel.size(), MAXIMUM_TRAILER_BYTES);
-            var trailer = ByteBuffer.allocate(trailerSize).order(ByteOrder.LITTLE_ENDIAN);
-            readFully(channel, trailer, channel.size() - trailerSize);
+    static void inspect(Path path, MetadataResourceBudget budget) throws IOException, MetadataParsingException {
+        try (var reader = BudgetedFileReader.open(path, budget)) {
+            var trailerSize = (int) Math.min(reader.size(), MAXIMUM_TRAILER_BYTES);
+            var trailer = reader.read(reader.size() - trailerSize, trailerSize).order(ByteOrder.LITTLE_ENDIAN);
             var end = findEndRecord(trailer.array());
             if (end < 0) {
                 throw corrupt("The EPUB central directory is missing.");
@@ -28,15 +24,18 @@ final class ZipSecurityInspector {
             var entries = unsignedShort(trailer, end + 10);
             var centralSize = unsignedInt(trailer, end + 12);
             var centralOffset = unsignedInt(trailer, end + 16);
-            if (entries > maximumEntries
-                    || centralSize > MAXIMUM_CENTRAL_DIRECTORY_BYTES
-                    || centralSize > channel.size()
-                    || centralOffset > channel.size() - centralSize) {
-                throw limit("The EPUB archive exceeds its directory limits.");
+            if (entries > budget.limits().maximumArchiveEntries()) {
+                throw MetadataParsingException.limit(
+                        "archive-entry-count", budget.limits().maximumArchiveEntries(), "entries");
             }
-            var directory = ByteBuffer.allocate(Math.toIntExact(centralSize)).order(ByteOrder.LITTLE_ENDIAN);
-            readFully(channel, directory, centralOffset);
-            directory.flip();
+            if (centralSize > budget.limits().maximumArchiveDirectoryBytes()
+                    || centralSize > reader.size()
+                    || centralOffset > reader.size() - centralSize) {
+                throw MetadataParsingException.limit(
+                        "archive-directory", budget.limits().maximumArchiveDirectoryBytes(), "bytes");
+            }
+            var directory =
+                    reader.read(centralOffset, Math.toIntExact(centralSize)).order(ByteOrder.LITTLE_ENDIAN);
             for (var index = 0; index < entries; index++) {
                 if (directory.remaining() < 46 || directory.getInt() != CENTRAL_SIGNATURE) {
                     throw corrupt("The EPUB central directory is invalid.");
@@ -60,15 +59,8 @@ final class ZipSecurityInspector {
                 directory.position(directory.position() + variableLength);
             }
         } catch (ArithmeticException exception) {
-            throw limit("The EPUB archive exceeds its directory limits.", exception);
-        }
-    }
-
-    private static void readFully(FileChannel channel, ByteBuffer target, long position) throws IOException {
-        while (target.hasRemaining()) {
-            if (channel.read(target, position + target.position()) < 0) {
-                throw new IOException("Unexpected end of ZIP file.");
-            }
+            throw MetadataParsingException.limit(
+                    "archive-directory", budget.limits().maximumArchiveDirectoryBytes(), "bytes", exception);
         }
     }
 
@@ -94,13 +86,5 @@ final class ZipSecurityInspector {
 
     private static MetadataParsingException corrupt(String message) {
         return new MetadataParsingException(MetadataExtractionResult.ErrorCode.CORRUPT_ASSET, message);
-    }
-
-    private static MetadataParsingException limit(String message) {
-        return new MetadataParsingException(MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED, message);
-    }
-
-    private static MetadataParsingException limit(String message, Throwable cause) {
-        return new MetadataParsingException(MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED, message, cause);
     }
 }

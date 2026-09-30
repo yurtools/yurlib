@@ -8,7 +8,5 @@ interface MetadataParser {
 
     ExtractedBookMetadata.Format format();
 
-    long maximumSourceBytes();
-
-    ParsedBookMetadata parse(Path file) throws IOException, MetadataParsingException;
+    ParsedBookMetadata parse(Path file, MetadataResourceBudget budget) throws IOException, MetadataParsingException;
 }

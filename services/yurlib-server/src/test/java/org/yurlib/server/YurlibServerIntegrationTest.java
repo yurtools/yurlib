@@ -238,7 +238,7 @@ class YurlibServerIntegrationTest {
 
         catalogStore.reconcile(first);
         catalogStore.reconcile(
-                reconciliation(root.id(), firstJob.id(), "bounded-metadata-v2", metadata("A Better Book", 123)));
+                reconciliation(root.id(), firstJob.id(), "bounded-metadata-v3", metadata("A Better Book", 123)));
 
         var client = JdbcClient.create(dataSource);
         assertThat(tableCount(client, "work")).isEqualTo(1);
@@ -248,7 +248,7 @@ class YurlibServerIntegrationTest {
         assertThat(client.sql("SELECT extraction_version FROM asset")
                         .query(String.class)
                         .single())
-                .isEqualTo("bounded-metadata-v2");
+                .isEqualTo("bounded-metadata-v3");
         assertThat(client.sql("SELECT provisional_title FROM work")
                         .query(String.class)
                         .single())
@@ -262,7 +262,7 @@ class YurlibServerIntegrationTest {
 
         catalogStore.reconcile(reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("A Book", 123)));
         catalogStore.reconcile(
-                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("A Better Book", 123)));
+                reconciliation(root.id(), job.id(), "bounded-metadata-v3", metadata("A Better Book", 123)));
 
         var client = JdbcClient.create(dataSource);
         assertThat(tableCount(client, "metadata_observation_set")).isEqualTo(2);
@@ -390,7 +390,7 @@ class YurlibServerIntegrationTest {
                 .containsEntry("value_state", "PRESENT");
 
         catalogStore.reconcile(
-                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("Reprocessed", 123)));
+                reconciliation(root.id(), job.id(), "bounded-metadata-v3", metadata("Reprocessed", 123)));
         assertThat(displayTitle(client)).containsEntry("display_value", "Curated");
 
         client.sql("UPDATE metadata_curated_override SET active = FALSE WHERE id = :id")
