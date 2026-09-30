@@ -27,9 +27,15 @@ class OpenApiContractTest {
                         "/api/v1/session",
                         "/api/v1/session/logout",
                         "/api/v1/library-roots",
+                        "/api/v1/library-roots/{rootId}",
                         "/api/v1/library-roots/{rootId}/scans",
                         "/api/v1/jobs/{jobId}",
                         "/api/v1/catalog/works",
-                        "/api/v1/assets/{assetId}/content");
+                        "/api/v1/assets/{assetId}/content",
+                        "/api/v1/admin/users",
+                        "/api/v1/admin/users/{userId}/enabled",
+                        "/api/v1/admin/users/{userId}/credential",
+                        "/api/v1/admin/users/{userId}/capabilities",
+                        "/api/v1/admin/users/{userId}/root-denies/{rootId}");
     }
 }

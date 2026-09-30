@@ -59,7 +59,7 @@ class FilesystemScanDiscoveryTest {
                 "main",
                 "books",
                 sha256(TOKEN),
-                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Mode.READ_ONLY_SOURCE,
                 LibraryRoot.Availability.AVAILABLE,
                 null);
     }

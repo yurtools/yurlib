@@ -8,8 +8,8 @@ servers:
 paths:
   /api/v1/session:
     get:
-      operationId: getOwnerSession
-      summary: Read owner authentication and access mode state
+      operationId: getSession
+      summary: Read persisted-user authentication and capability state
       security: []
       responses:
         "200":
@@ -19,8 +19,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/OwnerSession"
     post:
-      operationId: createOwnerSession
-      summary: Authenticate the deployment owner
+      operationId: createSession
+      summary: Authenticate a persisted user
       security:
         - csrfHeader: []
       requestBody:
@@ -46,8 +46,8 @@ paths:
           $ref: "#/components/responses/Problem"
   /api/v1/session/logout:
     post:
-      operationId: deleteOwnerSession
-      summary: End the current owner session
+      operationId: deleteSession
+      summary: End the current user session
       security:
         - sessionCookie: []
           csrfHeader: []
@@ -84,7 +84,7 @@ paths:
                   $ref: "#/components/schemas/LibraryRoot"
     post:
       operationId: createLibraryRoot
-      summary: Configure and validate a read-only library root
+      summary: Configure and validate a typed library root
       security:
         - sessionCookie: []
           csrfHeader: []
@@ -102,6 +102,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/LibraryRoot"
         "400":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/library-roots/{rootId}:
+    delete:
+      operationId: deleteLibraryRoot
+      summary: Remove an unused library root
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/RootId"
+      responses:
+        "204":
+          description: Root removed
+        "404":
           $ref: "#/components/responses/Problem"
         "409":
           $ref: "#/components/responses/Problem"
@@ -197,11 +213,160 @@ paths:
             application/epub+zip: {}
             application/xml: {}
             application/x-mobipocket-ebook: {}
+            application/pdf: {}
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document: {}
+            image/vnd.djvu: {}
             application/octet-stream: {}
         "404":
           $ref: "#/components/responses/Problem"
         "409":
           $ref: "#/components/responses/Problem"
+  /api/v1/admin/users:
+    get:
+      operationId: listUsers
+      summary: List persisted users and their authorization state
+      responses:
+        "200":
+          description: Persisted users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAccount"
+    post:
+      operationId: createUser
+      summary: Create a persisted user
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/admin/users/{userId}/enabled:
+    put:
+      operationId: setUserEnabled
+      summary: Enable or disable a persisted user
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+  /api/v1/admin/users/{userId}/credential:
+    put:
+      operationId: resetUserCredential
+      summary: Reset a persisted user's password
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+  /api/v1/admin/users/{userId}/capabilities:
+    put:
+      operationId: replaceUserCapabilities
+      summary: Replace a user's independently grantable capabilities
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [capabilities]
+              properties:
+                capabilities:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: "#/components/schemas/Capability"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+  /api/v1/admin/users/{userId}/root-denies/{rootId}:
+    put:
+      operationId: denyUserRoot
+      summary: Deny a root to a user
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/RootId"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+    delete:
+      operationId: allowUserRoot
+      summary: Remove a user's explicit root deny
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/RootId"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
 components:
   securitySchemes:
     sessionCookie:
@@ -220,6 +385,13 @@ components:
       schema:
         type: string
         format: uuid
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   responses:
     Problem:
       description: RFC 9457 problem response
@@ -231,7 +403,7 @@ components:
     OwnerSession:
       type: object
       additionalProperties: false
-      required: [mode, authenticated]
+      required: [mode, authenticated, owner, capabilities]
       properties:
         mode:
           type: string
@@ -240,6 +412,13 @@ components:
           type: boolean
         username:
           type: [string, "null"]
+        owner:
+          type: boolean
+        capabilities:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/Capability"
     LibraryMount:
       type: object
       additionalProperties: false
@@ -251,7 +430,7 @@ components:
     CreateLibraryRootRequest:
       type: object
       additionalProperties: false
-      required: [name, mountAlias, relativePath, identityToken]
+      required: [name, mountAlias, relativePath, identityToken, mode]
       properties:
         name:
           type: string
@@ -269,6 +448,9 @@ components:
           minLength: 16
           maxLength: 200
           writeOnly: true
+        mode:
+          type: string
+          enum: [READ_ONLY_SOURCE, MANAGED_OUTPUT]
     LibraryRoot:
       type: object
       required: [id, name, mountAlias, relativePath, mode, availability]
@@ -284,7 +466,7 @@ components:
           type: string
         mode:
           type: string
-          const: READ_ONLY
+          enum: [READ_ONLY_SOURCE, MANAGED_OUTPUT]
         availability:
           $ref: "#/components/schemas/RootAvailability"
         lastSuccessfulScanAt:
@@ -404,7 +586,7 @@ components:
           format: uuid
         format:
           type: string
-          enum: [EPUB, FB2, MOBI]
+          enum: [EPUB, FB2, MOBI, PDF, DOCX, DJVU]
         size:
           type: integer
           format: int64
@@ -414,7 +596,64 @@ components:
           enum: [AVAILABLE, UNAVAILABLE]
         original:
           type: boolean
-          const: true
+    Capability:
+      type: string
+      enum: [MANAGE_INGESTION_SOURCES, CURATE_CATALOG]
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 200
+          writeOnly: true
+    CredentialRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 200
+          writeOnly: true
+    UserAccount:
+      type: object
+      additionalProperties: false
+      required: [id, username, owner, enabled, authorizationVersion, capabilities, deniedRootIds]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        owner:
+          type: boolean
+        enabled:
+          type: boolean
+        authorizationVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        capabilities:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/Capability"
+        deniedRootIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
     Problem:
       type: object
       required: [type, title, status, code, correlationId]

@@ -16,6 +16,7 @@ import org.yurlib.server.library.application.CatalogQuery;
 import org.yurlib.server.library.application.CatalogReconciliation;
 import org.yurlib.server.library.application.CatalogStore;
 import org.yurlib.server.library.application.ExtractedBookMetadata;
+import org.yurlib.server.library.application.LibraryAccessContext;
 import org.yurlib.server.library.domain.Asset;
 import tools.jackson.databind.ObjectMapper;
 
@@ -27,10 +28,12 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
     private final JdbcClient jdbc;
     private final ObjectMapper objectMapper;
+    private final LibraryAccessContext accessContext;
 
-    public JdbcCatalogStore(JdbcClient jdbc, ObjectMapper objectMapper) {
+    public JdbcCatalogStore(JdbcClient jdbc, ObjectMapper objectMapper, LibraryAccessContext accessContext) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper.rebuild().build();
+        this.accessContext = accessContext;
     }
 
     @Override
@@ -91,16 +94,17 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     @Override
     public CatalogPage search(String query, int page, int size) {
         validatePage(query, page, size);
+        var access = accessContext.current();
         var pattern = searchPattern(query);
-        var total = countWorks(pattern);
+        var total = countWorks(pattern, access);
         if (total == 0) {
             return new CatalogPage(List.of(), page, size, 0);
         }
 
-        var works = findWorks(pattern, page, size);
+        var works = findWorks(pattern, page, size, access);
         var workIds = works.stream().map(WorkRow::id).toList();
-        var contributors = findContributors(workIds);
-        var assets = findAssets(workIds);
+        var contributors = findContributors(workIds, access);
+        var assets = findAssets(workIds, access);
         var items = works.stream()
                 .map(work -> new WorkSummary(
                         work.id(),
@@ -363,63 +367,148 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .update();
     }
 
-    private long countWorks(String pattern) {
+    private long countWorks(String pattern, LibraryAccessContext.Access access) {
         return jdbc.sql("""
-                SELECT count(DISTINCT work.id)
+                SELECT count(*)
                 FROM work
-                JOIN edition ON edition.work_id = work.id
-                JOIN asset ON asset.edition_id = edition.id
-                JOIN asset_location location ON location.asset_id = asset.id
-                WHERE lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
-                   OR lower(location.normalized_relative_path) LIKE :pattern ESCAPE '\\'
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM edition visible_edition
+                    JOIN asset visible_asset ON visible_asset.edition_id = visible_edition.id
+                    JOIN asset_location visible_location ON visible_location.asset_id = visible_asset.id
+                    WHERE visible_edition.work_id = work.id
+                      AND visible_location.availability = 'AVAILABLE'
+                      AND (:unrestricted OR NOT EXISTS (
+                          SELECT 1 FROM user_root_deny denied
+                          WHERE denied.user_id = :userId
+                            AND denied.library_root_id = visible_location.library_root_id
+                      ))
+                      AND (visible_asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                          SELECT 1
+                          FROM asset_derivation_source lineage
+                          JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                          JOIN user_root_deny denied_source
+                            ON denied_source.library_root_id = source_location.library_root_id
+                           AND denied_source.user_id = :userId
+                          WHERE lineage.derived_asset_id = visible_asset.id
+                      ))
+                )
+                AND (lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (
+                       SELECT 1
+                       FROM edition path_edition
+                       JOIN asset path_asset ON path_asset.edition_id = path_edition.id
+                       JOIN asset_location path_location ON path_location.asset_id = path_asset.id
+                       WHERE path_edition.work_id = work.id
+                         AND lower(path_location.normalized_relative_path) LIKE :pattern ESCAPE '\\'
+                         AND (:unrestricted OR NOT EXISTS (
+                             SELECT 1 FROM user_root_deny denied
+                             WHERE denied.user_id = :userId
+                               AND denied.library_root_id = path_location.library_root_id
+                         ))
+                   )
                    OR EXISTS (
                        SELECT 1 FROM metadata_observation observation
                        WHERE observation.subject_type = 'WORK'
                          AND observation.subject_id = work.id
                          AND observation.field_name = 'contributor'
                          AND lower(observation.observed_value) LIKE :pattern ESCAPE '\\'
+                         AND (:unrestricted OR NOT EXISTS (
+                             SELECT 1 FROM user_root_deny denied
+                             WHERE denied.user_id = :userId
+                               AND denied.library_root_id = observation.source_root_id
+                         ))
                    )
                    OR EXISTS (
-                       SELECT 1 FROM jsonb_each_text(edition.identifiers) identifier
-                       WHERE lower(identifier.key) LIKE :pattern ESCAPE '\\'
-                          OR lower(identifier.value) LIKE :pattern ESCAPE '\\'
-                   )
-                """).param("pattern", pattern).query(Long.class).single();
+                       SELECT 1
+                       FROM edition identifier_edition,
+                            jsonb_each_text(identifier_edition.identifiers) identifier
+                       WHERE identifier_edition.work_id = work.id
+                         AND (lower(identifier.key) LIKE :pattern ESCAPE '\\'
+                              OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                   ))
+                """)
+                .param("pattern", pattern)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
+                .query(Long.class)
+                .single();
     }
 
-    private List<WorkRow> findWorks(String pattern, int page, int size) {
+    private List<WorkRow> findWorks(String pattern, int page, int size, LibraryAccessContext.Access access) {
         return jdbc.sql("""
-                SELECT DISTINCT work.id, work.provisional_title AS title,
+                SELECT work.id, work.provisional_title AS title,
                        work.resolution_state = 'PROVISIONAL' AS provisional
                 FROM work
-                JOIN edition ON edition.work_id = work.id
-                JOIN asset ON asset.edition_id = edition.id
-                JOIN asset_location location ON location.asset_id = asset.id
-                WHERE lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
-                   OR lower(location.normalized_relative_path) LIKE :pattern ESCAPE '\\'
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM edition visible_edition
+                    JOIN asset visible_asset ON visible_asset.edition_id = visible_edition.id
+                    JOIN asset_location visible_location ON visible_location.asset_id = visible_asset.id
+                    WHERE visible_edition.work_id = work.id
+                      AND visible_location.availability = 'AVAILABLE'
+                      AND (:unrestricted OR NOT EXISTS (
+                          SELECT 1 FROM user_root_deny denied
+                          WHERE denied.user_id = :userId
+                            AND denied.library_root_id = visible_location.library_root_id
+                      ))
+                      AND (visible_asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                          SELECT 1
+                          FROM asset_derivation_source lineage
+                          JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                          JOIN user_root_deny denied_source
+                            ON denied_source.library_root_id = source_location.library_root_id
+                           AND denied_source.user_id = :userId
+                          WHERE lineage.derived_asset_id = visible_asset.id
+                      ))
+                )
+                AND (lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (
+                       SELECT 1
+                       FROM edition path_edition
+                       JOIN asset path_asset ON path_asset.edition_id = path_edition.id
+                       JOIN asset_location path_location ON path_location.asset_id = path_asset.id
+                       WHERE path_edition.work_id = work.id
+                         AND lower(path_location.normalized_relative_path) LIKE :pattern ESCAPE '\\'
+                         AND (:unrestricted OR NOT EXISTS (
+                             SELECT 1 FROM user_root_deny denied
+                             WHERE denied.user_id = :userId
+                               AND denied.library_root_id = path_location.library_root_id
+                         ))
+                   )
                    OR EXISTS (
                        SELECT 1 FROM metadata_observation observation
                        WHERE observation.subject_type = 'WORK'
                          AND observation.subject_id = work.id
                          AND observation.field_name = 'contributor'
                          AND lower(observation.observed_value) LIKE :pattern ESCAPE '\\'
+                         AND (:unrestricted OR NOT EXISTS (
+                             SELECT 1 FROM user_root_deny denied
+                             WHERE denied.user_id = :userId
+                               AND denied.library_root_id = observation.source_root_id
+                         ))
                    )
                    OR EXISTS (
-                       SELECT 1 FROM jsonb_each_text(edition.identifiers) identifier
-                       WHERE lower(identifier.key) LIKE :pattern ESCAPE '\\'
-                          OR lower(identifier.value) LIKE :pattern ESCAPE '\\'
-                   )
+                       SELECT 1
+                       FROM edition identifier_edition,
+                            jsonb_each_text(identifier_edition.identifiers) identifier
+                       WHERE identifier_edition.work_id = work.id
+                         AND (lower(identifier.key) LIKE :pattern ESCAPE '\\'
+                              OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                   ))
                 ORDER BY title, work.id
                 LIMIT :size OFFSET :offset
                 """)
                 .param("pattern", pattern)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
                 .param("size", size)
                 .param("offset", Math.multiplyExact(page, size))
                 .query(WorkRow.class)
                 .list();
     }
 
-    private Map<UUID, List<String>> findContributors(List<UUID> workIds) {
+    private Map<UUID, List<String>> findContributors(List<UUID> workIds, LibraryAccessContext.Access access) {
         var result = new LinkedHashMap<UUID, List<String>>();
         jdbc.sql("""
                 SELECT subject_id AS work_id, observed_value
@@ -427,9 +516,16 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 WHERE subject_type = 'WORK'
                   AND field_name = 'contributor'
                   AND subject_id IN (:workIds)
+                  AND (:unrestricted OR NOT EXISTS (
+                      SELECT 1 FROM user_root_deny denied
+                      WHERE denied.user_id = :userId
+                        AND denied.library_root_id = metadata_observation.source_root_id
+                  ))
                 ORDER BY subject_id, observed_value
                 """)
                 .param("workIds", workIds)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
                 .query((row, rowNumber) ->
                         new ContributorRow(row.getObject("work_id", UUID.class), row.getString("observed_value")))
                 .list()
@@ -438,25 +534,42 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         return result;
     }
 
-    private Map<UUID, List<AssetSummary>> findAssets(List<UUID> workIds) {
+    private Map<UUID, List<AssetSummary>> findAssets(List<UUID> workIds, LibraryAccessContext.Access access) {
         var result = new LinkedHashMap<UUID, List<AssetSummary>>();
         jdbc.sql("""
-                SELECT edition.work_id, asset.id, asset.format, asset.byte_size,
+                SELECT edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
                        bool_or(location.availability = 'AVAILABLE') AS available
                 FROM asset
                 JOIN edition ON edition.id = asset.edition_id
                 JOIN asset_location location ON location.asset_id = asset.id
                 WHERE edition.work_id IN (:workIds)
-                GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size
+                  AND (:unrestricted OR NOT EXISTS (
+                      SELECT 1 FROM user_root_deny denied
+                      WHERE denied.user_id = :userId
+                        AND denied.library_root_id = location.library_root_id
+                  ))
+                  AND (asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                      SELECT 1
+                      FROM asset_derivation_source lineage
+                      JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                      JOIN user_root_deny denied_source
+                        ON denied_source.library_root_id = source_location.library_root_id
+                       AND denied_source.user_id = :userId
+                      WHERE lineage.derived_asset_id = asset.id
+                  ))
+                GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation
                 ORDER BY edition.work_id, asset.id
                 """)
                 .param("workIds", workIds)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
                 .query((row, rowNumber) -> new AssetRow(
                         row.getObject("work_id", UUID.class),
                         row.getObject("id", UUID.class),
                         Asset.Format.valueOf(row.getString("format")),
                         row.getLong("byte_size"),
-                        row.getBoolean("available")))
+                        row.getBoolean("available"),
+                        "ORIGINAL".equals(row.getString("derivation"))))
                 .list()
                 .forEach(row -> result.computeIfAbsent(row.workId(), ignored -> new ArrayList<>())
                         .add(new AssetSummary(
@@ -464,7 +577,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                                 row.format(),
                                 row.size(),
                                 row.available() ? Availability.AVAILABLE : Availability.UNAVAILABLE,
-                                true)));
+                                row.original())));
         return result;
     }
 
@@ -517,5 +630,6 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
     private record ContributorRow(UUID workId, String value) {}
 
-    private record AssetRow(UUID workId, UUID id, Asset.Format format, long size, boolean available) {}
+    private record AssetRow(
+            UUID workId, UUID id, Asset.Format format, long size, boolean available, boolean original) {}
 }

@@ -28,7 +28,7 @@ class CatalogProvenanceMigrationTest {
         var storedHash = sourceHashes.get("valid/minimal.fb2");
         var ids = insertM1Catalog(schema, storedHash);
 
-        flyway(schema, null).migrate();
+        flyway(schema, "4").migrate();
 
         try (var connection = connection(schema);
                 var statement = connection.createStatement()) {

@@ -37,21 +37,30 @@ class ConfigureLibraryRootServiceTest {
         verify(store).save(saved.capture());
         assertThat(result).isEqualTo(saved.getValue());
         assertThat(saved.getValue().expectedIdentityDigest()).isEqualTo("a".repeat(64));
-        assertThat(saved.getValue().mode()).isEqualTo(LibraryRoot.Mode.READ_ONLY);
+        assertThat(saved.getValue().mode()).isEqualTo(LibraryRoot.Mode.READ_ONLY_SOURCE);
         assertThat(saved.getValue().availability()).isEqualTo(LibraryRoot.Availability.AVAILABLE);
     }
 
     @Test
-    void rejectsASecondRootBeforeAccessingItsFilesystem() {
-        when(store.hasAny()).thenReturn(true);
+    void rejectsAnOverlappingRootAfterNormalizingItsLocation() {
+        when(store.findAll())
+                .thenReturn(List.of(new LibraryRoot(
+                        java.util.UUID.randomUUID(),
+                        "Main library",
+                        "main",
+                        "books",
+                        "a".repeat(64),
+                        LibraryRoot.Mode.READ_ONLY_SOURCE,
+                        LibraryRoot.Availability.AVAILABLE,
+                        null)));
+        when(verifier.verify("main", "books/child", "private-token-1234"))
+                .thenReturn(new RootLocationVerifier.VerifiedRootLocation("books/child", "b".repeat(64)));
 
         assertThatThrownBy(() -> service.configure(
-                        new ConfigureLibraryRootCommand("Second library", "second", "", "private-token-1234")))
+                        new ConfigureLibraryRootCommand("Second library", "main", "books/child", "private-token-1234")))
                 .isInstanceOfSatisfying(
                         LibraryRootFailure.class,
-                        failure ->
-                                assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_ALREADY_CONFIGURED));
-        verify(verifier, never()).verify(any(), any(), any());
+                        failure -> assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_OVERLAP));
     }
 
     @Test

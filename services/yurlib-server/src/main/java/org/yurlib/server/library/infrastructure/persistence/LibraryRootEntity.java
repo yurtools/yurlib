@@ -39,9 +39,6 @@ class LibraryRootEntity {
     @Column(name = "last_successful_scan_at")
     private Instant lastSuccessfulScanAt;
 
-    @Column(name = "singleton_key")
-    private short singletonKey = 1;
-
     protected LibraryRootEntity() {
         // Required by JPA.
     }
@@ -55,7 +52,6 @@ class LibraryRootEntity {
         mode = root.mode().name();
         availability = root.availability().name();
         lastSuccessfulScanAt = root.lastSuccessfulScanAt();
-        singletonKey = 1;
     }
 
     LibraryRoot toDomain() {

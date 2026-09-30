@@ -31,13 +31,11 @@ public record LibraryRoot(
         if (!SHA_256.matcher(expectedIdentityDigest).matches()) {
             throw new IllegalArgumentException("expectedIdentityDigest must be a lowercase SHA-256 digest");
         }
-        if (mode != Mode.READ_ONLY) {
-            throw new IllegalArgumentException("the first slice supports read-only roots only");
-        }
     }
 
     public enum Mode {
-        READ_ONLY
+        READ_ONLY_SOURCE,
+        MANAGED_OUTPUT
     }
 
     public enum Availability {

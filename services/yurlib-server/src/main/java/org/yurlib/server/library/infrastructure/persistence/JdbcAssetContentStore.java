@@ -6,18 +6,22 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.yurlib.server.library.application.AssetContentLocation;
 import org.yurlib.server.library.application.AssetContentStore;
+import org.yurlib.server.library.application.LibraryAccessContext;
 
 @Component
 public class JdbcAssetContentStore implements AssetContentStore {
 
     private final JdbcClient jdbc;
+    private final LibraryAccessContext accessContext;
 
-    public JdbcAssetContentStore(JdbcClient jdbc) {
+    public JdbcAssetContentStore(JdbcClient jdbc, LibraryAccessContext accessContext) {
         this.jdbc = jdbc;
+        this.accessContext = accessContext;
     }
 
     @Override
     public Optional<AssetContentLocation> findByAssetId(UUID assetId) {
+        var access = accessContext.current();
         return jdbc.sql("""
                 SELECT asset.id AS asset_id,
                        location.library_root_id AS root_id,
@@ -30,11 +34,29 @@ public class JdbcAssetContentStore implements AssetContentStore {
                 FROM asset
                 JOIN asset_location location ON location.asset_id = asset.id
                 WHERE asset.id = :assetId
+                  AND (:unrestricted OR NOT EXISTS (
+                      SELECT 1
+                      FROM user_root_deny denied
+                      WHERE denied.user_id = :userId
+                        AND denied.library_root_id = location.library_root_id
+                  ))
+                  AND (asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                      SELECT 1
+                      FROM asset_derivation_source lineage
+                      JOIN asset_location source_location
+                        ON source_location.asset_id = lineage.source_asset_id
+                      JOIN user_root_deny denied_source
+                        ON denied_source.library_root_id = source_location.library_root_id
+                       AND denied_source.user_id = :userId
+                      WHERE lineage.derived_asset_id = asset.id
+                  ))
                 ORDER BY CASE WHEN location.availability = 'AVAILABLE' THEN 0 ELSE 1 END,
                          location.normalized_relative_path
                 LIMIT 1
                 """)
                 .param("assetId", assetId)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
                 .query(AssetContentLocation.class)
                 .optional();
     }

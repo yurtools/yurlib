@@ -123,7 +123,7 @@ class DomainModelTest {
                         "library-main",
                         "books",
                         "not-a-digest",
-                        LibraryRoot.Mode.READ_ONLY,
+                        LibraryRoot.Mode.READ_ONLY_SOURCE,
                         LibraryRoot.Availability.UNKNOWN,
                         null))
                 .isInstanceOf(IllegalArgumentException.class)

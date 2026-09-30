@@ -19,16 +19,16 @@
 
 @if (checkingSession()) {
   <main class="access-shell" aria-live="polite">
-    <p class="eyebrow">Owner access</p>
+    <p class="eyebrow">Library access</p>
     <h1>Opening your library…</h1>
   </main>
 } @else if (!session()?.authenticated) {
   <main class="access-shell">
     <section class="access-panel" aria-labelledby="access-heading">
       <div class="access-intro">
-        <p class="eyebrow">Owner access</p>
+        <p class="eyebrow">Library access</p>
         <h1 id="access-heading">Enter the workbench.</h1>
-        <p>Sign in with the owner credential configured for this Yurlib deployment.</p>
+        <p>Sign in with your Yurlib account.</p>
       </div>
       <form class="login-form" (submit)="signIn($event)" (keydown.enter)="signIn($event)" novalidate>
         <label>
@@ -69,8 +69,7 @@
         <h1>Library workbench</h1>
       </div>
       <p class="workspace-summary">
-        Configure one read-only source, follow its scan, then browse and download the original
-        books.
+        Browse the books available to your account and manage sources when authorized.
       </p>
     </header>
 
@@ -78,7 +77,8 @@
       <p class="notice notice-error" role="alert">{{ workspaceError() }}</p>
     }
 
-    <section class="workspace-section setup-section" aria-labelledby="source-heading">
+    @if (canManageSources()) {
+      <section class="workspace-section setup-section" aria-labelledby="source-heading">
       <div class="section-heading">
         <p class="step">01</p>
         <div>
@@ -102,7 +102,11 @@
             <span class="status" [attr.data-state]="root.availability">
               {{ formatState(root.availability) }}
             </span>
-            <button type="button" (click)="startScan()" [disabled]="startingScan()">
+            <button
+              type="button"
+              (click)="startScan()"
+              [disabled]="startingScan() || root.mode !== 'READ_ONLY_SOURCE'"
+            >
               {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
             </button>
           </div>
@@ -110,8 +114,16 @@
         @if (scanError()) {
           <p class="notice notice-error" role="alert">{{ scanError() }}</p>
         }
-      } @else {
-        <form class="root-form" (submit)="configureRoot($event)" novalidate>
+      }
+      <form class="root-form" (submit)="configureRoot($event)" novalidate>
+          <label>
+            <span>Root mode</span>
+            <select [formField]="rootForm.mode">
+              <option value="READ_ONLY_SOURCE">Read-only source</option>
+              <option value="MANAGED_OUTPUT">Managed output</option>
+            </select>
+          </label>
+
           <label>
             <span>Library name</span>
             <input autocomplete="off" [formField]="rootForm.name" />
@@ -167,12 +179,12 @@
             </button>
             <p>The identity token is verified and never returned by the server.</p>
           </div>
-        </form>
-        @if (rootError()) {
-          <p class="notice notice-error" role="alert">{{ rootError() }}</p>
-        }
+      </form>
+      @if (rootError()) {
+        <p class="notice notice-error" role="alert">{{ rootError() }}</p>
       }
-    </section>
+      </section>
+    }
 
     @if (job(); as currentJob) {
       <section class="workspace-section" aria-labelledby="scan-heading" aria-live="polite">

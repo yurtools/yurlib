@@ -66,7 +66,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("4");
+        assertThat(value).isEqualTo("5");
     }
 
     @Test
@@ -98,7 +98,11 @@ class YurlibServerIntegrationTest {
                         "edition_identifier",
                         "asset_derivation_source",
                         "catalog_redirect",
-                        "catalog_audit_event"));
+                        "catalog_audit_event",
+                        "user_account",
+                        "user_capability",
+                        "user_root_deny",
+                        "security_audit_event"));
     }
 
     @Test
@@ -209,7 +213,7 @@ class YurlibServerIntegrationTest {
                 "main",
                 "books",
                 identityDigest,
-                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Mode.READ_ONLY_SOURCE,
                 LibraryRoot.Availability.AVAILABLE,
                 null));
 
@@ -586,7 +590,7 @@ class YurlibServerIntegrationTest {
                 "main",
                 "books",
                 "a".repeat(64),
-                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Mode.READ_ONLY_SOURCE,
                 LibraryRoot.Availability.AVAILABLE,
                 null));
     }

@@ -46,14 +46,15 @@ class LibraryRootControllerTest {
                                   "name": "Main library",
                                   "mountAlias": "main",
                                   "relativePath": "books",
-                                  "identityToken": "private-token-1234"
+                                  "identityToken": "private-token-1234",
+                                  "mode": "READ_ONLY_SOURCE"
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(CorrelationIdFilter.HEADER, CORRELATION_ID))
                 .andExpect(jsonPath("$.mountAlias").value("main"))
                 .andExpect(jsonPath("$.relativePath").value("books"))
-                .andExpect(jsonPath("$.mode").value("READ_ONLY"))
+                .andExpect(jsonPath("$.mode").value("READ_ONLY_SOURCE"))
                 .andExpect(jsonPath("$.availability").value("AVAILABLE"))
                 .andExpect(jsonPath("$.identityToken").doesNotExist())
                 .andExpect(jsonPath("$.expectedIdentityDigest").doesNotExist());
@@ -83,7 +84,8 @@ class LibraryRootControllerTest {
                                   "name": "Main library",
                                   "mountAlias": "main",
                                   "relativePath": "books",
-                                  "identityToken": "private-token-1234"
+                                  "identityToken": "private-token-1234",
+                                  "mode": "READ_ONLY_SOURCE"
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -102,7 +104,8 @@ class LibraryRootControllerTest {
                                   "name": "Main library",
                                   "mountAlias": "MAIN",
                                   "relativePath": "books",
-                                  "identityToken": "short"
+                                  "identityToken": "short",
+                                  "mode": "READ_ONLY_SOURCE"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -130,7 +133,7 @@ class LibraryRootControllerTest {
                 "main",
                 "books",
                 "a".repeat(64),
-                LibraryRoot.Mode.READ_ONLY,
+                LibraryRoot.Mode.READ_ONLY_SOURCE,
                 LibraryRoot.Availability.AVAILABLE,
                 null);
     }

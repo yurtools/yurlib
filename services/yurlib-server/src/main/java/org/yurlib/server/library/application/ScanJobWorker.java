@@ -1,5 +1,6 @@
 package org.yurlib.server.library.application;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
@@ -16,6 +17,9 @@ public final class ScanJobWorker {
     private final Duration leaseTimeout;
     private final ScanJobTelemetry telemetry;
 
+    @SuppressFBWarnings(
+            value = "EI_EXPOSE_REP2",
+            justification = "The composition root owns these application ports for the worker lifetime.")
     public ScanJobWorker(
             LibraryRootStore roots,
             ScanJobStore jobs,
