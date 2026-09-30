@@ -81,6 +81,8 @@ READ_ONLY roots allow discovery, parsing and download but no source writes. Mana
 
 Discover candidates → record lightweight file facts → verify file stability → extract metadata → reconcile catalog records → perform deferred hashing and enrichment. Publish progress and provisional catalog entries before optional enrichment completes. Support EPUB, FB2 and MOBI at the first local-library milestone; classify unsupported, encrypted and corrupt files with actionable reasons.
 
+M2 expands discovery, bounded metadata extraction, cataloging, search and original-asset download to PDF, DOCX and DjVu. Treat their document structures, compressed members, embedded objects, external relationships, fonts, images and renderer/parser inputs as untrusted. The M2 design must select reviewed dependencies or isolated tools, define format-specific resource budgets and fixtures, and preserve source files. Full-text indexing, document editing, office macro execution and active-content execution are not implied by adding these formats.
+
 Use root identity and relative location, file size, modification information and processing versions to avoid unnecessary work. Fast fingerprints and timestamps are change-detection hints, not proof of identical content. Compute a full content hash before declaring an exact duplicate; provide an explicit verification rescan for changes that cheap checks may miss.
 
 ### NAS and filesystem behavior
@@ -194,6 +196,8 @@ Let the user select an available source asset and a supported target format. Exe
 
 Calibre is a candidate conversion provider, not part of the catalog domain. Its documented inputs and outputs include EPUB, FB2 and MOBI, but its documentation does not guarantee that every generated EPUB is valid. Validate supported routes against a representative corpus and report conversion limitations. [S2](https://manual.calibre-ebook.com/faq.html)
 
+PDF, DOCX and DjVu conversion routes are not implied by catalog support. Add a source/target route only after the M2 conversion design verifies converter support, fidelity, licensing, hostile-input isolation and deterministic acceptance fixtures for that route.
+
 Do not promise lossless round trips or universal device compatibility. Prevent repeated identical requests from producing accidental duplicates; identify a conversion by its source version and effective conversion configuration. Apply process time, memory and temporary-storage limits, avoid shell interpolation, and remove abandoned temporary output safely.
 
 ### PC-08 — Reviewable AI suggestions
@@ -275,16 +279,16 @@ Include partial copies, renamed files, unreachable roots, symlinks, malicious ar
 
 The following phasing is a proposal, not a removal of requested capabilities. V1 is the combined usable product across M1–M3; M1 alone is an early milestone, not a claim that the complete concept has shipped.
 
-| Stage                  | Outcome                                                                                                                                                                                                                                                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M0 — Foundation        | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks.                                                                                                                                    |
-| M1 — Local library     | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads.                                                                                                                                  |
-| M2 — Curation          | Provenance-aware metadata normalization and owner curation; bounded streaming extraction and parallel ingestion; safe covers; author aliases and merge recovery; personal library state; tags, collections, duplicate review, supported databases, conversion, managed outputs, and backup/restore verification. |
-| M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow.                                                                                                |
+| Stage                  | Outcome                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 — Foundation        | Create the GitHub repository, configure GitHub Issues and Projects, write and review the environment/SDLC design, configure the workflow and derive its implementation tasks.                                                                                                                                                                                                                  |
+| M1 — Local library     | Container deployment; read-only roots; EPUB/FB2/MOBI discovery and metadata; resumable ingestion; catalog search; progress/errors; authenticated access and original downloads.                                                                                                                                                                                                                |
+| M2 — Curation          | PDF/DOCX/DjVu discovery, bounded metadata, cataloging and original downloads; provenance-aware metadata normalization and owner curation; bounded streaming extraction and parallel ingestion; safe covers; author aliases and merge recovery; personal library state; tags, collections, duplicate review, supported databases, conversion, managed outputs, and backup/restore verification. |
+| M3 — Connected library | Versioned connector contract; at least one real source; Flibusta feasibility and implementation when supported; external search/check/link; supported user-triggered import; one optional AI suggestion workflow.                                                                                                                                                                              |
 
 ### Follow-on scope
 
-Preserve these as later candidates: broad managed-folder reorganization; automatic acquisition policies; additional formats and connectors; richer multi-work editions; full-text and semantic search; advanced recommendations; additional users and device integrations. DRM circumvention, public multi-tenant hosting, a plugin marketplace and Kubernetes are not V1 requirements.
+Preserve these as later candidates: broad managed-folder reorganization; automatic acquisition policies; formats beyond EPUB, FB2, MOBI, PDF, DOCX and DjVu; additional connectors; richer multi-work editions; full-text and semantic search; advanced recommendations; additional users and device integrations. DRM circumvention, public multi-tenant hosting, a plugin marketplace and Kubernetes are not V1 requirements.
 
 ### Architecture direction, not topology lock-in
 
