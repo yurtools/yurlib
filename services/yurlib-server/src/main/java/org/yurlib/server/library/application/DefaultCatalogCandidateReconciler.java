@@ -8,11 +8,24 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
 
     private final CatalogStore catalog;
     private final MetadataExtractor extractor;
+    private final PdfMetadataQueue pdfQueue;
     private final Clock clock;
 
     public DefaultCatalogCandidateReconciler(CatalogStore catalog, MetadataExtractor extractor, Clock clock) {
+        this(
+                catalog,
+                extractor,
+                (rootId, scanJobId, extractionVersion, candidate) -> CandidateReconciliationResult.deferred(
+                        MetadataExtractionResult.ErrorCode.UNSUPPORTED_FORMAT.name(),
+                        "The isolated PDF metadata worker is not configured."),
+                clock);
+    }
+
+    public DefaultCatalogCandidateReconciler(
+            CatalogStore catalog, MetadataExtractor extractor, PdfMetadataQueue pdfQueue, Clock clock) {
         this.catalog = catalog;
         this.extractor = extractor;
+        this.pdfQueue = pdfQueue;
         this.clock = clock;
     }
 
@@ -24,6 +37,13 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
                 .isPresent()) {
             catalog.markSeen(rootId, scanJobId, candidate.normalizedRelativePath());
             return CandidateReconciliationResult.skipped();
+        }
+
+        if (candidate
+                .normalizedRelativePath()
+                .toLowerCase(java.util.Locale.ROOT)
+                .endsWith(".pdf")) {
+            return pdfQueue.stageAndQueue(rootId, scanJobId, extractionVersion, candidate);
         }
 
         var extraction = extractor.extract(candidate.containedFile());
@@ -47,7 +67,8 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
             CatalogLocationSnapshot location, ScanDiscovery.Candidate candidate, String extractionVersion) {
         return location.byteSize() == candidate.byteSize()
                 && timestampMatches(location.modifiedAt(), candidate.modifiedAt())
-                && location.extractionVersion().equals(extractionVersion);
+                && location.extractionVersion().equals(extractionVersion)
+                && location.metadataState() != CatalogReconciliation.MetadataState.FAILED_SAFE;
     }
 
     private static boolean timestampMatches(java.time.Instant first, java.time.Instant second) {

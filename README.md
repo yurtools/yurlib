@@ -6,7 +6,7 @@ It is designed for people who already have books stored on local disks or NAS de
 
 Yurlib is also being developed as an **AI-native software engineering project**: architecture, requirements, implementation, testing, review, and delivery are designed to work well with modern coding agents while keeping important technical decisions under human control.
 
-> **Project status:** M1 — Local Library is complete. Yurlib can securely configure and scan one read-only source, persist and search a provisional EPUB/FB2/MOBI catalog, report progress and safe failures, and download original assets. M2 curation design is the next planned step.
+> **Project status:** M1 — Local Library is complete. M2 implementation is in progress, including secure PDF, DOCX, and DjVu catalog support.
 
 M2 also targets secure PDF, DOCX, and DjVu discovery, bounded metadata extraction, cataloging, search, and original downloads. Full-text indexing, editing, active-content execution, and conversion routes require separate approved design.
 
@@ -370,6 +370,15 @@ The marker token must be at least 16 characters and is supplied once when the ro
 
 The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
 
+PDF metadata is processed by the optional isolated document worker. The server catalogs a PDF immediately with `PENDING` metadata and keeps authorized browsing and original download available while the worker is offline. To run the worker through Compose, supply one private shared token to both containers:
+
+```bash
+export YURLIB_WORKER_TOKEN="$(openssl rand -hex 32)"
+docker compose --profile worker up --build
+```
+
+The worker receives only a server-staged read-only PDF. It has no source-library mount, database credentials, or egress-capable network. DOCX and DjVu bounded structural metadata runs in the server. PDF/DjVu rendering and DOCX thumbnail processing remain separate cover work.
+
 ## Repository Structure
 
 The bootstrap structure is:
@@ -377,7 +386,8 @@ The bootstrap structure is:
 ```text
 yurlib/
 ├── services/
-│   └── yurlib-server/
+│   ├── yurlib-server/
+│   └── yurlib-document-worker/
 │
 ├── web/
 │   └── yurlib-web/

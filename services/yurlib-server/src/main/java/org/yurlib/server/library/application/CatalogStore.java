@@ -11,5 +11,8 @@ public interface CatalogStore {
 
     void reconcile(CatalogReconciliation reconciliation);
 
+    void markMetadataState(
+            UUID rootId, String normalizedRelativePath, CatalogReconciliation.MetadataState metadataState);
+
     void markUnseenMissing(UUID rootId, UUID scanJobId);
 }

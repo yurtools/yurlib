@@ -21,6 +21,7 @@ import org.yurlib.server.library.application.LibraryRootUseCases;
 import org.yurlib.server.library.application.MetadataExtractor;
 import org.yurlib.server.library.application.MissingLocationReconciler;
 import org.yurlib.server.library.application.OriginalAssetContentUseCases;
+import org.yurlib.server.library.application.PdfMetadataQueue;
 import org.yurlib.server.library.application.RootLocationVerifier;
 import org.yurlib.server.library.application.ScanDiscovery;
 import org.yurlib.server.library.application.ScanJobStore;
@@ -34,7 +35,7 @@ import org.yurlib.server.library.infrastructure.filesystem.MountAliasRegistry;
 import org.yurlib.server.library.infrastructure.metadata.BoundedMetadataExtractor;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(LibraryStorageProperties.class)
+@EnableConfigurationProperties({LibraryStorageProperties.class, PdfWorkerProperties.class})
 @EnableScheduling
 public class LibraryRootConfiguration {
 
@@ -85,8 +86,8 @@ public class LibraryRootConfiguration {
 
     @Bean
     CatalogCandidateReconciler catalogCandidateReconciler(
-            CatalogStore catalog, MetadataExtractor extractor, Clock clock) {
-        return new DefaultCatalogCandidateReconciler(catalog, extractor, clock);
+            CatalogStore catalog, MetadataExtractor extractor, PdfMetadataQueue pdfQueue, Clock clock) {
+        return new DefaultCatalogCandidateReconciler(catalog, extractor, pdfQueue, clock);
     }
 
     @Bean

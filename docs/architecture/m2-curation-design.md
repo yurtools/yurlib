@@ -9,7 +9,7 @@
 
 M2 turns the safe M1 local-library skeleton into a multi-user, curated library without weakening source preservation or bounded processing. This document defines the component boundaries, state ownership, contracts, threats, failure behavior, acceptance evidence, walking skeleton, and implementation order.
 
-The owner approved this document and ADR-0005 through ADR-0010 by merging pull request #62. Exact parser, renderer, and converter versions still require dependency and license review in their implementation issues.
+The owner approved this document and ADR-0005 through ADR-0010 by merging pull request #62. ADR-0011 subsequently fixed the PDF, DOCX, and DjVu parser boundaries. Exact renderer and converter versions still require dependency and license review in their implementation issues.
 
 ## 2. Approved scope
 
@@ -173,16 +173,16 @@ These are M2 starting defaults. Raising a hard security boundary requires threat
 
 ### 8.3 Format behavior
 
-| Format | Required bounded access                                                                                                                                            |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| EPUB   | Inspect validated ZIP directory; read only mimetype, container XML, selected OPF, and selected cover. Unparsed content entries do not consume the XML limit.       |
-| FB2    | Secure streaming XML through `description/title-info`; skip embedded binary bodies without decoding or DOM construction.                                           |
-| MOBI   | Seek bounded record table, record zero, full-name fields, and selected EXTH records; validate every offset and length.                                             |
-| PDF    | Random-access validated xref/object traversal for document info and XMP only; never execute actions, scripts, forms, embedded files, media, or network references. |
-| DOCX   | Validate OPC/ZIP; read bounded core/custom properties and optional package thumbnail; never follow external relationships or activate macros/OLE.                  |
-| DjVu   | Validate bounded container/chunk traversal and metadata/page facts; native/external decoding occurs only in the isolated worker.                                   |
+| Format | Required bounded access                                                                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EPUB   | Inspect validated ZIP directory; read only mimetype, container XML, selected OPF, and selected cover. Unparsed content entries do not consume the XML limit. |
+| FB2    | Secure streaming XML through `description/title-info`; skip embedded binary bodies without decoding or DOM construction.                                     |
+| MOBI   | Seek bounded record table, record zero, full-name fields, and selected EXTH records; validate every offset and length.                                       |
+| PDF    | Stage a read-only verified copy for PDFBox in the isolated worker; select document info, bounded XMP, and page count only; never render or activate content. |
+| DOCX   | In the server, validate OPC/ZIP and read bounded core/custom properties; reject external relationships, macros, ActiveX, OLE, and embedded packages.         |
+| DjVu   | In the server, validate bounded positional IFF traversal and selected page/annotation facts; do not decode images, compressed annotations, or text payloads. |
 
-Parser/renderer choices require maintenance, CVE, license, platform, fuzzing, and resource-control review before implementation. Generated or clearly licensed fixtures cover valid multilingual, malformed, encrypted, adversarial, near-limit, and over-limit cases.
+ADR-0011 records the parser maintenance, CVE, license, and isolation decision. Renderer choices still require their own review. Generated fixtures cover valid multilingual, malformed, encrypted, adversarial, near-limit, and over-limit cases.
 
 ## 9. Covers and representative images
 
@@ -302,7 +302,8 @@ Each implementation issue must preserve a deployable, releasable `main` and incl
 | ADR-0008 | Accepted | Use typed managed-output roots and lineage authorization                      |
 | ADR-0009 | Accepted | Isolate conversion and native rendering in an optional worker                 |
 | ADR-0010 | Accepted | Normalize covers and representative document images                           |
+| ADR-0011 | Accepted | Isolate PDF metadata; parse bounded DOCX and DjVu structures in the server    |
 
 ## 19. Deferred decisions
 
-Exact parser/renderer/converter artifacts and versions are selected through reviewed dependency spikes before implementation. Raising resource ceilings, adding formats/routes, adding a database engine, import roots, shared collections, personal tags, or multiple application instances requires a later decision and evidence.
+Exact renderer/converter artifacts and versions are selected through reviewed dependency spikes before implementation. Raising resource ceilings, adding formats/routes, adding a database engine, import roots, shared collections, personal tags, or multiple application instances requires a later decision and evidence.

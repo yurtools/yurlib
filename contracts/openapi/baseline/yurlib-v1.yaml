@@ -171,6 +171,15 @@ paths:
           schema:
             type: string
             maxLength: 200
+        - name: format
+          in: query
+          description: Return works with at least one available asset in a selected format.
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              enum: [EPUB, FB2, MOBI, PDF, DOCX, DJVU]
         - name: page
           in: query
           schema:
@@ -579,7 +588,7 @@ components:
             $ref: "#/components/schemas/AssetSummary"
     AssetSummary:
       type: object
-      required: [id, format, size, availability, original]
+      required: [id, format, size, availability, original, metadataState]
       properties:
         id:
           type: string
@@ -596,6 +605,9 @@ components:
           enum: [AVAILABLE, UNAVAILABLE]
         original:
           type: boolean
+        metadataState:
+          type: string
+          enum: [PENDING, READY, FAILED_SAFE]
     Capability:
       type: string
       enum: [MANAGE_INGESTION_SOURCES, CURATE_CATALOG]

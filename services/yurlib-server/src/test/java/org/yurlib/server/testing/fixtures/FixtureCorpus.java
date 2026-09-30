@@ -1,5 +1,7 @@
 package org.yurlib.server.testing.fixtures;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -66,6 +68,40 @@ public final class FixtureCorpus {
 
     public static void writeMobiWithFullName(Path path, String fullName) throws IOException {
         writeMobi(path, fullName, null);
+    }
+
+    public static void writeDocx(Path path) throws IOException {
+        writeDocx(path, "Многоязычный DOCX", false, false);
+    }
+
+    public static void writeDocxWithTitle(Path path, String title) throws IOException {
+        writeDocx(path, title, false, false);
+    }
+
+    public static void writeDocxWithExternalRelationship(Path path) throws IOException {
+        writeDocx(path, "External relationship", true, false);
+    }
+
+    public static void writeMacroDocx(Path path) throws IOException {
+        writeDocx(path, "Macro package", false, true);
+    }
+
+    public static void writeEncryptedDocx(Path path) throws IOException {
+        Files.createDirectories(path.getParent());
+        var bytes = new byte[512];
+        var signature =
+                new byte[] {(byte) 0xd0, (byte) 0xcf, 0x11, (byte) 0xe0, (byte) 0xa1, (byte) 0xb1, 0x1a, (byte) 0xe1};
+        System.arraycopy(signature, 0, bytes, 0, signature.length);
+        Files.write(path, bytes);
+    }
+
+    public static void writeDjvu(Path path, String title) throws IOException {
+        writeDjvu(path, title, 0);
+    }
+
+    public static Path writeSparseDjvu(Path path, String title, int unparsedBytes) throws IOException {
+        writeDjvu(path, title, unparsedBytes);
+        return path;
     }
 
     public static void writeLargeFb2(Path path, int binaryCharacters) throws IOException {
@@ -157,8 +193,125 @@ public final class FixtureCorpus {
         }
     }
 
+    private static void writeDocx(Path path, String title, boolean externalRelationship, boolean macro)
+            throws IOException {
+        Files.createDirectories(path.getParent());
+        try (var output = new ZipOutputStream(Files.newOutputStream(path), StandardCharsets.UTF_8)) {
+            var documentContentType = macro
+                    ? "application/vnd.ms-word.document.macroEnabled.main+xml"
+                    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
+            writeEntry(output, "[Content_Types].xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="%s"/>
+                      <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+                      <Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-officedocument.custom-properties+xml"/>
+                    </Types>
+                    """.formatted(documentContentType));
+            writeEntry(output, "_rels/.rels", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="officeDocument" Target="word/document.xml"/>
+                      <Relationship Id="rId2" Type="core-properties" Target="docProps/core.xml"/>
+                      %s
+                    </Relationships>
+                    """.formatted(
+                            externalRelationship
+                                    ? "<Relationship Id=\"rId3\" Type=\"hyperlink\" Target=\"https://example.invalid/private\" TargetMode=\"External\"/>"
+                                    : ""));
+            var coreProperties = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <cp:coreProperties
+                      xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                      xmlns:dc="http://purl.org/dc/elements/1.1/">
+                      <dc:title>%s</dc:title>
+                      <dc:creator>Анна Тестова</dc:creator>
+                      <dc:language>ru</dc:language>
+                      <dc:identifier>urn:yurlib:docx-fixture</dc:identifier>
+                      <cp:keywords>тест, fixture</cp:keywords>
+                    </cp:coreProperties>
+                    """.formatted(xmlEscape(title));
+            writeStoredUtf8Entry(output, "docProps/core.xml", coreProperties);
+            writeEntry(output, "docProps/custom.xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
+                      xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+                      <property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="Collection">
+                        <vt:lpwstr>Generated fixtures</vt:lpwstr>
+                      </property>
+                    </Properties>
+                    """);
+            writeEntry(output, "word/document.xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body><w:p><w:r><w:t>Generated test content.</w:t></w:r></w:p></w:body>
+                    </w:document>
+                    """);
+            if (macro) {
+                writeEntry(output, "word/vbaProject.bin", "generated inactive fixture marker");
+            }
+        }
+    }
+
+    private static String xmlEscape(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private static void writeDjvu(Path path, String title, int unparsedBytes) throws IOException {
+        Files.createDirectories(path.getParent());
+        var info = ByteBuffer.allocate(10);
+        info.putShort((short) 1200).putShort((short) 1800).put((byte) 0).put((byte) 26);
+        info.putShort((short) 300).put((byte) 22).put((byte) 0);
+        var annotation = ("(metadata (Title \"" + title + "\") (Author \"Анна Тестова\")"
+                        + " (Language \"ru\") (ISBN \"9780000000002\"))")
+                .getBytes(StandardCharsets.UTF_8);
+        var prefix = new ByteArrayOutputStream();
+        try (var output = new DataOutputStream(prefix)) {
+            output.writeBytes("AT&T");
+            output.writeBytes("FORM");
+            var infoChunkBytes = 8 + info.array().length;
+            var annotationChunkBytes = 8 + annotation.length + (annotation.length & 1);
+            var unparsedChunkBytes = unparsedBytes == 0 ? 0 : 8 + unparsedBytes + (unparsedBytes & 1);
+            output.writeInt(4 + infoChunkBytes + annotationChunkBytes + unparsedChunkBytes);
+            output.writeBytes("DJVU");
+            writeDjvuChunk(output, "INFO", info.array());
+            writeDjvuChunk(output, "ANTa", annotation);
+            if (unparsedBytes > 0) {
+                output.writeBytes("BG44");
+                output.writeInt(unparsedBytes);
+            }
+        }
+        Files.write(path, prefix.toByteArray());
+        if (unparsedBytes > 0) {
+            try (var channel = FileChannel.open(path, StandardOpenOption.WRITE)) {
+                var finalSize = prefix.size() + (long) unparsedBytes + (unparsedBytes & 1);
+                channel.position(finalSize - 1);
+                channel.write(ByteBuffer.wrap(new byte[] {0}));
+            }
+        }
+    }
+
+    private static void writeDjvuChunk(DataOutputStream output, String id, byte[] value) throws IOException {
+        output.writeBytes(id);
+        output.writeInt(value.length);
+        output.write(value);
+        if ((value.length & 1) != 0) {
+            output.write(0);
+        }
+    }
+
     private static void writeStoredEntry(ZipOutputStream output, String name, String value) throws IOException {
         var bytes = value.getBytes(StandardCharsets.US_ASCII);
+        writeStoredEntry(output, name, bytes);
+    }
+
+    private static void writeStoredUtf8Entry(ZipOutputStream output, String name, String value) throws IOException {
+        writeStoredEntry(output, name, value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void writeStoredEntry(ZipOutputStream output, String name, byte[] bytes) throws IOException {
         var crc = new CRC32();
         crc.update(bytes);
         var entry = new ZipEntry(name);

@@ -242,6 +242,7 @@ describe('App', () => {
               size: 2048,
               availability: 'AVAILABLE',
               original: true,
+              metadataState: 'READY',
             },
           ],
         },

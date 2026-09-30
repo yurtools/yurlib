@@ -10,4 +10,31 @@ public record CatalogReconciliation(
         String fileKey,
         String extractionVersion,
         ExtractedBookMetadata metadata,
-        Instant observedAt) {}
+        Instant observedAt,
+        MetadataState metadataState) {
+
+    public CatalogReconciliation(
+            UUID rootId,
+            UUID scanJobId,
+            String normalizedRelativePath,
+            String fileKey,
+            String extractionVersion,
+            ExtractedBookMetadata metadata,
+            Instant observedAt) {
+        this(
+                rootId,
+                scanJobId,
+                normalizedRelativePath,
+                fileKey,
+                extractionVersion,
+                metadata,
+                observedAt,
+                MetadataState.READY);
+    }
+
+    public enum MetadataState {
+        PENDING,
+        READY,
+        FAILED_SAFE
+    }
+}

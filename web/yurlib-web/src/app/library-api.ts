@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
   CatalogPage,
+  CatalogFormat,
   CreateLibraryRootRequest,
   LibraryMount,
   LibraryRoot,
@@ -48,9 +49,10 @@ export class LibraryApi {
     return this.http.get<ScanJob>(`/api/v1/jobs/${jobId}`);
   }
 
-  searchCatalog(query: string, page: number, size: number) {
+  searchCatalog(query: string, page: number, size: number, formats: CatalogFormat[] = []) {
     let params = new HttpParams().set('page', page).set('size', size);
     if (query !== '') params = params.set('query', query);
+    for (const format of formats) params = params.append('format', format);
     return this.http.get<CatalogPage>('/api/v1/catalog/works', { params });
   }
 

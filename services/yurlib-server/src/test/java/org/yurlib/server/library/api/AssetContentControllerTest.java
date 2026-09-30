@@ -60,6 +60,16 @@ class AssetContentControllerTest {
     }
 
     @Test
+    void servesEachNewFormatWithItsRegisteredMediaType() throws Exception {
+        assertMediaType(Asset.Format.PDF, "book.pdf", "application/pdf");
+        assertMediaType(
+                Asset.Format.DOCX,
+                "book.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        assertMediaType(Asset.Format.DJVU, "book.djvu", "image/vnd.djvu");
+    }
+
+    @Test
     void mapsUnknownAndChangedAssetsToStableProblemCodes() throws Exception {
         when(contentUseCases.open(ASSET_ID))
                 .thenThrow(new AssetContentFailure(
@@ -90,5 +100,17 @@ class AssetContentControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.correlationId").isNotEmpty());
+    }
+
+    private void assertMediaType(Asset.Format format, String filename, String mediaType) throws Exception {
+        var bytes = new byte[] {1};
+        when(contentUseCases.open(ASSET_ID))
+                .thenReturn(new OpenedAssetContent(
+                        ASSET_ID, format, bytes.length, filename, new ByteArrayInputStream(bytes)));
+
+        mockMvc.perform(get("/api/v1/assets/{assetId}/content", ASSET_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(mediaType))
+                .andExpect(content().bytes(bytes));
     }
 }

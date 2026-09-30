@@ -29,6 +29,7 @@
 
     <modules>
         <module>services/yurlib-server</module>
+        <module>services/yurlib-document-worker</module>
     </modules>
 
     <properties>
@@ -41,6 +42,7 @@
         <maven-pmd.version>3.28.0</maven-pmd.version>
         <openapi-diff.version>2.1.4</openapi-diff.version>
         <palantir-java-format.version>2.98.0</palantir-java-format.version>
+        <pdfbox.version>3.0.8</pdfbox.version>
         <pmd.version>7.28.0</pmd.version>
         <prettier.version>3.9.9</prettier.version>
         <spotless.version>3.10.3</spotless.version>
