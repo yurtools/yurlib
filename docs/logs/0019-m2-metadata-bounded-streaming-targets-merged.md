@@ -1,9 +1,10 @@
 # M2 Metadata and Bounded Streaming Targets
 
-- Status: Pull request open
+- Status: Merged
 - Date: 2026-09-30
 - Branch: `fix/47-mobi-metadata`
 - Pull request: [#48](https://github.com/yurtools/yurlib/pull/48)
+- Squash-merge commit: `866e059`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Streaming issue: [#49](https://github.com/yurtools/yurlib/issues/49)
 - Repository: `yurtools/yurlib`
@@ -49,3 +50,5 @@
 ## Result
 
 M2 now explicitly owns both metadata quality and bounded streaming ingestion. Implementing issue #49 requires design approval through issue #41 before it moves to In Progress.
+
+The planning changes passed the required backend, frontend, Compose, and dependency-review checks and were squash-merged through pull request #48. Issue #49 remains open under Design M2 issue #41 in Project status Todo.
