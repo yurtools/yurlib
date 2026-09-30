@@ -4,6 +4,7 @@
 - Date: 2026-09-30
 - Branch: `fix/47-mobi-metadata`
 - Pull request: [#48](https://github.com/yurtools/yurlib/pull/48)
+- Reconciliation pull request: [#50](https://github.com/yurtools/yurlib/pull/50)
 - Squash-merge commit: `866e059`
 - Design issue: [#41](https://github.com/yurtools/yurlib/issues/41)
 - Streaming issue: [#49](https://github.com/yurtools/yurlib/issues/49)

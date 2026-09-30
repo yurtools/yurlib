@@ -5,6 +5,7 @@
 - Branch: `fix/47-mobi-metadata`
 - Issue: [#47](https://github.com/yurtools/yurlib/issues/47)
 - Pull request: [#48](https://github.com/yurtools/yurlib/pull/48)
+- Reconciliation pull request: [#50](https://github.com/yurtools/yurlib/pull/50)
 - Implementation commit: `51711a8`
 - Squash-merge commit: `866e059`
 - Repository: `yurtools/yurlib`
