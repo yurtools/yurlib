@@ -1,8 +1,10 @@
 # M2 Canonical Catalog and Provenance Schema
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `feat/53-canonical-catalog-schema`
+- Pull request: [#63](https://github.com/yurtools/yurlib/pull/63)
+- Implementation commit: `4041a44`
 - Issue: [#53](https://github.com/yurtools/yurlib/issues/53)
 - Repository: `yurtools/yurlib`
 
@@ -38,3 +40,4 @@
 - `docker compose config` passed.
 - `git diff --check` passed.
 - Frontend tests/build were not run because no frontend source was changed; the unrelated local Angular analytics preference remains untouched.
+- Committed the implementation as `4041a44`, pushed the short-lived branch, and opened pull request #63 against protected `main`.
