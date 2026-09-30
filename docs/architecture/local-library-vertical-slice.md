@@ -1,6 +1,6 @@
 # Yurlib First Local-Library Vertical Slice
 
-- Status: Approved for implementation planning
+- Status: Implemented in `v0.1.0-m1`
 - Date: 2026-09-29
 - Parent requirement: PC-03, PC-04, PC-09, PC-10
 - Architecture decisions: ADR-0002, ADR-0003
