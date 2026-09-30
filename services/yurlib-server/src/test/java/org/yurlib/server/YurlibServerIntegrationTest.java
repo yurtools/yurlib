@@ -280,6 +280,38 @@ class YurlibServerIntegrationTest {
     }
 
     @Test
+    void persistsReturnsAndSearchesCyrillicCatalogMetadata() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "cyrillic-search", "bounded-metadata-v1", java.time.Instant.now());
+        var metadata = new ExtractedBookMetadata(
+                ExtractedBookMetadata.Format.FB2,
+                "Кириллическая книга",
+                List.of("Анна Тестова"),
+                "ru",
+                Map.of(),
+                512,
+                java.time.Instant.parse("2026-09-29T12:00:00Z"),
+                "jdk-fb2",
+                "1");
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "русские/кириллица.fb2", "bounded-metadata-v1", metadata));
+
+        for (var query : List.of("кириллическая", "ТЕСТОВА", "кириллица.fb2")) {
+            assertThat(catalogQuery.search(query, 0, 25).items())
+                    .singleElement()
+                    .satisfies(work -> {
+                        assertThat(work.title()).isEqualTo("Кириллическая книга");
+                        assertThat(work.contributors()).containsExactly("Анна Тестова");
+                    });
+        }
+        assertThat(JdbcClient.create(dataSource)
+                        .sql("SELECT observed_language FROM edition")
+                        .query(String.class)
+                        .single())
+                .isEqualTo("ru");
+    }
+
+    @Test
     void loadsAStoredDownloadLocationByOpaqueAssetIdentifier() {
         var root = saveRoot();
         var job = scanJobStore.queue(root.id(), "download", "bounded-metadata-v1", java.time.Instant.now());

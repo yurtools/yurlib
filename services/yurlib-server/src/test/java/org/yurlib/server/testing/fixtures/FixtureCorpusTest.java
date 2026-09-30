@@ -22,6 +22,9 @@ class FixtureCorpusTest {
 
         assertThat(root.resolve("valid/minimal.fb2")).isRegularFile();
         assertThat(root.resolve("valid/日本語.fb2")).isRegularFile();
+        assertThat(root.resolve("valid/кириллица.fb2"))
+                .content(StandardCharsets.UTF_8)
+                .contains("Кириллическая книга", "Анна", "Тестова", "<lang>ru</lang>");
         assertThat(root.resolve("malformed/broken.fb2")).isRegularFile();
         assertThat(root.resolve("security/xxe.fb2"))
                 .content(StandardCharsets.UTF_8)

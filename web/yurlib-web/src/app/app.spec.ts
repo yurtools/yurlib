@@ -259,6 +259,38 @@ describe('App', () => {
       .flush({ ...emptyCatalog(), page: 1, totalElements: 13 });
   });
 
+  it('renders Cyrillic metadata and sends Cyrillic search text unchanged', async () => {
+    await initialize([], {
+      items: [
+        {
+          id: 'work-cyrillic',
+          title: 'Кириллическая книга',
+          contributors: ['Анна Тестова'],
+          provisional: true,
+          assets: [],
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.work-row')?.textContent).toContain('Кириллическая книга');
+    expect(element.querySelector('.contributors')?.textContent).toContain('Анна Тестова');
+
+    setInput(element.querySelector<HTMLInputElement>('#catalog-query')!, 'тестова');
+    element.querySelector<HTMLFormElement>('.search')?.dispatchEvent(new SubmitEvent('submit'));
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/v1/catalog/works' &&
+          request.params.get('query') === 'тестова',
+      )
+      .flush(emptyCatalog());
+    await fixture.whenStable();
+  });
+
   function setInput(input: HTMLInputElement, value: string) {
     input.value = value;
     input.dispatchEvent(new Event('input'));

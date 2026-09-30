@@ -64,6 +64,15 @@ class BoundedMetadataExtractorTest {
     }
 
     @Test
+    void preservesCyrillicFb2MetadataAndFilename() {
+        var result = extractor.extract(library.resolve("valid/кириллица.fb2"));
+
+        assertExtracted(result, ExtractedBookMetadata.Format.FB2, "Кириллическая книга", "jdk-fb2");
+        assertThat(result.metadata().contributors()).containsExactly("Анна Тестова");
+        assertThat(result.metadata().language()).isEqualTo("ru");
+    }
+
+    @Test
     void rejectsMalformedAndExternalEntityFb2WithoutResolvingTheEntity() {
         var malformed = extractor.extract(library.resolve("malformed/broken.fb2"));
         var externalEntity = extractor.extract(library.resolve("security/xxe.fb2"));

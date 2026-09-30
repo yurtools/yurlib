@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description>
+    <title-info>
+      <genre>prose_contemporary</genre>
+      <author><first-name>Анна</first-name><last-name>Тестова</last-name></author>
+      <book-title>Кириллическая книга</book-title>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+  <body><section><p>Создано для проверки Юрлиб.</p></section></body>
+</FictionBook>
