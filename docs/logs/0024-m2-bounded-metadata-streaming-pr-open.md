@@ -1,6 +1,6 @@
 # M2 Bounded Metadata Streaming
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-09-30
 - Branch: `feat/49-bounded-metadata-streaming`
 - Issue: [#49](https://github.com/yurtools/yurlib/issues/49)
@@ -42,6 +42,12 @@
 - `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
 - `docker compose config` — passed.
 - `git diff --check` — passed.
+
+## Commit and pull request
+
+- Implementation commit: `24b3b22` (`feat(#49): bound metadata extraction resources`).
+- Pull request: [#65](https://github.com/yurtools/yurlib/pull/65), targeting `main` and closing issue #49.
+- Issue #49 acceptance checklist: all 12 items checked after the full verification baseline passed.
 
 ## Blockers
 
