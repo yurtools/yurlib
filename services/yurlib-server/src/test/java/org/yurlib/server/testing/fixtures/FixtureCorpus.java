@@ -19,6 +19,7 @@ import org.yurlib.server.testing.RepositoryPaths;
 public final class FixtureCorpus {
 
     private static final int MOBI_HEADER_LENGTH = 232;
+    private static final int MOBI_HEADER_START = 16;
     private static final int PDB_HEADER_LENGTH = 78;
     private static final int RECORD_DIRECTORY_LENGTH = 16;
 
@@ -46,7 +47,8 @@ public final class FixtureCorpus {
         writeEpub(libraryRoot.resolve("valid/minimal.epub"), EpubKind.VALID);
         writeEpub(libraryRoot.resolve("security/traversal.epub"), EpubKind.TRAVERSAL);
         writeEpub(libraryRoot.resolve("security/decompression-limit.epub"), EpubKind.DECOMPRESSION_LIMIT);
-        writeMobi(libraryRoot.resolve("valid/minimal.mobi"));
+        writeMobi(libraryRoot.resolve("valid/minimal.mobi"), "Кириллическая MOBI книга", null);
+        writeMobi(libraryRoot.resolve("valid/updated-title.mobi"), "Header title", "Updated title");
         writeEscapingSymlink(libraryRoot);
         return libraryRoot;
     }
@@ -123,13 +125,28 @@ public final class FixtureCorpus {
         output.closeEntry();
     }
 
-    private static void writeMobi(Path path) throws IOException {
+    private static void writeMobi(Path path, String fullName, String updatedTitle) throws IOException {
         Files.createDirectories(path.getParent());
         var text = "Minimal MOBI fixture".getBytes(StandardCharsets.UTF_8);
+        var fullNameBytes = fullName.getBytes(StandardCharsets.UTF_8);
+        var exthRecords = new LinkedHashMap<Integer, byte[]>();
+        exthRecords.put(100, "Анна Тестова".getBytes(StandardCharsets.UTF_8));
+        exthRecords.put(104, "9780000000001".getBytes(StandardCharsets.UTF_8));
+        exthRecords.put(113, "B000YURLIB".getBytes(StandardCharsets.UTF_8));
+        if (updatedTitle != null) {
+            exthRecords.put(503, updatedTitle.getBytes(StandardCharsets.UTF_8));
+        }
+        exthRecords.put(524, "ru".getBytes(StandardCharsets.UTF_8));
+        var exthLength = 12
+                + exthRecords.values().stream()
+                        .mapToInt(value -> 8 + value.length)
+                        .sum();
+        var paddedExthLength = alignedToFourBytes(exthLength);
         var firstRecordOffset = PDB_HEADER_LENGTH + RECORD_DIRECTORY_LENGTH;
-        var secondRecordOffset = firstRecordOffset + 16 + MOBI_HEADER_LENGTH;
+        var fullNameOffset = MOBI_HEADER_START + MOBI_HEADER_LENGTH + paddedExthLength;
+        var secondRecordOffset = firstRecordOffset + fullNameOffset + fullNameBytes.length;
         var buffer = ByteBuffer.allocate(secondRecordOffset + text.length);
-        putAscii(buffer, 0, 32, "Yurlib fixture");
+        putAscii(buffer, 0, 32, "ASCII fallback title");
         putAscii(buffer, 60, 4, "BOOK");
         putAscii(buffer, 64, 4, "MOBI");
         buffer.putShort(76, (short) 2);
@@ -139,15 +156,36 @@ public final class FixtureCorpus {
         buffer.putInt(firstRecordOffset + 4, text.length);
         buffer.putShort(firstRecordOffset + 8, (short) 1);
         buffer.putShort(firstRecordOffset + 10, (short) 4096);
-        putAscii(buffer, firstRecordOffset + 16, 4, "MOBI");
+        putAscii(buffer, firstRecordOffset + MOBI_HEADER_START, 4, "MOBI");
         buffer.putInt(firstRecordOffset + 20, MOBI_HEADER_LENGTH);
         buffer.putInt(firstRecordOffset + 24, 2);
         buffer.putInt(firstRecordOffset + 28, 65001);
         buffer.putInt(firstRecordOffset + 32, 1);
         buffer.putInt(firstRecordOffset + 36, 6);
+        buffer.putInt(firstRecordOffset + MOBI_HEADER_START + 0x44, fullNameOffset);
+        buffer.putInt(firstRecordOffset + MOBI_HEADER_START + 0x48, fullNameBytes.length);
+        buffer.putInt(firstRecordOffset + MOBI_HEADER_START + 0x70, 0x40);
+        var exthStart = firstRecordOffset + MOBI_HEADER_START + MOBI_HEADER_LENGTH;
+        putAscii(buffer, exthStart, 4, "EXTH");
+        buffer.putInt(exthStart + 4, exthLength);
+        buffer.putInt(exthStart + 8, exthRecords.size());
+        var exthPosition = exthStart + 12;
+        for (var record : exthRecords.entrySet()) {
+            buffer.putInt(exthPosition, record.getKey());
+            buffer.putInt(exthPosition + 4, 8 + record.getValue().length);
+            buffer.position(exthPosition + 8);
+            buffer.put(record.getValue());
+            exthPosition += 8 + record.getValue().length;
+        }
+        buffer.position(firstRecordOffset + fullNameOffset);
+        buffer.put(fullNameBytes);
         buffer.position(secondRecordOffset);
         buffer.put(text);
         Files.write(path, buffer.array());
+    }
+
+    private static int alignedToFourBytes(int value) {
+        return (value + 3) & ~3;
     }
 
     private static void writeRecordEntry(ByteBuffer buffer, int offset, int recordOffset, int uniqueId) {

@@ -39,17 +39,29 @@ class BoundedMetadataExtractorTest {
         var fb2 = extractor.extract(library.resolve("valid/minimal.fb2"));
         var mobi = extractor.extract(library.resolve("valid/minimal.mobi"));
 
-        assertExtracted(epub, ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub");
+        assertExtracted(epub, ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "1");
         assertThat(epub.metadata().contributors()).containsExactly("Fixture Author");
         assertThat(epub.metadata().language()).isEqualTo("en");
         assertThat(epub.metadata().identifiers()).containsValue("urn:uuid:yurlib-fixture");
-        assertExtracted(fb2, ExtractedBookMetadata.Format.FB2, "Minimal FB2 Fixture", "jdk-fb2");
+        assertExtracted(fb2, ExtractedBookMetadata.Format.FB2, "Minimal FB2 Fixture", "jdk-fb2", "1");
         assertThat(fb2.metadata().contributors()).containsExactly("Yurlib Fixture");
         assertThat(fb2.metadata().language()).isEqualTo("en");
-        assertExtracted(mobi, ExtractedBookMetadata.Format.MOBI, "Yurlib fixture", "jdk-mobi");
-        assertThat(mobi.metadata().contributors()).isEmpty();
-        assertThat(mobi.metadata().language()).isNull();
-        assertThat(mobi.metadata().identifiers()).isEmpty();
+        assertExtracted(mobi, ExtractedBookMetadata.Format.MOBI, "Кириллическая MOBI книга", "jdk-mobi", "2");
+        assertThat(mobi.metadata().contributors()).containsExactly("Анна Тестова");
+        assertThat(mobi.metadata().language()).isEqualTo("ru");
+        assertThat(mobi.metadata().identifiers())
+                .containsEntry("isbn", "9780000000001")
+                .containsEntry("asin", "B000YURLIB");
+        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v2");
+    }
+
+    @Test
+    void prefersTheExthUpdatedTitleToTheMobiFullName() {
+        var result = extractor.extract(library.resolve("valid/updated-title.mobi"));
+
+        assertExtracted(result, ExtractedBookMetadata.Format.MOBI, "Updated title", "jdk-mobi", "2");
+        assertThat(result.metadata().contributors()).containsExactly("Анна Тестова");
+        assertThat(result.metadata().language()).isEqualTo("ru");
     }
 
     @Test
@@ -67,7 +79,7 @@ class BoundedMetadataExtractorTest {
     void preservesCyrillicFb2MetadataAndFilename() {
         var result = extractor.extract(library.resolve("valid/кириллица.fb2"));
 
-        assertExtracted(result, ExtractedBookMetadata.Format.FB2, "Кириллическая книга", "jdk-fb2");
+        assertExtracted(result, ExtractedBookMetadata.Format.FB2, "Кириллическая книга", "jdk-fb2", "1");
         assertThat(result.metadata().contributors()).containsExactly("Анна Тестова");
         assertThat(result.metadata().language()).isEqualTo("ru");
     }
@@ -146,14 +158,18 @@ class BoundedMetadataExtractorTest {
     }
 
     private static void assertExtracted(
-            MetadataExtractionResult result, ExtractedBookMetadata.Format format, String title, String parserName) {
+            MetadataExtractionResult result,
+            ExtractedBookMetadata.Format format,
+            String title,
+            String parserName,
+            String parserVersion) {
         assertThat(result.state()).isEqualTo(MetadataExtractionResult.State.EXTRACTED);
         assertThat(result.metadata().format()).isEqualTo(format);
         assertThat(result.metadata().title()).isEqualTo(title);
         assertThat(result.metadata().byteSize()).isPositive();
         assertThat(result.metadata().modifiedAt()).isNotNull();
         assertThat(result.metadata().parserName()).isEqualTo(parserName);
-        assertThat(result.metadata().parserVersion()).isEqualTo("1");
+        assertThat(result.metadata().parserVersion()).isEqualTo(parserVersion);
     }
 
     private static void assertFailure(

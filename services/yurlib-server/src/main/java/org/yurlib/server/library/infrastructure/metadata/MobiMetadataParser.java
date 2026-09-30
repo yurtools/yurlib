@@ -22,6 +22,10 @@ final class MobiMetadataParser implements MetadataParser {
     private static final int MAXIMUM_RECORD_ZERO_BYTES = 1024 * 1024;
     private static final int MAXIMUM_EXTH_RECORDS = 1024;
     private static final int MAXIMUM_TEXT_BYTES = 64 * 1024;
+    private static final int MOBI_HEADER_START = 16;
+    private static final int FULL_NAME_OFFSET_FIELD = 0x44;
+    private static final int FULL_NAME_LENGTH_FIELD = 0x48;
+    private static final int EXTH_FLAGS_FIELD = 0x70;
 
     @Override
     public ExtractedBookMetadata.Format format() {
@@ -68,20 +72,22 @@ final class MobiMetadataParser implements MetadataParser {
             throw new MetadataParsingException(
                     MetadataExtractionResult.ErrorCode.ENCRYPTED_ASSET, "Encrypted MOBI files are not supported.");
         }
-        requireAvailable(record, 16, 24);
-        if (!"MOBI".equals(ascii(record, 16, 4))) {
+        requireAvailable(record, MOBI_HEADER_START, 24);
+        if (!"MOBI".equals(ascii(record, MOBI_HEADER_START, 4))) {
             throw corrupt("The MOBI header is missing.");
         }
         var mobiLength = unsignedInt(record, 20);
-        if (mobiLength < 116 || mobiLength > MAXIMUM_RECORD_ZERO_BYTES || 16 + mobiLength > record.limit()) {
+        if (mobiLength < 116
+                || mobiLength > MAXIMUM_RECORD_ZERO_BYTES
+                || MOBI_HEADER_START + mobiLength > record.limit()) {
             throw corrupt("The MOBI header length is invalid.");
         }
         var charset = charset(unsignedInt(record, 28));
         var metadata = exth(record, Math.toIntExact(mobiLength), charset);
         var title = metadata.title;
         if (title == null) {
-            var titleOffset = unsignedInt(record, 16 + 84);
-            var titleLength = unsignedInt(record, 16 + 88);
+            var titleOffset = unsignedInt(record, MOBI_HEADER_START + FULL_NAME_OFFSET_FIELD);
+            var titleLength = unsignedInt(record, MOBI_HEADER_START + FULL_NAME_LENGTH_FIELD);
             title = boundedText(record, titleOffset, titleLength, charset);
         }
         if (title == null) {
@@ -94,15 +100,15 @@ final class MobiMetadataParser implements MetadataParser {
                 metadata.language,
                 metadata.identifiers,
                 "jdk-mobi",
-                "1");
+                "2");
     }
 
     private static ExthMetadata exth(ByteBuffer record, int mobiLength, Charset charset)
             throws MetadataParsingException {
-        if (mobiLength < 132 || (unsignedInt(record, 16 + 128) & 0x40) == 0) {
+        if (mobiLength < 116 || (unsignedInt(record, MOBI_HEADER_START + EXTH_FLAGS_FIELD) & 0x40) == 0) {
             return ExthMetadata.empty();
         }
-        var start = 16 + mobiLength;
+        var start = MOBI_HEADER_START + mobiLength;
         requireAvailable(record, start, 12);
         if (!"EXTH".equals(ascii(record, start, 4))) {
             throw corrupt("The MOBI extended metadata header is invalid.");
