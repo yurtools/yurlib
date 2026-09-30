@@ -164,6 +164,7 @@ Delete disposable source material only when it is no longer needed. The PostgreS
 - Updated the README project status and marked the M1 vertical-slice document implemented.
 - Created the M2 label, milestone, and Design M2 issue, then added the issue to the Yurlib Engineering Project in Todo.
 - Closed the M1 parent issue, moved its Project item to Done, and closed the M1 milestone.
+- Opened protected-branch pull request [#42](https://github.com/yurtools/yurlib/pull/42) for the release-status documentation.
 
 ## Verification and blockers
 
