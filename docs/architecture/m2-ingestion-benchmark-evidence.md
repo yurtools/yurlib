@@ -43,6 +43,8 @@ The SMB observation used an owner-provided corpus on a local-network CIFS 3.0 mo
 - MOBI: 1 extracted, 0 failed.
 - Failure codes: 67 `UNSUPPORTED_FORMAT` and 43 `CORRUPT_ASSET`.
 
+Aggregate-only follow-up diagnosis found that 90 failures are confirmed parser compatibility gaps rather than unsafe inputs: 67 DjVu files contain valid nested `FORM:DJVI` shared-information components, and 23 EPUB files contain ordinary explicit ZIP directory entries whose trailing slash is lost by host-path normalization. The remaining 20 DjVu outcomes comprise 19 padding-boundary failures and one top-level length failure; issue [#69](https://github.com/yurtools/yurlib/issues/69) requires comparison with a reference implementation before relaxing or retaining those rejections. These fixes and that validation are M2 scope. All byte, archive, nesting, path-traversal, deadline, and memory limits remain mandatory.
+
 No filenames, metadata values, or book content were recorded.
 
 ## Interpretation limits
