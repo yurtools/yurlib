@@ -1,9 +1,10 @@
 # M2 Metadata Normalization and Curation
 
-- Status: Ready for pull request
+- Status: Pull request open
 - Started: 2026-10-01
 - Branch: `feat/55-metadata-curation`
 - Issue: [#55](https://github.com/yurtools/yurlib/issues/55)
+- Pull request: [#67](https://github.com/yurtools/yurlib/pull/67)
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -36,6 +37,8 @@
 - Added unit, controller, PostgreSQL integration, migration, contract, authorization, and Angular component/API coverage.
 - Applied narrow documented SpotBugs suppressions only where constructor-injected collaborators are deliberately retained and Unicode normalization is intentionally locale-neutral.
 - Renamed log 0025 from `pr-open` to `merged` after pull request #66 was squash-merged.
+- Updated issue #55 to record that all implementation acceptance criteria are satisfied.
+- Committed the implementation as `be5dc7a` (`feat(#55): add metadata normalization and curation`), pushed the branch, and opened pull request #67. The pull request leaves visual verification explicitly pending.
 
 ## Verification
 
