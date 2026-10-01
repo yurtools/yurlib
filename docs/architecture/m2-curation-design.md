@@ -32,7 +32,7 @@ M2 does not deliver full-text or semantic search, document editing, macros or ac
 
 Priority order is safety and authorization, correctness and recovery, operability, useful incremental results, then throughput. Performance work must preserve the first four.
 
-The reference environment is one Yurlib application instance with 4 CPU cores, 8 GiB RAM, PostgreSQL, x86-64 and ARM64 coverage, local SSD, and representative SMB and NFS roots. Cold and warm results are reported separately. Numeric defaults below are initial safe defaults, not universal capacity claims.
+The reference environment is one Yurlib application instance with 4 CPU cores, 8 GiB RAM, PostgreSQL, x86-64 and ARM64 coverage, local SSD, and a representative SMB root. Cold and warm results are reported separately. Numeric defaults below are initial safe defaults, not universal capacity claims. NFS benchmark evidence is deferred beyond M2 in issue [#70](https://github.com/yurtools/yurlib/issues/70); NFS remains a supported host-mounted source option.
 
 ## 4. Component map
 

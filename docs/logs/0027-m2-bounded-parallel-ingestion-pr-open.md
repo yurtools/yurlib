@@ -1,6 +1,6 @@
 # M2 Bounded Parallel Ingestion
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-10-01
 - Branch: `feat/56-bounded-parallel-ingestion`
 - Issue: [#56](https://github.com/yurtools/yurlib/issues/56)
@@ -14,13 +14,17 @@ Follow-up prompt:
 
 > I have /mnt/nas/data/torrent/flibusta/Flibusta.Net/group_053/ that could be used for thesting
 
+Follow-up prompt:
+
+> Lets move NFS out of M2 scope
+
 ## Plan
 
 1. Reconcile merged pull request #67 and start issue #56 from merged `main`.
 2. Replace whole-scan single-worker execution with PostgreSQL-backed staged tasks using transactional claims, leases, heartbeats, bounded attempts, and idempotency keys.
 3. Enforce bounded discovery queues, parse concurrency, weighted memory, open-file, CPU, and database permits.
 4. Provide fair progress across roots, cooperative cancellation, lease-expiry recovery, and deterministic single-versus-parallel outcomes.
-5. Add operational metrics and a reference benchmark harness/report for local SSD, SMB, and NFS observations without making universal performance claims.
+5. Add operational metrics and a reference benchmark harness/report for local SSD and SMB observations without making universal performance claims. Keep optional NFS measurement support for deferred post-M2 work.
 6. Verify migrations, concurrency and failure recovery, backend/frontend baselines, Compose configuration, and source immutability; then open a draft pull request and close #56 only after all storage evidence is recorded.
 
 ## Actions and results
@@ -47,6 +51,8 @@ Follow-up prompt:
 - Added aggregate outcome reporting by format and error code. The final reference-profile run completed successfully for 136 SMB files: 26 extracted and 110 safely failed. The failures were concentrated in DjVu and EPUB and are recorded as a separate compatibility finding rather than hidden from the benchmark.
 - Created issue [#69](https://github.com/yurtools/yurlib/issues/69) in the Yurlib Engineering Project with Todo status to investigate real-world DjVu and EPUB compatibility using sanitized fixtures while preserving all resource limits.
 - Updated issue #56 and draft pull request #68 with the SMB evidence; NFS is now the only missing benchmark target.
+- Recorded the owner's decision to remove NFS evidence from M2 acceptance while retaining host-mounted NFS support. Created post-M2 issue [#70](https://github.com/yurtools/yurlib/issues/70) in Project Todo; no ADR was required because the runtime and storage architecture did not change.
+- Updated issue #56 so all revised acceptance criteria are complete, changed pull request #68 to close #56, and marked the pull request ready for review. The Project item remains In Progress until merge because the Project workflow has no separate review state.
 
 ## Verification
 
@@ -77,4 +83,4 @@ Follow-up prompt:
 
 ## Blockers
 
-- The NFS benchmark measurement still requires an owner-provided mounted reference path.
+- None.

@@ -25,7 +25,7 @@ The generated files contain no private book content. The EPUB contains a 2 MiB e
 | FB2 96 MiB embedded binary |      100,663,721 |                      8,230 |                         0 |                 54,317,856 |          1,012.57 |
 | MOBI 256 MiB sparse source |      268,435,456 |                        364 |                       132 |                 55,366,432 |          2,391.42 |
 
-Counted bytes and controlled buffers are deterministic adapter evidence. Peak heap is the absolute process-wide sum of heap-pool peak usage after resetting pool peaks; it includes the JVM, JUnit, fixture state, and adapter allocations and is not attributed solely to a parser. Throughput is a local warm observation, not a release claim or universal target. Cold storage, SMB/NFS behavior, concurrency, and interactive latency remain in the benchmark scope of #56.
+Counted bytes and controlled buffers are deterministic adapter evidence. Peak heap is the absolute process-wide sum of heap-pool peak usage after resetting pool peaks; it includes the JVM, JUnit, fixture state, and adapter allocations and is not attributed solely to a parser. Throughput is a local warm observation, not a release claim or universal target. Local SSD and SMB concurrency and interactive-latency evidence are recorded by #56. NFS benchmark evidence is deferred beyond M2 in #70.
 
 ## Acceptance interpretation
 

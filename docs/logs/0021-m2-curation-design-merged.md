@@ -94,6 +94,10 @@ The first follow-up asked who administers users and source-management grants, th
 - The owner can change ingestion-source-management grants and root denies after account creation. Changes are audited, authority reductions invalidate existing sessions, and authorization takes effect immediately.
 - The M2 reference environment is 4 CPU cores, 8 GiB RAM, x86-64 and ARM64, local SSD plus SMB and NFS coverage, and one Yurlib application instance.
 
+### Post-approval scope change
+
+On 2026-10-01, the owner moved NFS benchmark evidence out of M2 scope. The M2 reference coverage is now local SSD plus SMB. NFS remains a supported host-mounted source option, and its performance evidence is deferred to issue #70. No ADR was added because storage ownership, mount boundaries, and runtime architecture did not change.
+
 ## Remaining decisions
 
 The final follow-up asked who may edit shared catalog data and whether tags and collections are shared or private.
