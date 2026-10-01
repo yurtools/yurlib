@@ -35,6 +35,8 @@
 - Added integration coverage for capacity, idempotency, root fairness, lease recovery, stale-worker rejection, retry exhaustion, and cancellation. Extended the walking-skeleton acceptance test to compare sequential and parallel catalog observations.
 - Added an opt-in reference benchmark and `docs/architecture/m2-ingestion-benchmark-evidence.md`. Recorded local-SSD evidence under the documented 4-core, 8-GiB, 512-MiB-heap profile; the harness accepts owner-provided local, SMB, and NFS corpus paths.
 - Corrected the PMD row-mapper finding and the SpotBugs constructor/finalizer warning without suppressing either rule.
+- Updated issue #56 to mark the five verified implementation criteria complete and left the SMB/NFS benchmark criterion open with a comment linking the local evidence and verification results.
+- Committed the implementation as `76a2f6a` (`feat(#56): add bounded parallel ingestion`).
 
 ## Verification
 
