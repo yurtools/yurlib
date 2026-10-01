@@ -66,6 +66,7 @@ Follow-up prompt:
 - Committed the M2 parser-compatibility scope updates as `7f29b82` (`docs(#69): add parser compatibility to M2`).
 - Investigated pull request #68 run `36888905454`. Frontend, Compose Configuration, and Dependency Review passed; Backend stopped at Spotless before compilation because the expanded M2 acceptance table needed Markdown realignment.
 - Applied the repository Spotless formatter. It changed only `docs/architecture/m2-curation-design.md`; the unrelated local Angular analytics preference remained untouched.
+- Committed and pushed the correction as `2ef73df` (`docs(#69): format M2 acceptance matrix`). Pull request #68 CI run `36889387869` then passed Backend, Frontend, Compose Configuration, and Dependency Review.
 
 ## Verification
 
@@ -83,6 +84,8 @@ Follow-up prompt:
 - `npm --prefix web/yurlib-web run build`: passed.
 - `docker compose config`: passed.
 - `git diff --check`: passed.
+- `./mvnw -B spotless:check`: passed after the Markdown formatting correction.
+- GitHub Actions run `36889387869`: passed all four required checks at commit `2ef73df`.
 - `YURLIB_RUN_INGESTION_BENCHMARK=true YURLIB_BENCHMARK_SMB=<owner-provided-path> JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 -XX:MaxRAM=8g -Xms256m -Xmx512m' taskset -c 0-3 ./mvnw -B -pl services/yurlib-server -Djacoco.skip=true -Dtest=IngestionReferenceBenchmarkTest test`: passed.
   - SMB files: 136 total; 26 extracted, 0 deferred, 110 safely failed.
   - Time to first result: 9.098 ms.
