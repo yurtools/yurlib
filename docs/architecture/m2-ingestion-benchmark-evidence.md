@@ -30,10 +30,11 @@ The harness also accepts `YURLIB_BENCHMARK_NFS` for deferred post-M2 issue [#70]
 
 ## Observations
 
-| Storage   | Files | Extracted | Deferred | Failed | Time to first result | Warm throughput |   Counted bytes |         Peak heap | Peak open files/task |       DB p95 | Interactive API p95 | Status   |
-| --------- | ----: | --------: | -------: | -----: | -------------------: | --------------: | --------------: | ----------------: | -------------------: | -----------: | ------------------: | -------- |
-| Local SSD |     6 |         6 |        0 |      0 |            36.813 ms |  414.45 files/s |     4,139 bytes | 121,732,552 bytes |                    2 | 2,531.234 µs |       15,140.425 µs | Observed |
-| SMB       |   136 |        26 |        0 |    110 |             9.098 ms |  243.07 files/s | 3,641,034 bytes | 271,154,632 bytes |                    2 | 3,643.164 µs |       14,331.904 µs | Observed |
+| Storage        | Files | Extracted | Deferred | Failed | Time to first result | Warm throughput |   Counted bytes |         Peak heap | Peak open files/task |       DB p95 | Interactive API p95 | Status   |
+| -------------- | ----: | --------: | -------: | -----: | -------------------: | --------------: | --------------: | ----------------: | -------------------: | -----------: | ------------------: | -------- |
+| Local SSD      |     6 |         6 |        0 |      0 |            36.813 ms |  414.45 files/s |     4,139 bytes | 121,732,552 bytes |                    2 | 2,531.234 µs |       15,140.425 µs | Observed |
+| SMB before #69 |   136 |        26 |        0 |    110 |             9.098 ms |  243.07 files/s | 3,641,034 bytes | 271,154,632 bytes |                    2 | 3,643.164 µs |       14,331.904 µs | Observed |
+| SMB after #69  |   136 |       135 |        0 |      1 |            10.117 ms |   18.32 files/s | 4,051,056 bytes | 218,213,520 bytes |                    2 |   442.343 µs |        4,290.697 µs | Observed |
 
 The SMB observation used an owner-provided corpus on a local-network CIFS 3.0 mount with strict caching, 4-MiB read/write sizes, and a one-second attribute-cache timeout. The 136 supported files comprised 87 DjVu, 46 EPUB, two DOCX, and one MOBI files. Aggregate outcomes were:
 
@@ -44,6 +45,8 @@ The SMB observation used an owner-provided corpus on a local-network CIFS 3.0 mo
 - Failure codes: 67 `UNSUPPORTED_FORMAT` and 43 `CORRUPT_ASSET`.
 
 Aggregate-only follow-up diagnosis found that 90 failures are confirmed parser compatibility gaps rather than unsafe inputs: 67 DjVu files contain valid nested `FORM:DJVI` shared-information components, and 23 EPUB files contain ordinary explicit ZIP directory entries whose trailing slash is lost by host-path normalization. The remaining 20 DjVu outcomes comprise 19 padding-boundary failures and one top-level length failure; issue [#69](https://github.com/yurtools/yurlib/issues/69) requires comparison with a reference implementation before relaxing or retaining those rejections. These fixes and that validation are M2 scope. All byte, archive, nesting, path-traversal, deadline, and memory limits remain mandatory.
+
+The post-#69 observation extracts all 46 EPUB, two DOCX, one MOBI, and 86 reference-valid DjVu files. The sole `CORRUPT_ASSET` is a truncated DjVu also rejected by DjVuLibre. The lower warm throughput is expected because the earlier parser rejected most of the corpus near the beginning of each file, while the corrected parser performs bounded structural traversal of the accepted multipage documents. The benchmark's roughly ten-minute test duration also includes 100 additional full-corpus passes used to sample database and health-API responsiveness; those passes are separate from the reported warm-throughput interval.
 
 No filenames, metadata values, or book content were recorded.
 

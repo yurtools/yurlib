@@ -491,9 +491,9 @@ class YurlibServerIntegrationTest {
     @Test
     void normalizesCuratesAndSearchesSharedMetadataWithoutReplacingOverrides() {
         var root = saveRoot();
-        var job = scanJobStore.queue(root.id(), "curation", "bounded-metadata-v1", java.time.Instant.now());
+        var job = scanJobStore.queue(root.id(), "curation", "bounded-metadata-v4", java.time.Instant.now());
         catalogStore.reconcile(
-                reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("  A   Raw Title  ", 123)));
+                reconciliation(root.id(), job.id(), "bounded-metadata-v4", metadata("  A   Raw Title  ", 123)));
         var client = JdbcClient.create(dataSource);
         var workId = client.sql("SELECT id FROM work").query(UUID.class).single();
         var actorId = new UUID(0, 0);
@@ -527,7 +527,7 @@ class YurlibServerIntegrationTest {
                 .isEqualTo("The Curated Title");
 
         catalogStore.reconcile(
-                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("Reprocessed Title", 123)));
+                reconciliation(root.id(), job.id(), "bounded-metadata-v5", metadata("Reprocessed Title", 123)));
 
         assertThat(catalogCuration.findWork(workId).title().value()).isEqualTo("The Curated Title");
         assertThat(catalogCuration.findWork(workId).reviews())

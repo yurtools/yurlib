@@ -40,7 +40,7 @@ class BoundedMetadataExtractorTest {
         var fb2 = extractor.extract(library.resolve("valid/minimal.fb2"));
         var mobi = extractor.extract(library.resolve("valid/minimal.mobi"));
 
-        assertExtracted(epub, ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "2");
+        assertExtracted(epub, ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "3");
         assertThat(epub.metadata().contributors()).containsExactly("Fixture Author");
         assertThat(epub.metadata().language()).isEqualTo("en");
         assertThat(epub.metadata().identifiers()).containsValue("urn:uuid:yurlib-fixture");
@@ -53,7 +53,7 @@ class BoundedMetadataExtractorTest {
         assertThat(mobi.metadata().identifiers())
                 .containsEntry("isbn", "9780000000001")
                 .containsEntry("asin", "B000YURLIB");
-        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v4");
+        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v5");
     }
 
     @Test
@@ -73,14 +73,14 @@ class BoundedMetadataExtractorTest {
         assertThat(docx.metadata().additionalObservations())
                 .containsEntry("docx:core:title", List.of("Многоязычный DOCX"))
                 .containsEntry("docx:custom", List.of("Collection=Generated fixtures"));
-        assertExtracted(djvu, ExtractedBookMetadata.Format.DJVU, "Многоязычный DjVu", "jdk-djvu-iff", "1");
+        assertExtracted(djvu, ExtractedBookMetadata.Format.DJVU, "Многоязычный DjVu", "jdk-djvu-iff", "2");
         assertThat(djvu.metadata().contributors()).containsExactly("Анна Тестова");
         assertThat(djvu.metadata().language()).isEqualTo("ru");
         assertThat(djvu.metadata().identifiers()).containsEntry("isbn", "9780000000002");
         assertThat(djvu.metadata().additionalObservations())
                 .containsEntry("djvu:page-count", List.of("1"))
                 .containsEntry("djvu:first-page-dpi", List.of("300"));
-        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v4");
+        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v5");
     }
 
     @Test
@@ -112,13 +112,36 @@ class BoundedMetadataExtractorTest {
     }
 
     @Test
+    void acceptsBoundedSharedDjvuFormsAndTerminalChunksWithoutPadding() throws IOException {
+        var path = library.resolve("valid/shared-form.djvu");
+        FixtureCorpus.writeDjvuWithSharedForm(path, "Shared DjVu");
+
+        var result = extractor.extractMeasured(path);
+
+        assertExtracted(result.result(), ExtractedBookMetadata.Format.DJVU, "Shared DjVu", "jdk-djvu-iff", "2");
+        assertThat(result.result().metadata().additionalObservations()).containsEntry("djvu:page-count", List.of("1"));
+        assertThat(result.usage().bytesRead()).isLessThan(1024);
+    }
+
+    @Test
+    void rejectsMissingInteriorDjvuPaddingAndTruncatedTopLevelLength() throws IOException {
+        var missingPadding = library.resolve("malformed/missing-interior-padding.djvu");
+        var truncated = library.resolve("malformed/truncated-top-level.djvu");
+        FixtureCorpus.writeDjvuWithMissingInteriorPadding(missingPadding, "Missing padding");
+        FixtureCorpus.writeTruncatedDjvu(truncated, "Truncated");
+
+        assertFailure(extractor.extract(missingPadding), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+        assertFailure(extractor.extract(truncated), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+    }
+
+    @Test
     void skipsLargeUnselectedDjvuImageChunkWithBoundedReads() throws IOException {
         var path = FixtureCorpus.writeSparseDjvu(
                 library.resolve("valid/large-sparse.djvu"), "Sparse DjVu", 96 * 1024 * 1024);
 
         var result = extractor.extractMeasured(path);
 
-        assertExtracted(result.result(), ExtractedBookMetadata.Format.DJVU, "Sparse DjVu", "jdk-djvu-iff", "1");
+        assertExtracted(result.result(), ExtractedBookMetadata.Format.DJVU, "Sparse DjVu", "jdk-djvu-iff", "2");
         assertThat(result.usage().bytesRead()).isLessThan(128 * 1024);
         assertThat(result.usage().largestControlledBufferBytes()).isLessThanOrEqualTo(64 * 1024);
     }
@@ -190,13 +213,37 @@ class BoundedMetadataExtractorTest {
     }
 
     @Test
+    void acceptsExplicitEpubDirectoryEntries() throws IOException {
+        var path = library.resolve("valid/explicit-directories.epub");
+        FixtureCorpus.writeEpubWithDirectoryEntries(path);
+
+        var result = extractor.extract(path);
+
+        assertExtracted(result, ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "3");
+    }
+
+    @Test
+    void retainsStrictEpubPathAndCanonicalNameRejection() throws IOException {
+        var unsafeNames =
+                List.of("/absolute-entry", "OEBPS\\backslash-entry", "OEBPS//empty-segment", "OEBPS/./dot-segment");
+        for (var index = 0; index < unsafeNames.size(); index++) {
+            var path = library.resolve("security/unsafe-entry-" + index + ".epub");
+            FixtureCorpus.writeEpubWithUnsafeEntry(path, unsafeNames.get(index));
+            assertFailure(extractor.extract(path), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+        }
+        var collision = library.resolve("security/canonical-name-collision.epub");
+        FixtureCorpus.writeEpubWithCanonicalNameCollision(collision);
+        assertFailure(extractor.extract(collision), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+    }
+
+    @Test
     void importsEpubWithLargeUnparsedImageWithinOperationRelevantBudgets() throws IOException {
         var largeImage = library.resolve("valid/large-image.epub");
         FixtureCorpus.writeEpubWithLargeUnparsedEntry(largeImage);
 
         var result = extractor.extractMeasured(largeImage);
 
-        assertExtracted(result.result(), ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "2");
+        assertExtracted(result.result(), ExtractedBookMetadata.Format.EPUB, "Minimal EPUB Fixture", "jdk-epub", "3");
         assertThat(result.usage().bytesRead()).isLessThan(1024 * 1024);
         assertThat(result.usage().largestControlledBufferBytes()).isLessThanOrEqualTo(4 * 1024 * 1024 + 1);
         assertThat(result.usage().peakOpenFiles()).isLessThanOrEqualTo(2);

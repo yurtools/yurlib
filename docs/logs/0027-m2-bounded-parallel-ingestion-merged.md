@@ -1,6 +1,6 @@
 # M2 Bounded Parallel Ingestion
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-10-01
 - Branch: `feat/56-bounded-parallel-ingestion`
 - Issue: [#56](https://github.com/yurtools/yurlib/issues/56)
@@ -86,6 +86,7 @@ Follow-up prompt:
 - `git diff --check`: passed.
 - `./mvnw -B spotless:check`: passed after the Markdown formatting correction.
 - GitHub Actions run `36889387869`: passed all four required checks at commit `2ef73df`.
+- Pull request [#68](https://github.com/yurtools/yurlib/pull/68) was squash-merged as `604c15f`; issue #56 is closed and its Project item is Done.
 - `YURLIB_RUN_INGESTION_BENCHMARK=true YURLIB_BENCHMARK_SMB=<owner-provided-path> JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 -XX:MaxRAM=8g -Xms256m -Xmx512m' taskset -c 0-3 ./mvnw -B -pl services/yurlib-server -Djacoco.skip=true -Dtest=IngestionReferenceBenchmarkTest test`: passed.
   - SMB files: 136 total; 26 extracted, 0 deferred, 110 safely failed.
   - Time to first result: 9.098 ms.

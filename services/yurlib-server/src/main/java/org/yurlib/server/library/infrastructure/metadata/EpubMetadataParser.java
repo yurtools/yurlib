@@ -3,6 +3,7 @@ package org.yurlib.server.library.infrastructure.metadata;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -42,7 +43,7 @@ final class EpubMetadataParser implements MetadataParser {
                         SecureXml.firstText(document, "language", budget),
                         identifiers(document, budget),
                         "jdk-epub",
-                        "2");
+                        "3");
             }
         }
     }
@@ -50,6 +51,7 @@ final class EpubMetadataParser implements MetadataParser {
     private static void validateArchive(ZipFile archive, MetadataResourceBudget budget)
             throws MetadataParsingException {
         var entries = archive.entries();
+        var canonicalNames = new HashSet<String>();
         var count = 0;
         while (entries.hasMoreElements()) {
             var entry = entries.nextElement();
@@ -58,7 +60,10 @@ final class EpubMetadataParser implements MetadataParser {
                 throw MetadataParsingException.limit(
                         "archive-entry-count", budget.limits().maximumArchiveEntries(), "entries");
             }
-            validateName(entry.getName());
+            var canonicalName = validateName(entry.getName(), entry.isDirectory());
+            if (!canonicalNames.add(canonicalName)) {
+                throw corrupt("The EPUB contains ambiguous entry paths.");
+            }
             budget.checkpoint();
         }
     }
@@ -88,14 +93,14 @@ final class EpubMetadataParser implements MetadataParser {
                 throw corrupt("The EPUB package reference is missing.");
             }
             var path = SecureXml.normalizedSelected(rootFile.getAttribute("full-path"), budget);
-            validateName(path);
+            validateName(path, false);
             return path;
         }
     }
 
     private static ZipEntry requireSelectedEntry(ZipFile archive, String name, long maximumExpandedBytes)
             throws MetadataParsingException {
-        validateName(name);
+        validateName(name, false);
         var entry = archive.getEntry(name);
         if (entry == null || entry.isDirectory()) {
             throw corrupt("The EPUB metadata structure is incomplete.");
@@ -115,24 +120,30 @@ final class EpubMetadataParser implements MetadataParser {
         return entry;
     }
 
-    private static void validateName(String name) throws MetadataParsingException {
+    private static String validateName(String name, boolean directory) throws MetadataParsingException {
         if (name == null || name.isBlank() || name.startsWith("/") || name.contains("\\")) {
             throw corrupt("The EPUB contains an unsafe entry path.");
         }
         try {
-            var path = Path.of(name);
-            var hasTraversal = false;
-            for (var element : path) {
-                if (".".equals(element.toString()) || "..".equals(element.toString())) {
-                    hasTraversal = true;
-                    break;
-                }
-            }
-            if (path.isAbsolute()
-                    || hasTraversal
-                    || !path.normalize().toString().replace('\\', '/').equals(name)) {
+            var trailingSlash = name.endsWith("/");
+            if (directory != trailingSlash) {
                 throw corrupt("The EPUB contains an unsafe entry path.");
             }
+            var canonicalName = trailingSlash ? name.substring(0, name.length() - 1) : name;
+            if (canonicalName.isBlank()) {
+                throw corrupt("The EPUB contains an unsafe entry path.");
+            }
+            for (var segment : canonicalName.split("/", -1)) {
+                if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) {
+                    throw corrupt("The EPUB contains an unsafe entry path.");
+                }
+            }
+            var path = Path.of(canonicalName);
+            if (path.isAbsolute()
+                    || !path.normalize().toString().replace('\\', '/').equals(canonicalName)) {
+                throw corrupt("The EPUB contains an unsafe entry path.");
+            }
+            return canonicalName;
         } catch (java.nio.file.InvalidPathException exception) {
             throw corrupt("The EPUB contains an unsafe entry path.", exception);
         }

@@ -12,31 +12,39 @@ final class BudgetedFileReader implements AutoCloseable {
     private final FileChannel channel;
     private final MetadataResourceBudget budget;
     private final MetadataResourceBudget.ResourceLease lease;
+    private final long size;
 
     private BudgetedFileReader(
-            FileChannel channel, MetadataResourceBudget budget, MetadataResourceBudget.ResourceLease lease) {
+            FileChannel channel, MetadataResourceBudget budget, MetadataResourceBudget.ResourceLease lease, long size) {
         this.channel = channel;
         this.budget = budget;
         this.lease = lease;
+        this.size = size;
     }
 
     static BudgetedFileReader open(Path path, MetadataResourceBudget budget)
             throws IOException, MetadataParsingException {
         var lease = budget.openFile();
         try {
-            return new BudgetedFileReader(FileChannel.open(path, StandardOpenOption.READ), budget, lease);
+            var channel = FileChannel.open(path, StandardOpenOption.READ);
+            try {
+                return new BudgetedFileReader(channel, budget, lease, channel.size());
+            } catch (IOException | RuntimeException failure) {
+                channel.close();
+                throw failure;
+            }
         } catch (IOException | RuntimeException failure) {
             lease.close();
             throw failure;
         }
     }
 
-    long size() throws IOException {
-        return channel.size();
+    long size() {
+        return size;
     }
 
     ByteBuffer read(long position, int length) throws IOException, MetadataParsingException {
-        if (position < 0 || length < 0 || position > channel.size() - length) {
+        if (position < 0 || length < 0 || position > size - length) {
             throw new IOException("Requested file range is unavailable.");
         }
         budget.recordControlledBuffer(length);

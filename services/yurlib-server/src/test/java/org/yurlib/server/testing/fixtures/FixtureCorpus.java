@@ -66,6 +66,18 @@ public final class FixtureCorpus {
         writeEpub(path, EpubKind.LARGE_UNRELATED_ENTRY);
     }
 
+    public static void writeEpubWithDirectoryEntries(Path path) throws IOException {
+        writeEpub(path, EpubKind.DIRECTORY_ENTRIES);
+    }
+
+    public static void writeEpubWithUnsafeEntry(Path path, String entryName) throws IOException {
+        writeEpub(path, EpubKind.VALID, entryName);
+    }
+
+    public static void writeEpubWithCanonicalNameCollision(Path path) throws IOException {
+        writeEpub(path, EpubKind.CANONICAL_NAME_COLLISION);
+    }
+
     public static void writeMobiWithFullName(Path path, String fullName) throws IOException {
         writeMobi(path, fullName, null);
     }
@@ -102,6 +114,23 @@ public final class FixtureCorpus {
     public static Path writeSparseDjvu(Path path, String title, int unparsedBytes) throws IOException {
         writeDjvu(path, title, unparsedBytes);
         return path;
+    }
+
+    public static void writeDjvuWithSharedForm(Path path, String title) throws IOException {
+        writeCompoundDjvu(path, title, true);
+    }
+
+    public static void writeDjvuWithMissingInteriorPadding(Path path, String title) throws IOException {
+        writeCompoundDjvu(path, title, false);
+    }
+
+    public static void writeTruncatedDjvu(Path path, String title) throws IOException {
+        writeDjvu(path, title);
+        try (var channel = FileChannel.open(path, StandardOpenOption.WRITE)) {
+            var declaredLength = ByteBuffer.allocate(Integer.BYTES).putInt(Math.toIntExact(Files.size(path) - 11));
+            declaredLength.flip();
+            channel.write(declaredLength, 8);
+        }
     }
 
     public static void writeLargeFb2(Path path, int binaryCharacters) throws IOException {
@@ -154,9 +183,17 @@ public final class FixtureCorpus {
     }
 
     private static void writeEpub(Path path, EpubKind kind) throws IOException {
+        writeEpub(path, kind, null);
+    }
+
+    private static void writeEpub(Path path, EpubKind kind, String extraEntryName) throws IOException {
         Files.createDirectories(path.getParent());
         try (var output = new ZipOutputStream(Files.newOutputStream(path), StandardCharsets.UTF_8)) {
             writeStoredEntry(output, "mimetype", "application/epub+zip");
+            if (kind == EpubKind.DIRECTORY_ENTRIES || kind == EpubKind.CANONICAL_NAME_COLLISION) {
+                writeDirectoryEntry(output, "META-INF/");
+                writeDirectoryEntry(output, "OEBPS/");
+            }
             writeEntry(output, "META-INF/container.xml", """
                     <?xml version="1.0"?>
                     <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -189,6 +226,10 @@ public final class FixtureCorpus {
                 writeEntry(output, "../escaped.txt", "must never be extracted");
             } else if (kind == EpubKind.LARGE_UNRELATED_ENTRY) {
                 writeEntry(output, "OEBPS/oversized.txt", "A".repeat(2 * 1024 * 1024));
+            } else if (kind == EpubKind.CANONICAL_NAME_COLLISION) {
+                writeEntry(output, "OEBPS", "ambiguous with the explicit directory");
+            } else if (extraEntryName != null) {
+                writeEntry(output, extraEntryName, "unsafe path fixture");
             }
         }
     }
@@ -293,6 +334,58 @@ public final class FixtureCorpus {
         }
     }
 
+    private static void writeCompoundDjvu(Path path, String title, boolean includeInteriorPadding) throws IOException {
+        Files.createDirectories(path.getParent());
+        var sharedChild = djvuChunkBytes("Djbz", new byte[] {1}, false);
+        var sharedForm = djvuFormBytes("DJVI", sharedChild, includeInteriorPadding);
+
+        var info = ByteBuffer.allocate(10);
+        info.putShort((short) 1200).putShort((short) 1800).put((byte) 0).put((byte) 26);
+        info.putShort((short) 300).put((byte) 22).put((byte) 0);
+        var annotation = ("(metadata (Title \"" + title + "\"))").getBytes(StandardCharsets.UTF_8);
+        if ((annotation.length & 1) == 0) {
+            annotation = Arrays.copyOf(annotation, annotation.length + 1);
+            annotation[annotation.length - 1] = ' ';
+        }
+        var pageChildren =
+                concatenate(djvuChunkBytes("INFO", info.array(), true), djvuChunkBytes("ANTa", annotation, false));
+        var pageForm = djvuFormBytes("DJVU", pageChildren, false);
+        var body = concatenate("DJVM".getBytes(StandardCharsets.US_ASCII), sharedForm, pageForm);
+
+        try (var output = new DataOutputStream(Files.newOutputStream(path))) {
+            output.writeBytes("AT&T");
+            output.writeBytes("FORM");
+            output.writeInt(body.length);
+            output.write(body);
+        }
+    }
+
+    private static byte[] djvuChunkBytes(String id, byte[] value, boolean includePadding) throws IOException {
+        var bytes = new ByteArrayOutputStream();
+        try (var output = new DataOutputStream(bytes)) {
+            output.writeBytes(id);
+            output.writeInt(value.length);
+            output.write(value);
+            if (includePadding && (value.length & 1) != 0) {
+                output.write(0);
+            }
+        }
+        return bytes.toByteArray();
+    }
+
+    private static byte[] djvuFormBytes(String type, byte[] children, boolean includePadding) throws IOException {
+        var value = concatenate(type.getBytes(StandardCharsets.US_ASCII), children);
+        return djvuChunkBytes("FORM", value, includePadding);
+    }
+
+    private static byte[] concatenate(byte[]... values) throws IOException {
+        var bytes = new ByteArrayOutputStream();
+        for (var value : values) {
+            bytes.write(value);
+        }
+        return bytes.toByteArray();
+    }
+
     private static void writeDjvuChunk(DataOutputStream output, String id, byte[] value) throws IOException {
         output.writeBytes(id);
         output.writeInt(value.length);
@@ -300,6 +393,11 @@ public final class FixtureCorpus {
         if ((value.length & 1) != 0) {
             output.write(0);
         }
+    }
+
+    private static void writeDirectoryEntry(ZipOutputStream output, String name) throws IOException {
+        output.putNextEntry(new ZipEntry(name));
+        output.closeEntry();
     }
 
     private static void writeStoredEntry(ZipOutputStream output, String name, String value) throws IOException {
@@ -436,6 +534,8 @@ public final class FixtureCorpus {
         TRAVERSAL,
         DECOMPRESSION_LIMIT,
         LARGE_UNRELATED_ENTRY,
-        NEAR_LIMIT_METADATA
+        NEAR_LIMIT_METADATA,
+        DIRECTORY_ENTRIES,
+        CANONICAL_NAME_COLLISION
     }
 }
