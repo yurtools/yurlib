@@ -14,12 +14,17 @@ final class ZipSecurityInspector {
     private ZipSecurityInspector() {}
 
     static void inspect(Path path, MetadataResourceBudget budget) throws IOException, MetadataParsingException {
+        inspect(path, budget, "EPUB");
+    }
+
+    static void inspect(Path path, MetadataResourceBudget budget, String format)
+            throws IOException, MetadataParsingException {
         try (var reader = BudgetedFileReader.open(path, budget)) {
             var trailerSize = (int) Math.min(reader.size(), MAXIMUM_TRAILER_BYTES);
             var trailer = reader.read(reader.size() - trailerSize, trailerSize).order(ByteOrder.LITTLE_ENDIAN);
             var end = findEndRecord(trailer.array());
             if (end < 0) {
-                throw corrupt("The EPUB central directory is missing.");
+                throw corrupt("The " + format + " central directory is missing.");
             }
             var entries = unsignedShort(trailer, end + 10);
             var centralSize = unsignedInt(trailer, end + 12);
@@ -38,14 +43,14 @@ final class ZipSecurityInspector {
                     reader.read(centralOffset, Math.toIntExact(centralSize)).order(ByteOrder.LITTLE_ENDIAN);
             for (var index = 0; index < entries; index++) {
                 if (directory.remaining() < 46 || directory.getInt() != CENTRAL_SIGNATURE) {
-                    throw corrupt("The EPUB central directory is invalid.");
+                    throw corrupt("The " + format + " central directory is invalid.");
                 }
                 directory.position(directory.position() + 4);
                 var flags = Short.toUnsignedInt(directory.getShort());
                 if ((flags & 1) != 0) {
                     throw new MetadataParsingException(
                             MetadataExtractionResult.ErrorCode.ENCRYPTED_ASSET,
-                            "Encrypted EPUB entries are not supported.");
+                            "Encrypted " + format + " entries are not supported.");
                 }
                 directory.position(directory.position() + 18);
                 var nameLength = Short.toUnsignedInt(directory.getShort());
@@ -54,7 +59,7 @@ final class ZipSecurityInspector {
                 directory.position(directory.position() + 12);
                 var variableLength = nameLength + extraLength + commentLength;
                 if (variableLength > directory.remaining()) {
-                    throw corrupt("The EPUB central directory is invalid.");
+                    throw corrupt("The " + format + " central directory is invalid.");
                 }
                 directory.position(directory.position() + variableLength);
             }

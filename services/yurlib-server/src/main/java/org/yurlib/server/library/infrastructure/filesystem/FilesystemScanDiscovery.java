@@ -111,7 +111,13 @@ public final class FilesystemScanDiscovery implements ScanDiscovery {
 
         private static boolean isSupportedCandidate(String path) {
             var lowercase = path.toLowerCase(Locale.ROOT);
-            return lowercase.endsWith(".epub") || lowercase.endsWith(".fb2") || lowercase.endsWith(".mobi");
+            return lowercase.endsWith(".epub")
+                    || lowercase.endsWith(".fb2")
+                    || lowercase.endsWith(".mobi")
+                    || lowercase.endsWith(".pdf")
+                    || lowercase.endsWith(".docx")
+                    || lowercase.endsWith(".djvu")
+                    || lowercase.endsWith(".djv");
         }
     }
 }

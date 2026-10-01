@@ -425,6 +425,36 @@ app-root {
   .search button {
     border-radius: 0 999px 999px 0;
   }
+
+  .format-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.8rem;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .format-filters legend {
+    width: 100%;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .format-filters label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+  }
+
+  .metadata-state {
+    color: var(--muted);
+    font-size: 0.74rem;
+    text-transform: capitalize;
+  }
   .catalog-list {
     margin-left: 4.5rem;
   }

@@ -44,12 +44,15 @@ export interface ScanJob {
   completedAt?: string | null;
 }
 
+export type CatalogFormat = 'EPUB' | 'FB2' | 'MOBI' | 'PDF' | 'DOCX' | 'DJVU';
+
 export interface CatalogAsset {
   id: string;
-  format: 'EPUB' | 'FB2' | 'MOBI' | 'PDF' | 'DOCX' | 'DJVU';
+  format: CatalogFormat;
   size: number;
   availability: 'AVAILABLE' | 'UNAVAILABLE';
   original: true;
+  metadataState: 'PENDING' | 'READY' | 'FAILED_SAFE';
 }
 
 export interface CatalogWork {

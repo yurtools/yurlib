@@ -255,6 +255,19 @@
               Search
             </button>
           </div>
+          <fieldset class="format-filters">
+            <legend>File formats</legend>
+            @for (format of catalogFormats; track format) {
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="selectedCatalogFormats().has(format)"
+                  (change)="toggleCatalogFormat(format, $any($event.target).checked)"
+                />
+                {{ format }}
+              </label>
+            }
+          </fieldset>
           @if (searchForm.query().touched() && searchForm.query().errors()[0]; as error) {
             <small class="field-error">{{ error.message }}</small>
           }
@@ -293,6 +306,11 @@
                     <span
                       ><strong>{{ asset.format }}</strong> · {{ formatBytes(asset.size) }}</span
                     >
+                    @if (asset.metadataState !== 'READY') {
+                      <span class="metadata-state" [attr.data-state]="asset.metadataState">
+                        Metadata {{ formatState(asset.metadataState) }}
+                      </span>
+                    }
                     @if (asset.availability === 'AVAILABLE') {
                       <a [href]="downloadUrl(asset.id)" download>Download original</a>
                     } @else {

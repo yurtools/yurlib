@@ -23,3 +23,4 @@ Architecture Decision Records (ADRs) document significant Yurlib engineering dec
 | [ADR-0008](0008-use-typed-managed-output-roots-and-lineage-authorization.md)   | Accepted | Use typed managed roots and lineage authorization              |
 | [ADR-0009](0009-isolate-conversion-and-native-rendering.md)                    | Accepted | Isolate conversion and native rendering                        |
 | [ADR-0010](0010-normalize-covers-and-document-representatives.md)              | Accepted | Normalize covers and document representatives                  |
+| [ADR-0011](0011-isolate-pdf-metadata-and-parse-docx-djvu-structures.md)        | Accepted | Isolate PDF metadata; parse DOCX/DjVu structures in process    |

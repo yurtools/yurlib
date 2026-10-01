@@ -32,6 +32,10 @@ class FilesystemScanDiscoveryTest {
         Files.writeString(mount.resolve("books/.yurlib-root-id"), TOKEN, StandardCharsets.UTF_8);
         Files.writeString(rootPath.resolve("one.EPUB"), "content", StandardCharsets.UTF_8);
         Files.writeString(rootPath.resolve("two.fb2"), "content", StandardCharsets.UTF_8);
+        Files.writeString(rootPath.resolve("three.pdf"), "content", StandardCharsets.UTF_8);
+        Files.writeString(rootPath.resolve("four.DOCX"), "content", StandardCharsets.UTF_8);
+        Files.writeString(rootPath.resolve("five.djvu"), "content", StandardCharsets.UTF_8);
+        Files.writeString(rootPath.resolve("six.DJV"), "content", StandardCharsets.UTF_8);
         Files.writeString(rootPath.resolve("notes.txt"), "ignored", StandardCharsets.UTF_8);
         var outside = Files.writeString(temporaryDirectory.resolve("outside.mobi"), "private", StandardCharsets.UTF_8);
         Files.createSymbolicLink(rootPath.resolve("escape.mobi"), outside);
@@ -42,7 +46,13 @@ class FilesystemScanDiscoveryTest {
         assertThat(result.coverageComplete()).isTrue();
         assertThat(listener.discovered)
                 .extracting(ScanDiscovery.Candidate::normalizedRelativePath)
-                .containsExactlyInAnyOrder("fiction/one.EPUB", "fiction/two.fb2");
+                .containsExactlyInAnyOrder(
+                        "fiction/one.EPUB",
+                        "fiction/two.fb2",
+                        "fiction/three.pdf",
+                        "fiction/four.DOCX",
+                        "fiction/five.djvu",
+                        "fiction/six.DJV");
         assertThat(listener.failures).containsExactly("fiction/escape.mobi:PATH_ESCAPE");
         assertThat(listener.heartbeats).isGreaterThanOrEqualTo(5);
     }

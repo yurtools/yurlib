@@ -3,12 +3,14 @@ package org.yurlib.server.library.api;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.util.Set;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.yurlib.server.library.application.CatalogQuery;
+import org.yurlib.server.library.domain.Asset;
 
 @RestController
 @Validated
@@ -24,8 +26,9 @@ public class CatalogController {
     @GetMapping
     public CatalogPageResponse list(
             @RequestParam(required = false) @Size(max = 200) String query,
+            @RequestParam(required = false) Set<Asset.Format> format,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "25") @Min(1) @Max(100) int size) {
-        return CatalogPageResponse.from(catalog.search(query, page, size));
+        return CatalogPageResponse.from(catalog.search(query, format == null ? Set.of() : format, page, size));
     }
 }

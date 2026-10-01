@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ class CatalogControllerTest {
 
     @Test
     void returnsTheContractedCatalogPageAndUsesDefaultPagination() throws Exception {
-        when(catalog.search(null, 0, 25))
+        when(catalog.search(null, Set.of(), 0, 25))
                 .thenReturn(new CatalogQuery.CatalogPage(
                         List.of(new CatalogQuery.WorkSummary(
                                 WORK_ID,
@@ -59,7 +60,7 @@ class CatalogControllerTest {
                 .andExpect(jsonPath("$.size").value(25))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(catalog).search(null, 0, 25);
+        verify(catalog).search(null, Set.of(), 0, 25);
     }
 
     @Test

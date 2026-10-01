@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
@@ -39,7 +40,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     @Override
     public Optional<CatalogLocationSnapshot> findLocation(UUID rootId, String normalizedRelativePath) {
         return jdbc.sql("""
-                SELECT location.byte_size, location.modified_at, asset.extraction_version
+                SELECT location.byte_size, location.modified_at, asset.extraction_version, asset.metadata_state
                 FROM asset_location location
                 JOIN asset ON asset.id = location.asset_id
                 WHERE location.library_root_id = :rootId
@@ -81,6 +82,24 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
     @Override
     @Transactional
+    public void markMetadataState(
+            UUID rootId, String normalizedRelativePath, CatalogReconciliation.MetadataState metadataState) {
+        jdbc.sql("""
+                UPDATE asset
+                SET metadata_state = :metadataState
+                FROM asset_location location
+                WHERE location.asset_id = asset.id
+                  AND location.library_root_id = :rootId
+                  AND location.normalized_relative_path = :path
+                """)
+                .param("metadataState", metadataState.name())
+                .param("rootId", rootId)
+                .param("path", normalizedRelativePath)
+                .update();
+    }
+
+    @Override
+    @Transactional
     public void markUnseenMissing(UUID rootId, UUID scanJobId) {
         jdbc.sql("""
                 UPDATE asset_location
@@ -92,16 +111,18 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     }
 
     @Override
-    public CatalogPage search(String query, int page, int size) {
+    public CatalogPage search(String query, Set<Asset.Format> formats, int page, int size) {
         validatePage(query, page, size);
         var access = accessContext.current();
         var pattern = searchPattern(query);
-        var total = countWorks(pattern, access);
+        var selectedFormats = formats.isEmpty() ? Set.of(Asset.Format.values()) : Set.copyOf(formats);
+        var formatNames = selectedFormats.stream().map(Enum::name).toList();
+        var total = countWorks(pattern, formatNames, access);
         if (total == 0) {
             return new CatalogPage(List.of(), page, size, 0);
         }
 
-        var works = findWorks(pattern, page, size, access);
+        var works = findWorks(pattern, formatNames, page, size, access);
         var workIds = works.stream().map(WorkRow::id).toList();
         var contributors = findContributors(workIds, access);
         var assets = findAssets(workIds, access);
@@ -159,10 +180,12 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .update();
         jdbc.sql("""
                 UPDATE asset
-                SET extraction_version = :extractionVersion
+                SET extraction_version = :extractionVersion,
+                    metadata_state = :metadataState
                 WHERE id = :assetId
                 """)
                 .param("extractionVersion", reconciliation.extractionVersion())
+                .param("metadataState", reconciliation.metadataState().name())
                 .param("assetId", existing.assetId())
                 .update();
         updateLocation(existing.locationId(), existing.assetId(), reconciliation);
@@ -201,9 +224,9 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .update();
         jdbc.sql("""
                 INSERT INTO asset (
-                    id, edition_id, format, byte_size, derivation, extraction_version, created_at
+                    id, edition_id, format, byte_size, derivation, extraction_version, metadata_state, created_at
                 ) VALUES (
-                    :id, :editionId, :format, :byteSize, 'ORIGINAL', :extractionVersion, :observedAt
+                    :id, :editionId, :format, :byteSize, 'ORIGINAL', :extractionVersion, :metadataState, :observedAt
                 )
                 """)
                 .param("id", assetId)
@@ -211,6 +234,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .param("format", metadata.format().name())
                 .param("byteSize", metadata.byteSize())
                 .param("extractionVersion", reconciliation.extractionVersion())
+                .param("metadataState", reconciliation.metadataState().name())
                 .param("observedAt", timestamp(reconciliation.observedAt()))
                 .update();
         if (existing == null) {
@@ -294,6 +318,21 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                         entry.getValue(),
                         0,
                         reconciliation));
+        metadata.additionalObservations().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    for (var index = 0; index < entry.getValue().size(); index++) {
+                        insertObservation(
+                                observationSetId,
+                                assetId,
+                                assetId,
+                                "ASSET",
+                                entry.getKey(),
+                                entry.getValue().get(index),
+                                index,
+                                reconciliation);
+                    }
+                });
         insertObservation(
                 observationSetId,
                 assetId,
@@ -367,7 +406,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .update();
     }
 
-    private long countWorks(String pattern, LibraryAccessContext.Access access) {
+    private long countWorks(String pattern, List<String> formats, LibraryAccessContext.Access access) {
         return jdbc.sql("""
                 SELECT count(*)
                 FROM work
@@ -378,6 +417,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                     JOIN asset_location visible_location ON visible_location.asset_id = visible_asset.id
                     WHERE visible_edition.work_id = work.id
                       AND visible_location.availability = 'AVAILABLE'
+                      AND visible_asset.format IN (:formats)
                       AND (:unrestricted OR NOT EXISTS (
                           SELECT 1 FROM user_root_deny denied
                           WHERE denied.user_id = :userId
@@ -429,13 +469,15 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                    ))
                 """)
                 .param("pattern", pattern)
+                .param("formats", formats)
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())
                 .query(Long.class)
                 .single();
     }
 
-    private List<WorkRow> findWorks(String pattern, int page, int size, LibraryAccessContext.Access access) {
+    private List<WorkRow> findWorks(
+            String pattern, List<String> formats, int page, int size, LibraryAccessContext.Access access) {
         return jdbc.sql("""
                 SELECT work.id, work.provisional_title AS title,
                        work.resolution_state = 'PROVISIONAL' AS provisional
@@ -447,6 +489,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                     JOIN asset_location visible_location ON visible_location.asset_id = visible_asset.id
                     WHERE visible_edition.work_id = work.id
                       AND visible_location.availability = 'AVAILABLE'
+                      AND visible_asset.format IN (:formats)
                       AND (:unrestricted OR NOT EXISTS (
                           SELECT 1 FROM user_root_deny denied
                           WHERE denied.user_id = :userId
@@ -500,6 +543,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 LIMIT :size OFFSET :offset
                 """)
                 .param("pattern", pattern)
+                .param("formats", formats)
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())
                 .param("size", size)
@@ -538,6 +582,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         var result = new LinkedHashMap<UUID, List<AssetSummary>>();
         jdbc.sql("""
                 SELECT edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
+                       asset.metadata_state,
                        bool_or(location.availability = 'AVAILABLE') AS available
                 FROM asset
                 JOIN edition ON edition.id = asset.edition_id
@@ -557,7 +602,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                        AND denied_source.user_id = :userId
                       WHERE lineage.derived_asset_id = asset.id
                   ))
-                GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation
+                GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
+                         asset.metadata_state
                 ORDER BY edition.work_id, asset.id
                 """)
                 .param("workIds", workIds)
@@ -569,7 +615,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                         Asset.Format.valueOf(row.getString("format")),
                         row.getLong("byte_size"),
                         row.getBoolean("available"),
-                        "ORIGINAL".equals(row.getString("derivation"))))
+                        "ORIGINAL".equals(row.getString("derivation")),
+                        CatalogReconciliation.MetadataState.valueOf(row.getString("metadata_state"))))
                 .list()
                 .forEach(row -> result.computeIfAbsent(row.workId(), ignored -> new ArrayList<>())
                         .add(new AssetSummary(
@@ -577,7 +624,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                                 row.format(),
                                 row.size(),
                                 row.available() ? Availability.AVAILABLE : Availability.UNAVAILABLE,
-                                row.original())));
+                                row.original(),
+                                row.metadataState())));
         return result;
     }
 
@@ -631,5 +679,11 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     private record ContributorRow(UUID workId, String value) {}
 
     private record AssetRow(
-            UUID workId, UUID id, Asset.Format format, long size, boolean available, boolean original) {}
+            UUID workId,
+            UUID id,
+            Asset.Format format,
+            long size,
+            boolean available,
+            boolean original,
+            CatalogReconciliation.MetadataState metadataState) {}
 }

@@ -15,6 +15,7 @@ import { EMPTY, Subscription, expand, firstValueFrom, switchMap, timer } from 'r
 import { LibraryApi } from './library-api';
 import {
   CatalogPage,
+  CatalogFormat,
   CreateLibraryRootRequest,
   LibraryMount,
   LibraryRoot,
@@ -30,6 +31,8 @@ const TERMINAL_SCAN_STATES: ReadonlySet<ScanState> = new Set([
   'FAILED',
   'CANCELLED',
 ]);
+
+const CATALOG_FORMATS: readonly CatalogFormat[] = ['EPUB', 'FB2', 'MOBI', 'PDF', 'DOCX', 'DJVU'];
 
 @Component({
   imports: [FormField],
@@ -84,6 +87,8 @@ export class App {
   });
 
   protected readonly searchModel = signal({ query: '' });
+  protected readonly catalogFormats = CATALOG_FORMATS;
+  protected readonly selectedCatalogFormats = signal<ReadonlySet<CatalogFormat>>(new Set());
   protected readonly searchForm = form(this.searchModel, (schema) => {
     maxLength(schema.query, 200, { message: 'Use 200 characters or fewer.' });
   });
@@ -226,6 +231,15 @@ export class App {
     submit(this.searchForm, async () => this.loadCatalog(0));
   }
 
+  protected toggleCatalogFormat(format: CatalogFormat, selected: boolean) {
+    this.selectedCatalogFormats.update((current) => {
+      const next = new Set(current);
+      if (selected) next.add(format);
+      else next.delete(format);
+      return next;
+    });
+  }
+
   protected previousPage() {
     if (this.hasPreviousPage()) void this.loadCatalog(this.catalog().page - 1);
   }
@@ -303,7 +317,12 @@ export class App {
     try {
       this.catalog.set(
         await firstValueFrom(
-          this.api.searchCatalog(this.searchModel().query.trim(), page, App.CATALOG_PAGE_SIZE),
+          this.api.searchCatalog(
+            this.searchModel().query.trim(),
+            page,
+            App.CATALOG_PAGE_SIZE,
+            [...this.selectedCatalogFormats()],
+          ),
         ),
       );
     } catch (error) {

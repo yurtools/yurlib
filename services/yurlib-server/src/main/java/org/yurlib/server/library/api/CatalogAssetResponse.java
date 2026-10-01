@@ -3,7 +3,8 @@ package org.yurlib.server.library.api;
 import java.util.UUID;
 import org.yurlib.server.library.application.CatalogQuery;
 
-public record CatalogAssetResponse(UUID id, String format, long size, String availability, boolean original) {
+public record CatalogAssetResponse(
+        UUID id, String format, long size, String availability, boolean original, String metadataState) {
 
     static CatalogAssetResponse from(CatalogQuery.AssetSummary asset) {
         return new CatalogAssetResponse(
@@ -11,6 +12,7 @@ public record CatalogAssetResponse(UUID id, String format, long size, String ava
                 asset.format().name(),
                 asset.size(),
                 asset.availability().name(),
-                asset.original());
+                asset.original(),
+                asset.metadataState().name());
     }
 }

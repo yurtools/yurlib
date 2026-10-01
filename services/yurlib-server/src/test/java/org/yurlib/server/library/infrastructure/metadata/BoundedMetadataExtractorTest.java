@@ -53,7 +53,91 @@ class BoundedMetadataExtractorTest {
         assertThat(mobi.metadata().identifiers())
                 .containsEntry("isbn", "9780000000001")
                 .containsEntry("asin", "B000YURLIB");
-        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v3");
+        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v4");
+    }
+
+    @Test
+    void extractsMultilingualDocxAndDjvuMetadataWithSourceSpecificObservations() throws IOException {
+        var docxPath = library.resolve("valid/minimal.docx");
+        var djvuPath = library.resolve("valid/minimal.djvu");
+        FixtureCorpus.writeDocx(docxPath);
+        FixtureCorpus.writeDjvu(djvuPath, "Многоязычный DjVu");
+
+        var docx = extractor.extract(docxPath);
+        var djvu = extractor.extract(djvuPath);
+
+        assertExtracted(docx, ExtractedBookMetadata.Format.DOCX, "Многоязычный DOCX", "jdk-docx-opc", "1");
+        assertThat(docx.metadata().contributors()).containsExactly("Анна Тестова");
+        assertThat(docx.metadata().language()).isEqualTo("ru");
+        assertThat(docx.metadata().identifiers()).containsEntry("docx-core", "urn:yurlib:docx-fixture");
+        assertThat(docx.metadata().additionalObservations())
+                .containsEntry("docx:core:title", List.of("Многоязычный DOCX"))
+                .containsEntry("docx:custom", List.of("Collection=Generated fixtures"));
+        assertExtracted(djvu, ExtractedBookMetadata.Format.DJVU, "Многоязычный DjVu", "jdk-djvu-iff", "1");
+        assertThat(djvu.metadata().contributors()).containsExactly("Анна Тестова");
+        assertThat(djvu.metadata().language()).isEqualTo("ru");
+        assertThat(djvu.metadata().identifiers()).containsEntry("isbn", "9780000000002");
+        assertThat(djvu.metadata().additionalObservations())
+                .containsEntry("djvu:page-count", List.of("1"))
+                .containsEntry("djvu:first-page-dpi", List.of("300"));
+        assertThat(extractor.extractionVersion()).isEqualTo("bounded-metadata-v4");
+    }
+
+    @Test
+    void rejectsEncryptedActiveAndExternallyRelatedDocxPackagesSafely() throws IOException {
+        var encrypted = library.resolve("security/encrypted.docx");
+        var macro = library.resolve("security/macro.docx");
+        var external = library.resolve("security/external-relationship.docx");
+        FixtureCorpus.writeEncryptedDocx(encrypted);
+        FixtureCorpus.writeMacroDocx(macro);
+        FixtureCorpus.writeDocxWithExternalRelationship(external);
+
+        assertFailure(extractor.extract(encrypted), MetadataExtractionResult.ErrorCode.ENCRYPTED_ASSET);
+        assertFailure(extractor.extract(macro), MetadataExtractionResult.ErrorCode.UNSUPPORTED_FORMAT);
+        var externalResult = extractor.extract(external);
+        assertFailure(externalResult, MetadataExtractionResult.ErrorCode.UNSUPPORTED_FORMAT);
+        assertThat(externalResult.safeDiagnostic()).doesNotContain("example.invalid");
+    }
+
+    @Test
+    void rejectsMalformedDocxAndDjvuContainersSafely() throws IOException {
+        var docx = library.resolve("malformed/broken.docx");
+        var djvu = library.resolve("malformed/broken.djvu");
+        Files.createDirectories(docx.getParent());
+        Files.writeString(docx, "not a ZIP package", StandardCharsets.US_ASCII);
+        Files.write(djvu, "AT&TFORM".getBytes(StandardCharsets.US_ASCII));
+
+        assertFailure(extractor.extract(docx), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+        assertFailure(extractor.extract(djvu), MetadataExtractionResult.ErrorCode.CORRUPT_ASSET);
+    }
+
+    @Test
+    void skipsLargeUnselectedDjvuImageChunkWithBoundedReads() throws IOException {
+        var path = FixtureCorpus.writeSparseDjvu(
+                library.resolve("valid/large-sparse.djvu"), "Sparse DjVu", 96 * 1024 * 1024);
+
+        var result = extractor.extractMeasured(path);
+
+        assertExtracted(result.result(), ExtractedBookMetadata.Format.DJVU, "Sparse DjVu", "jdk-djvu-iff", "1");
+        assertThat(result.usage().bytesRead()).isLessThan(128 * 1024);
+        assertThat(result.usage().largestControlledBufferBytes()).isLessThanOrEqualTo(64 * 1024);
+    }
+
+    @Test
+    void enforcesSelectedValueBoundaryForDocxAndDjvu() throws IOException {
+        var docxNear = library.resolve("valid/near-limit.docx");
+        var docxOver = library.resolve("security/over-limit.docx");
+        var djvuNear = library.resolve("valid/near-limit.djvu");
+        var djvuOver = library.resolve("security/over-limit.djvu");
+        FixtureCorpus.writeDocxWithTitle(docxNear, "D".repeat(64 * 1024));
+        FixtureCorpus.writeDocxWithTitle(docxOver, "D".repeat(64 * 1024 + 1));
+        FixtureCorpus.writeDjvu(djvuNear, "J".repeat(64 * 1024));
+        FixtureCorpus.writeDjvu(djvuOver, "J".repeat(64 * 1024 + 1));
+
+        assertThat(extractor.extract(docxNear).state()).isEqualTo(MetadataExtractionResult.State.EXTRACTED);
+        assertFailure(extractor.extract(docxOver), MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED);
+        assertThat(extractor.extract(djvuNear).state()).isEqualTo(MetadataExtractionResult.State.EXTRACTED);
+        assertFailure(extractor.extract(djvuOver), MetadataExtractionResult.ErrorCode.PARSE_LIMIT_EXCEEDED);
     }
 
     @Test

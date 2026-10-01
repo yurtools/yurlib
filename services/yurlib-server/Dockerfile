@@ -3,6 +3,7 @@ FROM maven:3.9.11-eclipse-temurin-25-alpine AS build
 WORKDIR /workspace
 COPY pom.xml ./
 COPY services/yurlib-server/pom.xml services/yurlib-server/pom.xml
+COPY services/yurlib-document-worker/pom.xml services/yurlib-document-worker/pom.xml
 RUN mvn -B -pl services/yurlib-server -am dependency:go-offline
 
 COPY contracts contracts

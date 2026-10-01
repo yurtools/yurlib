@@ -46,4 +46,12 @@ describe('LibraryApi', () => {
     ).not.toContain('://');
     expect(api.downloadUrl('asset/id')).toBe('/api/v1/assets/asset%2Fid/content');
   });
+
+  it('sends each selected catalog format as a repeated query parameter', () => {
+    api.searchCatalog('', 0, 12, ['PDF', 'DOCX']).subscribe();
+
+    const request = http.expectOne((candidate) => candidate.url === '/api/v1/catalog/works');
+    expect(request.request.params.getAll('format')).toEqual(['PDF', 'DOCX']);
+    request.flush({ items: [], page: 0, size: 12, totalElements: 0 });
+  });
 });

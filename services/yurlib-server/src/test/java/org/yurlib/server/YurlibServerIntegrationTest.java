@@ -66,7 +66,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("5");
+        assertThat(value).isEqualTo("6");
     }
 
     @Test
@@ -103,6 +103,7 @@ class YurlibServerIntegrationTest {
                         "user_capability",
                         "user_root_deny",
                         "security_audit_event"));
+        assertThat(tables).contains("pdf_metadata_job");
     }
 
     @Test
@@ -456,6 +457,14 @@ class YurlibServerIntegrationTest {
         assertThat(catalogQuery.search(null, 1, 1).items())
                 .extracting(CatalogQuery.WorkSummary::title)
                 .containsExactly("The Left Hand of Darkness");
+        assertThat(catalogQuery
+                        .search(null, Set.of(org.yurlib.server.library.domain.Asset.Format.EPUB), 0, 25)
+                        .totalElements())
+                .isEqualTo(2);
+        assertThat(catalogQuery
+                        .search(null, Set.of(org.yurlib.server.library.domain.Asset.Format.PDF), 0, 25)
+                        .totalElements())
+                .isZero();
 
         assertThatThrownBy(() -> catalogQuery.search("query", 0, 101)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> catalogQuery.search("x".repeat(201), 0, 25))

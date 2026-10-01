@@ -12,7 +12,7 @@ import org.yurlib.server.library.application.MetadataExtractor;
 
 public final class BoundedMetadataExtractor implements MetadataExtractor {
 
-    public static final String EXTRACTION_VERSION = "bounded-metadata-v3";
+    public static final String EXTRACTION_VERSION = "bounded-metadata-v4";
     private static final String CORRUPT_DIAGNOSTIC = "The book file could not be read safely.";
 
     private final FileFactsReader factsReader;
@@ -22,7 +22,12 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
     public BoundedMetadataExtractor() {
         this(
                 FileFactsReader.nio(),
-                List.of(new EpubMetadataParser(), new Fb2MetadataParser(), new MobiMetadataParser()),
+                List.of(
+                        new EpubMetadataParser(),
+                        new Fb2MetadataParser(),
+                        new MobiMetadataParser(),
+                        new DocxMetadataParser(),
+                        new DjvuMetadataParser()),
                 MetadataResourceLimits.m2Defaults());
     }
 
@@ -83,6 +88,7 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
                     parsed.contributors(),
                     parsed.language(),
                     parsed.identifiers(),
+                    parsed.additionalObservations(),
                     before.size(),
                     before.modifiedAt(),
                     parsed.parserName(),
@@ -111,6 +117,15 @@ public final class BoundedMetadataExtractor implements MetadataExtractor {
         }
         if (name.endsWith(".mobi")) {
             return ExtractedBookMetadata.Format.MOBI;
+        }
+        if (name.endsWith(".pdf")) {
+            return ExtractedBookMetadata.Format.PDF;
+        }
+        if (name.endsWith(".docx")) {
+            return ExtractedBookMetadata.Format.DOCX;
+        }
+        if (name.endsWith(".djvu") || name.endsWith(".djv")) {
+            return ExtractedBookMetadata.Format.DJVU;
         }
         return null;
     }
