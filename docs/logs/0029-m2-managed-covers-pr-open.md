@@ -1,9 +1,10 @@
 # M2 Managed Covers and Representative Images
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-10-01
 - Branch: `feat/57-managed-covers`
 - Issue: [#57](https://github.com/yurtools/yurlib/issues/57)
+- Pull request: [#72](https://github.com/yurtools/yurlib/pull/72)
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -43,6 +44,7 @@
 - Updated Compose and README setup for the writable managed root and cover staging limits; updated the worker third-party notice for DjVuLibre.
 - Added generated valid and hostile extraction fixtures plus worker, controller, Angular, PostgreSQL integration, migration, API-contract, and authorization regression coverage.
 - The initial worker image build exposed an obsolete `djvulibre=3.5.28-r5` pin against the current Alpine base. Updated it to `3.5.30-r0`, confirmed the package contains `ddjvu`, and rebuilt the image successfully.
+- Committed the implementation as `c90ff01`, pushed the feature branch, and opened pull request #72 with `Closes #57`.
 
 ## Verification
 
