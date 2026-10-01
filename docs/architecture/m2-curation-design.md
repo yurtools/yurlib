@@ -260,17 +260,17 @@ Acceptance includes a destructive disposable-environment restore drill for local
 
 ## 16. Acceptance matrix
 
-| Area               | Required evidence                                                                                                                                                                        |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Canonical model    | Migrations and tests for observation → normalized → resolved → curated precedence, conflicts, reprocessing, undo, merge/split, and source preservation                                   |
-| Authorization      | Two-user tests for default visibility, denies, mixed-root Works, direct IDs, totals, covers, downloads, conversions, personal state, session invalidation, and owner-only administration |
+| Area               | Required evidence                                                                                                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canonical model    | Migrations and tests for observation → normalized → resolved → curated precedence, conflicts, reprocessing, undo, merge/split, and source preservation                                                                                  |
+| Authorization      | Two-user tests for default visibility, denies, mixed-root Works, direct IDs, totals, covers, downloads, conversions, personal state, session invalidation, and owner-only administration                                                |
 | Formats            | Generated/licensed valid, multilingual, malformed, encrypted, adversarial, near/over-limit fixtures for all six formats; real-world EPUB directory-entry and DjVu `DJVI`/padding compatibility; byte/read and constrained-heap evidence |
-| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable NAS, and benchmark report                                              |
-| Covers             | Hostile image limits, PDF/DjVu page one, DOCX thumbnail, fallback, provenance, caching, and source hashes unchanged                                                                      |
-| Conversion         | Worker isolation, no egress/DB/source mount, two route corpora, timeout/OOM/cancel/retry, atomic publication, lineage authorization, and no original mutation                            |
-| Personal curation  | Favorite contributors, Work read state with Edition evidence, private collections, shared tags, merge/split reconciliation, privacy/export/removal                                       |
-| Recovery           | PostgreSQL plus managed-root backup/restore, manifest validation, missing sources, interrupted jobs, and authorization preservation                                                      |
-| UI/API             | OpenAPI compatibility, RFC 9457 codes, CSRF, optimistic concurrency, accessible desktop/mobile workflows, and no denied-data disclosure                                                  |
+| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable NAS, and benchmark report                                                                                             |
+| Covers             | Hostile image limits, PDF/DjVu page one, DOCX thumbnail, fallback, provenance, caching, and source hashes unchanged                                                                                                                     |
+| Conversion         | Worker isolation, no egress/DB/source mount, two route corpora, timeout/OOM/cancel/retry, atomic publication, lineage authorization, and no original mutation                                                                           |
+| Personal curation  | Favorite contributors, Work read state with Edition evidence, private collections, shared tags, merge/split reconciliation, privacy/export/removal                                                                                      |
+| Recovery           | PostgreSQL plus managed-root backup/restore, manifest validation, missing sources, interrupted jobs, and authorization preservation                                                                                                     |
+| UI/API             | OpenAPI compatibility, RFC 9457 codes, CSRF, optimistic concurrency, accessible desktop/mobile workflows, and no denied-data disclosure                                                                                                 |
 
 ## 17. Walking skeleton and implementation order
 

@@ -22,6 +22,10 @@ Follow-up prompt:
 
 > add those fixes to m2
 
+Follow-up prompt:
+
+> some checks on the PR failed
+
 ## Plan
 
 1. Reconcile merged pull request #67 and start issue #56 from merged `main`.
@@ -60,6 +64,8 @@ Follow-up prompt:
 - Diagnosed the SMB parser outcomes using aggregate-only, read-only checks. Confirmed 67 DjVu false rejections for valid nested `FORM:DJVI` components and 23 EPUB false rejections for ordinary explicit ZIP directory entries. Isolated 19 DjVu padding-boundary outcomes and one top-level length outcome for reference-parser validation without recording filenames or content.
 - Added issue #69 to the explicit M2 implementation order before cover work, assigned it to the M2 milestone, and replaced its investigative criteria with concrete EPUB, DjVu, regression, versioning, and aggregate-corpus acceptance requirements. Updated the M2 design, parser safety review, and benchmark evidence; no ADR changed because the accepted parser and isolation boundaries remain intact.
 - Committed the M2 parser-compatibility scope updates as `7f29b82` (`docs(#69): add parser compatibility to M2`).
+- Investigated pull request #68 run `36888905454`. Frontend, Compose Configuration, and Dependency Review passed; Backend stopped at Spotless before compilation because the expanded M2 acceptance table needed Markdown realignment.
+- Applied the repository Spotless formatter. It changed only `docs/architecture/m2-curation-design.md`; the unrelated local Angular analytics preference remained untouched.
 
 ## Verification
 
