@@ -18,6 +18,10 @@ Follow-up prompt:
 
 > Lets move NFS out of M2 scope
 
+Follow-up prompt:
+
+> add those fixes to m2
+
 ## Plan
 
 1. Reconcile merged pull request #67 and start issue #56 from merged `main`.
@@ -53,6 +57,9 @@ Follow-up prompt:
 - Updated issue #56 and draft pull request #68 with the SMB evidence; NFS is now the only missing benchmark target.
 - Recorded the owner's decision to remove NFS evidence from M2 acceptance while retaining host-mounted NFS support. Created post-M2 issue [#70](https://github.com/yurtools/yurlib/issues/70) in Project Todo; no ADR was required because the runtime and storage architecture did not change.
 - Updated issue #56 so all revised acceptance criteria are complete, changed pull request #68 to close #56, and marked the pull request ready for review. The Project item remains In Progress until merge because the Project workflow has no separate review state.
+- Diagnosed the SMB parser outcomes using aggregate-only, read-only checks. Confirmed 67 DjVu false rejections for valid nested `FORM:DJVI` components and 23 EPUB false rejections for ordinary explicit ZIP directory entries. Isolated 19 DjVu padding-boundary outcomes and one top-level length outcome for reference-parser validation without recording filenames or content.
+- Added issue #69 to the explicit M2 implementation order before cover work, assigned it to the M2 milestone, and replaced its investigative criteria with concrete EPUB, DjVu, regression, versioning, and aggregate-corpus acceptance requirements. Updated the M2 design, parser safety review, and benchmark evidence; no ADR changed because the accepted parser and isolation boundaries remain intact.
+- Committed the M2 parser-compatibility scope updates as `7f29b82` (`docs(#69): add parser compatibility to M2`).
 
 ## Verification
 
