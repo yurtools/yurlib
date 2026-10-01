@@ -13,6 +13,7 @@ public final class DefaultScanJobService implements ScanJobUseCases {
     private final ScanJobStore jobs;
     private final LibraryRootAccess access;
     private final MetadataExtractor extractor;
+    private final IngestionTaskStore tasks;
     private final Clock clock;
 
     @SuppressFBWarnings(
@@ -23,16 +24,14 @@ public final class DefaultScanJobService implements ScanJobUseCases {
             ScanJobStore jobs,
             LibraryRootAccess access,
             MetadataExtractor extractor,
+            IngestionTaskStore tasks,
             Clock clock) {
         this.roots = roots;
         this.jobs = jobs;
         this.access = access;
         this.extractor = extractor;
+        this.tasks = tasks;
         this.clock = clock;
-    }
-
-    public DefaultScanJobService(LibraryRootStore roots, ScanJobStore jobs, MetadataExtractor extractor, Clock clock) {
-        this(roots, jobs, ignored -> true, extractor, clock);
     }
 
     @Override
@@ -59,5 +58,25 @@ public final class DefaultScanJobService implements ScanJobUseCases {
             throw new ScanJobFailure(ScanJobFailure.Code.JOB_NOT_FOUND, "The requested scan job does not exist.");
         }
         return new ScanJobView(job, jobs.findFailures(jobId, MAXIMUM_RETURNED_FAILURES));
+    }
+
+    @Override
+    public ScanJobView cancel(UUID jobId) {
+        var job = requireVisibleJob(jobId);
+        var cancelledAt = clock.instant();
+        var cancelled = jobs.cancel(job.id(), cancelledAt);
+        tasks.cancelQueued(job.id(), cancelledAt);
+        jobs.completeIfReady(job.id(), cancelledAt).ifPresent(ignored -> {});
+        return get(cancelled.id());
+    }
+
+    private ScanJob requireVisibleJob(UUID jobId) {
+        var job = jobs.findById(jobId)
+                .orElseThrow(() -> new ScanJobFailure(
+                        ScanJobFailure.Code.JOB_NOT_FOUND, "The requested scan job does not exist."));
+        if (!access.isAllowed(job.libraryRootId())) {
+            throw new ScanJobFailure(ScanJobFailure.Code.JOB_NOT_FOUND, "The requested scan job does not exist.");
+        }
+        return job;
     }
 }

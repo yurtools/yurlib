@@ -71,7 +71,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("7");
+        assertThat(value).isEqualTo("8");
     }
 
     @Test
@@ -108,7 +108,14 @@ class YurlibServerIntegrationTest {
                         "user_capability",
                         "user_root_deny",
                         "security_audit_event"));
-        assertThat(tables).contains("pdf_metadata_job", "metadata_review_item", "catalog_tag", "work_tag");
+        assertThat(tables)
+                .contains(
+                        "pdf_metadata_job",
+                        "metadata_review_item",
+                        "catalog_tag",
+                        "work_tag",
+                        "ingestion_task",
+                        "ingestion_root_schedule");
     }
 
     @Test

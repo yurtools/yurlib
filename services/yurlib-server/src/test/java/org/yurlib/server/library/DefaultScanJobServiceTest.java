@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.yurlib.server.library.application.DefaultScanJobService;
+import org.yurlib.server.library.application.IngestionTaskStore;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.MetadataExtractor;
 import org.yurlib.server.library.application.ScanJobFailure;
@@ -30,7 +31,9 @@ class DefaultScanJobServiceTest {
     private final LibraryRootStore roots = mock(LibraryRootStore.class);
     private final ScanJobStore jobs = mock(ScanJobStore.class);
     private final MetadataExtractor extractor = mock(MetadataExtractor.class);
-    private final DefaultScanJobService service = new DefaultScanJobService(roots, jobs, extractor, CLOCK);
+    private final IngestionTaskStore tasks = mock(IngestionTaskStore.class);
+    private final DefaultScanJobService service =
+            new DefaultScanJobService(roots, jobs, ignored -> true, extractor, tasks, CLOCK);
 
     @Test
     void queuesAJobOnlyForAConfiguredRoot() {
@@ -65,6 +68,20 @@ class DefaultScanJobServiceTest {
 
         assertThat(service.get(scanJob.id()).failures()).containsExactly(failure);
         verify(jobs).findFailures(scanJob.id(), 100);
+    }
+
+    @Test
+    void cancelsQueuedTasksAndReturnsTheDurableJobState() {
+        var queued = job(root().id(), ScanJob.State.QUEUED);
+        var cancelled = job(queued.libraryRootId(), ScanJob.State.CANCELLED);
+        when(jobs.findById(queued.id())).thenReturn(Optional.of(queued));
+        when(jobs.cancel(queued.id(), NOW)).thenReturn(cancelled);
+        when(jobs.findById(cancelled.id())).thenReturn(Optional.of(cancelled));
+        when(jobs.findFailures(cancelled.id(), 100)).thenReturn(List.of());
+
+        assertThat(service.cancel(queued.id()).job().state()).isEqualTo(ScanJob.State.CANCELLED);
+        verify(tasks).cancelQueued(queued.id(), NOW);
+        verify(jobs).completeIfReady(queued.id(), NOW);
     }
 
     private static LibraryRoot root() {

@@ -77,6 +77,16 @@ class ScanJobControllerTest {
     }
 
     @Test
+    void requestsCooperativeCancellation() throws Exception {
+        when(useCases.cancel(JOB_ID))
+                .thenReturn(new ScanJobUseCases.ScanJobView(job(ScanJob.State.CANCELLED, 0, false), List.of()));
+
+        mockMvc.perform(post("/api/v1/jobs/{jobId}/cancel", JOB_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("CANCELLED"));
+    }
+
+    @Test
     void reportsAnActiveScanConflictAsProblemDetails() throws Exception {
         when(useCases.queue(ROOT_ID, CORRELATION_ID))
                 .thenThrow(new ScanJobFailure(

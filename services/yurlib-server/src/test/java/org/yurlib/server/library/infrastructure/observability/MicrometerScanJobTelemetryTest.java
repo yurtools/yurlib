@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.yurlib.server.library.application.IngestionResourceGovernor;
+import org.yurlib.server.library.application.IngestionTaskStore;
 import org.yurlib.server.library.application.ScanJobStore;
 import org.yurlib.server.library.domain.ScanJob;
 
@@ -18,8 +20,12 @@ class MicrometerScanJobTelemetryTest {
     void recordsBoundedScanMetricsAndQueueDepth() {
         var registry = new SimpleMeterRegistry();
         var jobs = mock(ScanJobStore.class);
+        var tasks = mock(IngestionTaskStore.class);
         when(jobs.queuedCount()).thenReturn(3L);
-        var telemetry = new MicrometerScanJobTelemetry(registry, jobs);
+        when(tasks.queuedCount()).thenReturn(5L);
+        when(tasks.runningCount()).thenReturn(2L);
+        var telemetry =
+                new MicrometerScanJobTelemetry(registry, jobs, tasks, new IngestionResourceGovernor(512, 32, 2, 2));
         var completed = completedJob();
 
         telemetry.fileFailed("CORRUPT_ASSET");
@@ -27,6 +33,11 @@ class MicrometerScanJobTelemetryTest {
         telemetry.completed(completed, Duration.ofMillis(125));
 
         assertThat(registry.get("yurlib.scan.queue.depth").gauge().value()).isEqualTo(3);
+        assertThat(registry.get("yurlib.ingestion.tasks")
+                        .tag("state", "queued")
+                        .gauge()
+                        .value())
+                .isEqualTo(5);
         assertThat(registry.get("yurlib.scan.jobs")
                         .tag("outcome", "COMPLETED_WITH_FAILURES")
                         .counter()

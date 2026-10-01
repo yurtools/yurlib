@@ -161,6 +161,29 @@ paths:
                 $ref: "#/components/schemas/ScanJob"
         "404":
           $ref: "#/components/responses/Problem"
+  /api/v1/jobs/{jobId}/cancel:
+    post:
+      operationId: cancelScanJob
+      summary: Request cooperative cancellation of a scan
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current scan state after the cancellation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanJob"
+        "404":
+          $ref: "#/components/responses/Problem"
   /api/v1/catalog/works:
     get:
       operationId: listWorks

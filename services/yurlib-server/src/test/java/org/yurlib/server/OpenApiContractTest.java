@@ -30,6 +30,7 @@ class OpenApiContractTest {
                         "/api/v1/library-roots/{rootId}",
                         "/api/v1/library-roots/{rootId}/scans",
                         "/api/v1/jobs/{jobId}",
+                        "/api/v1/jobs/{jobId}/cancel",
                         "/api/v1/catalog/works",
                         "/api/v1/curation/works/{workId}",
                         "/api/v1/curation/works/{workId}/title",

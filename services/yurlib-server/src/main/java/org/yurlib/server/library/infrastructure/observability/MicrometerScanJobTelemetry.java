@@ -9,6 +9,8 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.yurlib.server.library.application.IngestionResourceGovernor;
+import org.yurlib.server.library.application.IngestionTaskStore;
 import org.yurlib.server.library.application.ScanJobStore;
 import org.yurlib.server.library.application.ScanJobTelemetry;
 import org.yurlib.server.library.domain.ScanJob;
@@ -24,10 +26,31 @@ public final class MicrometerScanJobTelemetry implements ScanJobTelemetry {
             value = "EI_EXPOSE_REP2",
             justification =
                     "Spring owns the shared MeterRegistry; telemetry must register and update application meters.")
-    public MicrometerScanJobTelemetry(MeterRegistry registry, ScanJobStore jobs) {
+    public MicrometerScanJobTelemetry(
+            MeterRegistry registry, ScanJobStore jobs, IngestionTaskStore tasks, IngestionResourceGovernor governor) {
         this.registry = registry;
         Gauge.builder("yurlib.scan.queue.depth", jobs, ScanJobStore::queuedCount)
                 .description("Number of scan jobs waiting to run")
+                .register(registry);
+        Gauge.builder("yurlib.ingestion.tasks", tasks, IngestionTaskStore::queuedCount)
+                .description("Number of staged ingestion tasks waiting to run")
+                .tag("state", "queued")
+                .register(registry);
+        Gauge.builder("yurlib.ingestion.tasks", tasks, IngestionTaskStore::runningCount)
+                .description("Number of staged ingestion tasks currently leased")
+                .tag("state", "running")
+                .register(registry);
+        Gauge.builder(
+                        "yurlib.ingestion.resources.available.memory.mib",
+                        governor,
+                        value -> value.snapshot().availableMemoryMib())
+                .description("Unreserved ingestion work-memory permits")
+                .register(registry);
+        Gauge.builder(
+                        "yurlib.ingestion.resources.available.open.files",
+                        governor,
+                        value -> value.snapshot().availableOpenFiles())
+                .description("Available ingestion open-file permits")
                 .register(registry);
     }
 

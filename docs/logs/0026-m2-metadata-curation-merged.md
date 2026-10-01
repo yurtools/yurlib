@@ -1,6 +1,6 @@
 # M2 Metadata Normalization and Curation
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-10-01
 - Branch: `feat/55-metadata-curation`
 - Issue: [#55](https://github.com/yurtools/yurlib/issues/55)
@@ -39,6 +39,7 @@
 - Renamed log 0025 from `pr-open` to `merged` after pull request #66 was squash-merged.
 - Updated issue #55 to record that all implementation acceptance criteria are satisfied.
 - Committed the implementation as `be5dc7a` (`feat(#55): add metadata normalization and curation`), pushed the branch, and opened pull request #67. The pull request leaves visual verification explicitly pending.
+- Pull request #67 passed Backend, Frontend, Compose Configuration, and Dependency Review CI checks and was squash-merged as `17763ecf5743fd6b8ae1c9b23eddfa0cc30a60db` on 2026-10-01. Issue #55 was closed and its Project item moved to Done.
 
 ## Verification
 
