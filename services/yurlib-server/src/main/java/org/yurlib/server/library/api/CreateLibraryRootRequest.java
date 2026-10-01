@@ -1,5 +1,6 @@
 package org.yurlib.server.library.api;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -13,4 +14,7 @@ public record CreateLibraryRootRequest(
 
         @NotNull @Size(max = 1024) String relativePath,
         @NotBlank @Size(min = 16, max = 200) String identityToken,
-        @NotNull LibraryRoot.Mode mode) {}
+        @NotNull LibraryRoot.Mode mode,
+
+        @JsonProperty(required = false, defaultValue = "false")
+        Boolean defaultForCovers) {}

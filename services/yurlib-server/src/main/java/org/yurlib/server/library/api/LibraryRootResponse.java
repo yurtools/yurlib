@@ -11,7 +11,8 @@ public record LibraryRootResponse(
         String relativePath,
         String mode,
         String availability,
-        Instant lastSuccessfulScanAt) {
+        Instant lastSuccessfulScanAt,
+        boolean defaultForCovers) {
 
     static LibraryRootResponse from(LibraryRoot root) {
         return new LibraryRootResponse(
@@ -21,6 +22,7 @@ public record LibraryRootResponse(
                 root.relativeBasePath(),
                 root.mode().name(),
                 root.availability().name(),
-                root.lastSuccessfulScanAt());
+                root.lastSuccessfulScanAt(),
+                root.defaultForCovers());
     }
 }

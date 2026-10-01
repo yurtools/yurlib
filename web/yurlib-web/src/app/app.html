@@ -124,6 +124,17 @@
             </select>
           </label>
 
+          @if (rootModel().mode === 'MANAGED_OUTPUT') {
+            <label class="checkbox-field">
+              <input
+                type="checkbox"
+                [checked]="rootModel().defaultForCovers"
+                (change)="setDefaultForCovers($any($event.target).checked)"
+              />
+              <span>Use as the default cover output</span>
+            </label>
+          }
+
           <label>
             <span>Library name</span>
             <input autocomplete="off" [formField]="rootForm.name" />
@@ -282,6 +293,21 @@
         <div class="catalog-list">
           @for (work of catalog().items; track work.id) {
             <article class="work-row">
+              <div class="work-cover-frame">
+                <span class="work-cover-fallback" aria-hidden="true">
+                  {{ work.title?.charAt(0) || '?' }}
+                </span>
+                @if (work.coverAvailable) {
+                  <img
+                    class="work-cover"
+                    [src]="coverUrl(work.id)"
+                    [alt]="'Cover of ' + (work.title || 'untitled work')"
+                    loading="lazy"
+                    decoding="async"
+                    (error)="hideFailedCover($event)"
+                  />
+                }
+              </div>
               <div class="work-copy">
                 <p class="work-kicker">
                   @if (work.provisional) {

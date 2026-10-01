@@ -19,12 +19,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.yurlib.server.library.application.CandidateReconciliationResult;
 import org.yurlib.server.library.application.CatalogReconciliation;
 import org.yurlib.server.library.application.CatalogStore;
+import org.yurlib.server.library.application.CoverQueue;
 import org.yurlib.server.library.application.ExtractedBookMetadata;
 import org.yurlib.server.library.application.MetadataExtractionResult;
 import org.yurlib.server.library.application.PdfMetadataQueue;
@@ -32,6 +34,7 @@ import org.yurlib.server.library.application.PdfWorkerClaim;
 import org.yurlib.server.library.application.PdfWorkerJobService;
 import org.yurlib.server.library.application.PdfWorkerResult;
 import org.yurlib.server.library.application.ScanDiscovery;
+import org.yurlib.server.library.domain.Asset;
 import org.yurlib.server.library.infrastructure.config.PdfWorkerProperties;
 
 @Component
@@ -46,12 +49,20 @@ public class JdbcPdfMetadataQueue implements PdfMetadataQueue, PdfWorkerJobServi
     private final JdbcClient jdbc;
     private final CatalogStore catalog;
     private final PdfWorkerProperties properties;
+    private final CoverQueue coverQueue;
     private final Clock clock;
 
     public JdbcPdfMetadataQueue(JdbcClient jdbc, CatalogStore catalog, PdfWorkerProperties properties, Clock clock) {
+        this(jdbc, catalog, properties, (sourceAssetId, sourceFile, format, expectedSize) -> {}, clock);
+    }
+
+    @Autowired
+    public JdbcPdfMetadataQueue(
+            JdbcClient jdbc, CatalogStore catalog, PdfWorkerProperties properties, CoverQueue coverQueue, Clock clock) {
         this.jdbc = jdbc;
         this.catalog = catalog;
         this.properties = properties;
+        this.coverQueue = coverQueue;
         this.clock = clock;
     }
 
@@ -202,7 +213,7 @@ public class JdbcPdfMetadataQueue implements PdfMetadataQueue, PdfWorkerJobServi
                     job.modifiedAt(),
                     result.parserName(),
                     result.parserVersion());
-            catalog.reconcile(new CatalogReconciliation(
+            var assetId = catalog.reconcile(new CatalogReconciliation(
                     job.rootId(),
                     job.scanJobId(),
                     job.path(),
@@ -211,6 +222,12 @@ public class JdbcPdfMetadataQueue implements PdfMetadataQueue, PdfWorkerJobServi
                     metadata,
                     completedAt,
                     CatalogReconciliation.MetadataState.READY));
+            try {
+                coverQueue.stageAndQueue(
+                        assetId, stagingRoot().resolve(job.stagedFileName()), Asset.Format.PDF, job.byteSize());
+            } catch (RuntimeException ignored) {
+                // Cover processing is intentionally independent from metadata ingestion.
+            }
             finishJob(jobId, "SUCCEEDED", null, null, completedAt);
         } else {
             catalog.markMetadataState(job.rootId(), job.path(), CatalogReconciliation.MetadataState.FAILED_SAFE);

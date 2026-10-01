@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.yurlib.server.library.application.CatalogCurationFailure;
 
-@RestControllerAdvice(assignableTypes = CatalogCurationController.class)
+@RestControllerAdvice(assignableTypes = {CatalogCurationController.class, CoverCurationController.class})
 final class CatalogCurationProblemHandler {
 
     @ExceptionHandler(CatalogCurationFailure.class)

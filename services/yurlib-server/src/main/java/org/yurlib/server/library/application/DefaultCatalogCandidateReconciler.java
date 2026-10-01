@@ -9,6 +9,7 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
     private final CatalogStore catalog;
     private final MetadataExtractor extractor;
     private final PdfMetadataQueue pdfQueue;
+    private final CoverQueue coverQueue;
     private final Clock clock;
 
     public DefaultCatalogCandidateReconciler(CatalogStore catalog, MetadataExtractor extractor, Clock clock) {
@@ -18,14 +19,25 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
                 (rootId, scanJobId, extractionVersion, candidate) -> CandidateReconciliationResult.deferred(
                         MetadataExtractionResult.ErrorCode.UNSUPPORTED_FORMAT.name(),
                         "The isolated PDF metadata worker is not configured."),
+                (sourceAssetId, sourceFile, format, expectedSize) -> {},
                 clock);
     }
 
     public DefaultCatalogCandidateReconciler(
             CatalogStore catalog, MetadataExtractor extractor, PdfMetadataQueue pdfQueue, Clock clock) {
+        this(catalog, extractor, pdfQueue, (sourceAssetId, sourceFile, format, expectedSize) -> {}, clock);
+    }
+
+    public DefaultCatalogCandidateReconciler(
+            CatalogStore catalog,
+            MetadataExtractor extractor,
+            PdfMetadataQueue pdfQueue,
+            CoverQueue coverQueue,
+            Clock clock) {
         this.catalog = catalog;
         this.extractor = extractor;
         this.pdfQueue = pdfQueue;
+        this.coverQueue = coverQueue;
         this.clock = clock;
     }
 
@@ -52,7 +64,7 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
             return failedExtraction(extraction);
         }
 
-        catalog.reconcile(new CatalogReconciliation(
+        var assetId = catalog.reconcile(new CatalogReconciliation(
                 rootId,
                 scanJobId,
                 candidate.normalizedRelativePath(),
@@ -60,7 +72,21 @@ public final class DefaultCatalogCandidateReconciler implements CatalogCandidate
                 extractionVersion,
                 extraction.metadata(),
                 clock.instant()));
+        queueCover(assetId, candidate, extraction.metadata().format());
         return CandidateReconciliationResult.processed();
+    }
+
+    private void queueCover(
+            UUID assetId, ScanDiscovery.Candidate candidate, ExtractedBookMetadata.Format extractedFormat) {
+        try {
+            coverQueue.stageAndQueue(
+                    assetId,
+                    candidate.containedFile(),
+                    org.yurlib.server.library.domain.Asset.Format.valueOf(extractedFormat.name()),
+                    candidate.byteSize());
+        } catch (RuntimeException ignored) {
+            // Cover state is intentionally independent from catalog ingestion.
+        }
     }
 
     private static boolean unchanged(

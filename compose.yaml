@@ -14,8 +14,11 @@ services:
       YURLIB_SESSION_COOKIE_SECURE: ${YURLIB_SESSION_COOKIE_SECURE:-false}
       YURLIB_WORKER_TOKEN: ${YURLIB_WORKER_TOKEN:-}
       YURLIB_PDF_STAGING_DIRECTORY: /var/lib/yurlib/staging/pdf
+      YURLIB_COVER_STAGING_DIRECTORY: /var/lib/yurlib/staging/covers
       YURLIB_LIBRARY_MOUNTS_0_ALIAS: main
       YURLIB_LIBRARY_MOUNTS_0_PATH: /library/main
+      YURLIB_LIBRARY_MOUNTS_1_ALIAS: managed
+      YURLIB_LIBRARY_MOUNTS_1_PATH: /library/managed
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,7 +31,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      - yurlib-pdf-staging:/var/lib/yurlib/staging
+      - type: bind
+        source: ${YURLIB_LIBRARY_MANAGED_PATH:-./.local/managed}
+        target: /library/managed
+        bind:
+          create_host_path: false
+      - yurlib-document-staging:/var/lib/yurlib/staging
     networks:
       - backend
       - worker-internal
@@ -76,7 +84,7 @@ services:
 
 volumes:
   yurlib-postgres-data:
-  yurlib-pdf-staging:
+  yurlib-document-staging:
 
 networks:
   backend:

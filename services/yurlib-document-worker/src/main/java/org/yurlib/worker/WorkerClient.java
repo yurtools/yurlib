@@ -46,10 +46,43 @@ final class WorkerClient implements AutoCloseable {
         }
     }
 
+    Optional<CoverClaim> claimCover() throws IOException, InterruptedException {
+        var request = authorized(HttpRequest.newBuilder(resolve("internal/v1/covers/jobs/claim")))
+                .timeout(REQUEST_TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        try (var body = response.body()) {
+            if (response.statusCode() == 204) {
+                return Optional.empty();
+            }
+            requireStatus(response.statusCode(), 200);
+            return Optional.of(WorkerJson.MAPPER.readValue(body, CoverClaim.class));
+        }
+    }
+
     void download(WorkerClaim claim, Path target) throws IOException, InterruptedException {
-        var request = authorized(
-                        HttpRequest.newBuilder(resolve("internal/v1/pdf-metadata/jobs/" + claim.id() + "/input")))
-                .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
+        download(
+                "internal/v1/pdf-metadata/jobs/" + claim.id() + "/input",
+                claim.leaseToken().toString(),
+                claim.byteSize(),
+                claim.sha256(),
+                target);
+    }
+
+    void download(CoverClaim claim, Path target) throws IOException, InterruptedException {
+        download(
+                "internal/v1/covers/jobs/" + claim.id() + "/input",
+                claim.leaseToken().toString(),
+                claim.byteSize(),
+                claim.sha256(),
+                target);
+    }
+
+    private void download(String path, String leaseToken, long expectedSize, String expectedHash, Path target)
+            throws IOException, InterruptedException {
+        var request = authorized(HttpRequest.newBuilder(resolve(path)))
+                .header("X-Yurlib-Lease-Token", leaseToken)
                 .timeout(REQUEST_TIMEOUT)
                 .GET()
                 .build();
@@ -63,25 +96,36 @@ final class WorkerClient implements AutoCloseable {
             int read;
             while ((read = input.read(buffer)) >= 0) {
                 copied = Math.addExact(copied, read);
-                if (copied > claim.byteSize()) {
-                    throw new IOException("Staged PDF exceeded its declared size.");
+                if (copied > expectedSize) {
+                    throw new IOException("Staged worker input exceeded its declared size.");
                 }
                 digest.update(buffer, 0, read);
                 output.write(buffer, 0, read);
             }
         }
         var actualHash = HexFormat.of().formatHex(digest.digest());
-        if (copied != claim.byteSize()
+        if (copied != expectedSize
                 || !MessageDigest.isEqual(
                         actualHash.getBytes(StandardCharsets.US_ASCII),
-                        claim.sha256().getBytes(StandardCharsets.US_ASCII))) {
-            throw new IOException("Staged PDF integrity verification failed.");
+                        expectedHash.getBytes(StandardCharsets.US_ASCII))) {
+            throw new IOException("Staged worker input integrity verification failed.");
         }
     }
 
     void complete(WorkerClaim claim, PdfMetadataResult result) throws IOException, InterruptedException {
         var request = authorized(
                         HttpRequest.newBuilder(resolve("internal/v1/pdf-metadata/jobs/" + claim.id() + "/result")))
+                .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
+                .header("Content-Type", "application/json")
+                .timeout(REQUEST_TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(WorkerJson.MAPPER.writeValueAsBytes(result)))
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.discarding());
+        requireStatus(response.statusCode(), 204);
+    }
+
+    void complete(CoverClaim claim, CoverResult result) throws IOException, InterruptedException {
+        var request = authorized(HttpRequest.newBuilder(resolve("internal/v1/covers/jobs/" + claim.id() + "/result")))
                 .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
                 .header("Content-Type", "application/json")
                 .timeout(REQUEST_TIMEOUT)

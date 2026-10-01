@@ -22,7 +22,9 @@ public final class YurlibDocumentWorker {
         try (var client = new WorkerClient(configuration.server(), configuration.token())) {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    runOnce(client, configuration.workDirectory());
+                    if (!runCoverOnce(client, configuration.workDirectory())) {
+                        runOnce(client, configuration.workDirectory());
+                    }
                 } catch (IOException failure) {
                     System.err.println("The internal PDF worker API is temporarily unavailable.");
                 }
@@ -53,6 +55,35 @@ public final class YurlibDocumentWorker {
             deleteJobDirectory(jobDirectory);
         }
         return true;
+    }
+
+    static boolean runCoverOnce(WorkerClient client, Path workRoot) throws IOException, InterruptedException {
+        var claimed = client.claimCover();
+        if (claimed.isEmpty()) {
+            return false;
+        }
+        var claim = claimed.get();
+        var jobDirectory = safeJobDirectory(workRoot, "cover-" + claim.id());
+        Files.createDirectory(jobDirectory);
+        try {
+            var input = jobDirectory.resolve("input." + claim.format().name().toLowerCase(java.util.Locale.ROOT));
+            var resultFile = jobDirectory.resolve("result.json");
+            client.download(claim, input);
+            var result = runBoundedCoverProcess(input, resultFile, claim.format());
+            client.complete(claim, result);
+        } finally {
+            deleteJobDirectory(jobDirectory);
+        }
+        return true;
+    }
+
+    private static Path safeJobDirectory(Path workRoot, String name) throws IOException {
+        var directory = workRoot.resolve(name).normalize();
+        var parent = java.util.Objects.requireNonNull(directory.getParent(), "The job must have a parent path.");
+        if (!parent.equals(workRoot.toAbsolutePath().normalize())) {
+            throw new IOException("Worker job path escaped its work root.");
+        }
+        return directory;
     }
 
     @SuppressWarnings("PMD.CloseResource")
@@ -86,6 +117,40 @@ public final class YurlibDocumentWorker {
             return PdfMetadataResult.failed("UNSUPPORTED_FORMAT", "The isolated PDF parser failed safely.");
         }
         return WorkerJson.MAPPER.readValue(resultFile.toFile(), PdfMetadataResult.class);
+    }
+
+    @SuppressWarnings("PMD.CloseResource")
+    @SuppressFBWarnings(
+            value = "COMMAND_INJECTION",
+            justification =
+                    "The executable and class are fixed, the format is an enum, and job paths use a server UUID below the configured work root.")
+    private static CoverResult runBoundedCoverProcess(Path input, Path resultFile, CoverClaim.Format format)
+            throws IOException, InterruptedException {
+        var javaExecutable =
+                Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        var process = new ProcessBuilder(
+                        javaExecutable,
+                        "-Xmx384m",
+                        "-XX:MaxDirectMemorySize=64m",
+                        "-Djava.io.tmpdir=" + input.getParent(),
+                        "-cp",
+                        System.getProperty("java.class.path"),
+                        CoverJobProcess.class.getName(),
+                        input.toString(),
+                        resultFile.toString(),
+                        format.name())
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start();
+        if (!process.waitFor(PROCESS_TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            process.waitFor();
+            return CoverResult.failed("PARSE_LIMIT_EXCEEDED", "The cover extraction deadline was exceeded.");
+        }
+        if (process.exitValue() != 0 || !Files.isRegularFile(resultFile)) {
+            return CoverResult.failed("UNSUPPORTED_FORMAT", "The isolated cover processor failed safely.");
+        }
+        return WorkerJson.MAPPER.readValue(resultFile.toFile(), CoverResult.class);
     }
 
     private static void deleteJobDirectory(Path directory) throws IOException {

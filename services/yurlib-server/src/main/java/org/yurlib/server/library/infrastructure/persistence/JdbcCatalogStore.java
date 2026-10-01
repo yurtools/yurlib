@@ -82,12 +82,13 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
     @Override
     @Transactional
-    public void reconcile(CatalogReconciliation reconciliation) {
+    public UUID reconcile(CatalogReconciliation reconciliation) {
         var existing = lockLocation(reconciliation.rootId(), reconciliation.normalizedRelativePath());
         if (existing.isPresent() && existing.get().sameBinaryFacts(reconciliation.metadata())) {
             updateExistingCatalog(existing.get(), reconciliation);
+            return existing.get().assetId();
         } else {
-            insertCatalog(existing.orElse(null), reconciliation);
+            return insertCatalog(existing.orElse(null), reconciliation);
         }
     }
 
@@ -137,13 +138,15 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         var workIds = works.stream().map(WorkRow::id).toList();
         var contributors = findContributors(workIds);
         var assets = findAssets(workIds, access);
+        var covers = findAccessibleCovers(workIds, access);
         var items = works.stream()
                 .map(work -> new WorkSummary(
                         work.id(),
                         work.title(),
                         work.provisional(),
                         contributors.getOrDefault(work.id(), List.of()),
-                        assets.getOrDefault(work.id(), List.of())))
+                        assets.getOrDefault(work.id(), List.of()),
+                        covers.contains(work.id())))
                 .toList();
         return new CatalogPage(items, page, size, total);
     }
@@ -203,7 +206,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         appendObservations(existing.workId(), existing.editionId(), existing.assetId(), reconciliation);
     }
 
-    private void insertCatalog(LocationRow existing, CatalogReconciliation reconciliation) {
+    private UUID insertCatalog(LocationRow existing, CatalogReconciliation reconciliation) {
         var workId = UUID.randomUUID();
         var editionId = UUID.randomUUID();
         var assetId = UUID.randomUUID();
@@ -254,6 +257,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
             updateLocation(existing.locationId(), assetId, reconciliation);
         }
         appendObservations(workId, editionId, assetId, reconciliation);
+        return assetId;
     }
 
     private void insertLocation(UUID assetId, CatalogReconciliation reconciliation) {
@@ -671,6 +675,43 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                                 row.original(),
                                 row.metadataState())));
         return result;
+    }
+
+    private Set<UUID> findAccessibleCovers(List<UUID> workIds, LibraryAccessContext.Access access) {
+        return Set.copyOf(jdbc.sql("""
+                WITH RECURSIVE candidate AS (
+                    SELECT derivative.id, derivative.work_id, derivative.source_asset_id,
+                           derivative.managed_root_id
+                    FROM cover_derivative derivative
+                    WHERE derivative.work_id IN (:workIds)
+                ), lineage(candidate_id, asset_id) AS (
+                    SELECT id, source_asset_id FROM candidate
+                    UNION
+                    SELECT lineage.candidate_id, source.source_asset_id
+                    FROM lineage
+                    JOIN asset_derivation_source source ON source.derived_asset_id = lineage.asset_id
+                )
+                SELECT DISTINCT candidate.work_id
+                FROM candidate
+                WHERE :unrestricted
+                   OR (NOT EXISTS (
+                           SELECT 1 FROM user_root_deny denied
+                           WHERE denied.user_id = :userId
+                             AND denied.library_root_id = candidate.managed_root_id)
+                       AND NOT EXISTS (
+                           SELECT 1
+                           FROM lineage
+                           JOIN asset_location location ON location.asset_id = lineage.asset_id
+                           JOIN user_root_deny denied
+                             ON denied.library_root_id = location.library_root_id
+                            AND denied.user_id = :userId
+                           WHERE lineage.candidate_id = candidate.id))
+                """)
+                .param("workIds", workIds)
+                .param("unrestricted", access.unrestricted())
+                .param("userId", access.userId())
+                .query(UUID.class)
+                .list());
     }
 
     private String json(Map<String, String> identifiers) {

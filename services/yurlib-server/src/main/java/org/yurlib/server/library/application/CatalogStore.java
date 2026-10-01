@@ -9,7 +9,7 @@ public interface CatalogStore {
 
     void markSeen(UUID rootId, UUID scanJobId, String normalizedRelativePath);
 
-    void reconcile(CatalogReconciliation reconciliation);
+    UUID reconcile(CatalogReconciliation reconciliation);
 
     void markMetadataState(
             UUID rootId, String normalizedRelativePath, CatalogReconciliation.MetadataState metadataState);

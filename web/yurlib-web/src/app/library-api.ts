@@ -63,6 +63,10 @@ export class LibraryApi {
     return `/api/v1/assets/${encodeURIComponent(assetId)}/content`;
   }
 
+  coverUrl(workId: string) {
+    return `/api/v1/catalog/works/${encodeURIComponent(workId)}/cover`;
+  }
+
   getWorkCuration(workId: string) {
     return this.http.get<WorkCuration>(`/api/v1/curation/works/${encodeURIComponent(workId)}`);
   }

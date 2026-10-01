@@ -39,6 +39,9 @@ class LibraryRootEntity {
     @Column(name = "last_successful_scan_at")
     private Instant lastSuccessfulScanAt;
 
+    @Column(name = "default_for_covers")
+    private boolean defaultForCovers;
+
     protected LibraryRootEntity() {
         // Required by JPA.
     }
@@ -52,6 +55,7 @@ class LibraryRootEntity {
         mode = root.mode().name();
         availability = root.availability().name();
         lastSuccessfulScanAt = root.lastSuccessfulScanAt();
+        defaultForCovers = root.defaultForCovers();
     }
 
     LibraryRoot toDomain() {
@@ -63,6 +67,7 @@ class LibraryRootEntity {
                 expectedIdentityDigest,
                 LibraryRoot.Mode.valueOf(mode),
                 LibraryRoot.Availability.valueOf(availability),
-                lastSuccessfulScanAt);
+                lastSuccessfulScanAt,
+                defaultForCovers);
     }
 }

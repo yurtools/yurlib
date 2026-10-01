@@ -223,6 +223,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkPage"
+  /api/v1/catalog/works/{workId}/cover:
+    get:
+      operationId: getWorkCover
+      summary: Stream the selected authorized normalized cover
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      responses:
+        "200":
+          description: Immutable normalized cover bytes
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
   /api/v1/curation/works/{workId}:
     get:
       operationId: getWorkCuration
@@ -312,6 +335,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/works/{workId}/cover:
+    put:
+      operationId: selectCuratedWorkCover
+      summary: Select a versioned preferred cover source asset
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoverPreferenceRequest"
+      responses:
+        "200":
+          description: Updated preferred cover source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverPreference"
         "404":
           $ref: "#/components/responses/Problem"
         "409":
@@ -660,9 +709,12 @@ components:
         mode:
           type: string
           enum: [READ_ONLY_SOURCE, MANAGED_OUTPUT]
+        defaultForCovers:
+          type: boolean
+          default: false
     LibraryRoot:
       type: object
-      required: [id, name, mountAlias, relativePath, mode, availability]
+      required: [id, name, mountAlias, relativePath, mode, availability, defaultForCovers]
       properties:
         id:
           type: string
@@ -681,6 +733,8 @@ components:
         lastSuccessfulScanAt:
           type: [string, "null"]
           format: date-time
+        defaultForCovers:
+          type: boolean
     RootAvailability:
       type: string
       enum: [UNKNOWN, AVAILABLE, UNAVAILABLE, IDENTITY_MISMATCH]
@@ -769,7 +823,7 @@ components:
           minimum: 0
     WorkSummary:
       type: object
-      required: [id, title, provisional, assets]
+      required: [id, title, provisional, assets, coverAvailable]
       properties:
         id:
           type: string
@@ -786,6 +840,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssetSummary"
+        coverAvailable:
+          type: boolean
     AssetSummary:
       type: object
       required: [id, format, size, availability, original, metadataState]
@@ -808,6 +864,37 @@ components:
         metadataState:
           type: string
           enum: [PENDING, READY, FAILED_SAFE]
+    CoverPreferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [sourceAssetId, reason, expectedVersion]
+      properties:
+        sourceAssetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    CoverPreference:
+      type: object
+      additionalProperties: false
+      required: [workId, sourceAssetId, version]
+      properties:
+        workId:
+          type: string
+          format: uuid
+        sourceAssetId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     WorkCuration:
       type: object
       additionalProperties: false

@@ -345,10 +345,13 @@ npm --prefix web/yurlib-web run build
 Run the applications during development with:
 
 ```bash
-mkdir -p .local/library
+mkdir -p .local/library .local/managed
 printf '%s\n' 'replace-with-a-private-random-token' > .local/library/.yurlib-root-id
+printf '%s\n' 'replace-with-a-second-private-random-token' > .local/managed/.yurlib-root-id
 export YURLIB_LIBRARY_MOUNTS_0_ALIAS=main
 export YURLIB_LIBRARY_MOUNTS_0_PATH="$PWD/.local/library"
+export YURLIB_LIBRARY_MOUNTS_1_ALIAS=managed
+export YURLIB_LIBRARY_MOUNTS_1_PATH="$PWD/.local/managed"
 ./mvnw -pl services/yurlib-server spring-boot:run -Dspring-boot.run.profiles=loopback-dev
 npm --prefix web/yurlib-web start
 ```
@@ -366,7 +369,7 @@ unset YURLIB_OWNER_RECOVERY_PASSWORD
 
 Recovery increments the owner's authorization version, invalidates existing sessions, records an audit event, and does not log the password.
 
-The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the library at `/library/main` with `read_only: true`, exposes it through the `main` alias, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
+The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. Configure the `managed` alias as a `MANAGED_OUTPUT` root and select it as the default cover output; source roots remain read-only. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_LIBRARY_MANAGED_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the source at `/library/main` read-only and the managed output at `/library/managed` writable, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
 
 The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
 
@@ -377,7 +380,7 @@ export YURLIB_WORKER_TOKEN="$(openssl rand -hex 32)"
 docker compose --profile worker up --build
 ```
 
-The worker receives only a server-staged read-only PDF. It has no source-library mount, database credentials, or egress-capable network. DOCX and DjVu bounded structural metadata runs in the server. PDF/DjVu rendering and DOCX thumbnail processing remain separate cover work.
+The worker receives only server-staged read-only inputs. It has no source-library mount, managed-output mount, database credentials, or egress-capable network. It extracts declared ebook covers and DOCX thumbnails, renders bounded PDF/DjVu first pages, and returns an unpublished normalized image for independent server validation and atomic publication.
 
 ## Repository Structure
 
