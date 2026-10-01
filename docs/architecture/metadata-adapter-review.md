@@ -3,7 +3,7 @@
 - Status: Accepted M2 implementation baseline
 - Scope: EPUB, FB2, MOBI, PDF, DOCX, and DjVu metadata extraction
 - Related issues: [#16](https://github.com/yurtools/yurlib/issues/16), [#49](https://github.com/yurtools/yurlib/issues/49), [#51](https://github.com/yurtools/yurlib/issues/51), [#69](https://github.com/yurtools/yurlib/issues/69)
-- Reviewed: 2026-09-30
+- Reviewed: 2026-10-01
 
 ## Decision
 
@@ -42,7 +42,7 @@ Raising a hard boundary requires threat review plus near-limit and over-limit fi
 
 ### EPUB
 
-All entry names and the bounded central directory are validated without extraction. Issue #69 must accept ordinary explicit directory entries without treating their trailing slash as path traversal; absolute paths, backslashes, empty segments, and `.` or `..` segments remain rejected. Encryption is rejected. Only `mimetype`, `META-INF/container.xml`, and the selected OPF package are inflated. The 4 MiB selected-entry expansion bound and 100:1 compression-ratio bound apply to those operation-relevant entries; a large unparsed image or content entry is not falsely rejected by the XML limit. ZIP64 structures outside the directory and source bounds are rejected.
+All entry names and the bounded central directory are validated without extraction. Ordinary explicit directory entries are accepted without treating their trailing slash as path traversal. Absolute paths, backslashes, empty segments, `.` or `..` segments, and file/directory canonical-name collisions remain rejected. Encryption is rejected. Only `mimetype`, `META-INF/container.xml`, and the selected OPF package are inflated. The 4 MiB selected-entry expansion bound and 100:1 compression-ratio bound apply to those operation-relevant entries; a large unparsed image or content entry is not falsely rejected by the XML limit. ZIP64 structures outside the directory and source bounds are rejected.
 
 ### FB2
 
@@ -58,7 +58,7 @@ The adapter first proves that the ZIP is an OPC Word package. It validates entry
 
 ### DjVu
 
-The adapter performs positional IFF traversal, validates every form/chunk length and padding byte, and keeps a strict page/chunk count. Issue #69 must make multipage `FORM:DJVM` traversal accept bounded nested `FORM:DJVI` shared-information components without decoding their payloads. It must compare terminal padding and declared-length behavior with a reference implementation so valid containers are accepted while malformed boundaries remain safe rejections. The adapter selects INFO and bounded uncompressed annotation facts. Image chunks, compressed annotations, and text payloads are not decoded. Large sparse fixtures demonstrate that reads stay independent of total file size.
+The adapter performs positional IFF traversal, validates every traversed form/chunk length plus each top-level component and padding boundary, and keeps strict component/chunk counts. Multipage `FORM:DJVM` traversal recognizes nested `FORM:DJVI` shared-information components without decoding their payloads or counting them as pages. It inspects only the first page for INFO and bounded uncompressed annotation facts while counting page forms; image chunks, later page payloads, shared dictionaries, compressed annotations, and text payloads are not decoded. DjVuLibre comparison confirms that a terminal odd-length child may end exactly at its containing form boundary without an additional in-form pad byte; missing interior alignment remains corrupt, as does a top-level form whose declared end exceeds the file. Large sparse fixtures demonstrate that reads stay independent of total file size. The positional reader caches the size of its open handle so each bounded range check does not create another network metadata request; pre/post file facts still detect concurrent source changes.
 
 ### PDF
 
@@ -85,4 +85,4 @@ Plain `.fb2` is supported. `.fb2.zip` and other general archive ingestion remain
 - Reading complete MOBI record zero was replaced with explicit positional ranges. The trade-off is more offset validation, but read/allocation evidence is deterministic and large trailing records do not affect heap use.
 - Broad third-party document parsers remain deferred. ADR-0011 accepts only PDFBox core in the isolated worker; Java runtime APIs satisfy the DOCX and DjVu catalog surface without server dependency or native-isolation expansion.
 
-Parser provenance is `jdk-epub` version `2`, `jdk-fb2-stax` version `2`, `jdk-mobi-seek` version `3`, `jdk-docx-opc` version `1`, `jdk-djvu-iff` version `1`, and worker `apache-pdfbox` version `3.0.8-1`. The aggregate extraction version is `bounded-metadata-v4`, so the next scan reprocesses older Assets through the existing append-only observation-set path. Unchanged files are then skipped idempotently at version 4, and active curated overrides remain separate.
+Parser provenance is `jdk-epub` version `3`, `jdk-fb2-stax` version `2`, `jdk-mobi-seek` version `3`, `jdk-docx-opc` version `1`, `jdk-djvu-iff` version `2`, and worker `apache-pdfbox` version `3.0.8-1`. The aggregate extraction version is `bounded-metadata-v5`, so the next scan reprocesses older Assets through the existing append-only observation-set path. Unchanged files are then skipped idempotently at version 5, and active curated overrides remain separate.

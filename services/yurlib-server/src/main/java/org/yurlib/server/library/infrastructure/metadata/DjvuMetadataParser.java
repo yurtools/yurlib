@@ -45,9 +45,9 @@ final class DjvuMetadataParser implements MetadataParser {
             if (!"DJVU".equals(formType) && !"DJVM".equals(formType)) {
                 throw unsupported("The DjVu form type is not supported.");
             }
-            var state = new State("DJVU".equals(formType) ? 1 : 0);
+            var state = new State("DJVU".equals(formType));
             scan(reader, 16, formEnd, 1, state, budget);
-            if (state.pages == 0) {
+            if (state.pageCount() == 0) {
                 throw corrupt("The DjVu document does not contain any pages.");
             }
             return state.metadata();
@@ -88,7 +88,13 @@ final class DjvuMetadataParser implements MetadataParser {
                     // Image, palette, navigation, and unknown chunks are intentionally not decoded.
                 }
             }
-            position = Math.addExact(dataEnd, length & 1L);
+            if (dataEnd == end) {
+                position = dataEnd;
+            } else if ((length & 1L) != 0) {
+                position = Math.addExact(dataEnd, 1);
+            } else {
+                position = dataEnd;
+            }
             budget.checkpoint();
         }
         if (position != end) {
@@ -109,7 +115,14 @@ final class DjvuMetadataParser implements MetadataParser {
         }
         var formType = ascii(reader.read(dataStart, 4), 0, 4);
         if ("DJVU".equals(formType)) {
-            state.pages++;
+            state.encounteredPages++;
+            if (!state.pageMetadataScanned) {
+                state.pageMetadataScanned = true;
+                scan(reader, dataStart + 4, dataEnd, depth + 1, state, budget);
+            }
+            return;
+        } else if ("DJVI".equals(formType)) {
+            return;
         } else if (!"DJVM".equals(formType)) {
             throw unsupported("The DjVu document contains an unsupported nested form.");
         }
@@ -146,7 +159,7 @@ final class DjvuMetadataParser implements MetadataParser {
             throw MetadataParsingException.limit(
                     "djvu-page-count", budget.limits().maximumArchiveEntries(), "pages");
         }
-        state.pages = Math.max(state.pages, declaredFiles);
+        state.declaredComponents = Math.max(state.declaredComponents, declaredFiles);
     }
 
     private static void readAnnotations(
@@ -266,15 +279,18 @@ final class DjvuMetadataParser implements MetadataParser {
     private static final class State {
 
         private final Map<String, List<String>> metadata = new LinkedHashMap<>();
-        private int pages;
+        private int encounteredPages;
+        private int declaredComponents;
         private int chunks;
         private Integer width;
         private Integer height;
         private Integer dpi;
         private boolean compressedMetadataPresent;
+        private boolean pageMetadataScanned;
 
-        private State(int pages) {
-            this.pages = pages;
+        private State(boolean standalonePage) {
+            this.encounteredPages = standalonePage ? 1 : 0;
+            this.pageMetadataScanned = standalonePage;
             this.width = null;
             this.height = null;
             this.dpi = null;
@@ -287,7 +303,10 @@ final class DjvuMetadataParser implements MetadataParser {
 
         private ParsedBookMetadata metadata() {
             var observations = new LinkedHashMap<String, List<String>>();
-            observations.put("djvu:page-count", List.of(Integer.toString(pages)));
+            observations.put("djvu:page-count", List.of(Integer.toString(pageCount())));
+            if (declaredComponents > 0) {
+                observations.put("djvu:component-count", List.of(Integer.toString(declaredComponents)));
+            }
             if (width != null) {
                 observations.put("djvu:first-page-width", List.of(width.toString()));
                 observations.put("djvu:first-page-height", List.of(height.toString()));
@@ -309,12 +328,16 @@ final class DjvuMetadataParser implements MetadataParser {
                     isbn == null ? Map.of() : Map.of("isbn", isbn),
                     observations,
                     "jdk-djvu-iff",
-                    "1");
+                    "2");
         }
 
         private String first(String key) {
             var values = metadata.get(key);
             return values == null || values.isEmpty() ? null : values.getFirst();
+        }
+
+        private int pageCount() {
+            return encounteredPages;
         }
     }
 }
