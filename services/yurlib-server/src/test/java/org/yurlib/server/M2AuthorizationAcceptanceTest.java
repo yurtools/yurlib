@@ -101,6 +101,8 @@ class M2AuthorizationAcceptanceTest {
                 .andExpect(jsonPath("$.totalElements").value(3));
         mockMvc.perform(get("/api/v1/library-roots").session(readerSession.session()))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/curation/reviews").session(readerSession.session()))
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(put("/api/v1/admin/users/{userId}/root-denies/{rootId}", readerId, DENIED_ROOT_ID)
                         .session(ownerSession.session())
@@ -131,7 +133,7 @@ class M2AuthorizationAcceptanceTest {
                         .header("X-XSRF-TOKEN", ownerSession.csrfCookie().getValue())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"capabilities":["MANAGE_INGESTION_SOURCES"]}
+                                {"capabilities":["MANAGE_INGESTION_SOURCES","CURATE_CATALOG"]}
                                 """))
                 .andExpect(status().isOk());
 
@@ -142,6 +144,10 @@ class M2AuthorizationAcceptanceTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/jobs/{jobId}", DENIED_JOB_ID).session(readerSession.session()))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/curation/reviews").session(readerSession.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].detail").value("Allowed metadata review"));
 
         users.resetPassword(owner.userId(), owner.userId(), passwordEncoder.encode("recovered owner password"), true);
         mockMvc.perform(get("/api/v1/admin/users").session(ownerSession.session()))
@@ -189,9 +195,11 @@ class M2AuthorizationAcceptanceTest {
         var jdbc = JdbcClient.create(dataSource);
         insertRoot(jdbc, ALLOWED_ROOT_ID, "Allowed root", "allowed");
         insertRoot(jdbc, DENIED_ROOT_ID, "Denied root", "denied");
-        insertWork(jdbc, "Allowed work", ALLOWED_ROOT_ID, ALLOWED_ASSET_ID, "allowed/book.epub");
-        insertWork(jdbc, "Denied work", DENIED_ROOT_ID, DENIED_ASSET_ID, "denied/book.pdf");
+        var allowedWorkId = insertWork(jdbc, "Allowed work", ALLOWED_ROOT_ID, ALLOWED_ASSET_ID, "allowed/book.epub");
+        var deniedWorkId = insertWork(jdbc, "Denied work", DENIED_ROOT_ID, DENIED_ASSET_ID, "denied/book.pdf");
         insertMixedWork(jdbc);
+        insertReview(jdbc, allowedWorkId, "Allowed metadata review");
+        insertReview(jdbc, deniedWorkId, "Denied metadata review");
         jdbc.sql("""
                 INSERT INTO scan_job (
                     id, library_root_id, state, correlation_id, extraction_version,
@@ -220,7 +228,7 @@ class M2AuthorizationAcceptanceTest {
                 .update();
     }
 
-    private static void insertWork(JdbcClient jdbc, String title, UUID rootId, UUID assetId, String path)
+    private static UUID insertWork(JdbcClient jdbc, String title, UUID rootId, UUID assetId, String path)
             throws IOException {
         var workId = UUID.randomUUID();
         var editionId = UUID.randomUUID();
@@ -233,6 +241,23 @@ class M2AuthorizationAcceptanceTest {
                 .param("workId", workId)
                 .update();
         insertAsset(jdbc, editionId, rootId, assetId, path);
+        return workId;
+    }
+
+    private static void insertReview(JdbcClient jdbc, UUID workId, String detail) {
+        jdbc.sql("""
+                INSERT INTO metadata_review_item (
+                    id, subject_id, subject_type, field_name, reason_code,
+                    detail, rule_name, rule_version
+                ) VALUES (
+                    :id, :workId, 'WORK', 'title', 'CONFLICT',
+                    :detail, 'authorization-test', '1'
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("workId", workId)
+                .param("detail", detail)
+                .update();
     }
 
     private static void insertMixedWork(JdbcClient jdbc) throws IOException {

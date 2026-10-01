@@ -20,6 +20,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.yurlib.server.library.application.AssetContentStore;
+import org.yurlib.server.library.application.CatalogCuration;
+import org.yurlib.server.library.application.CatalogCurationFailure;
 import org.yurlib.server.library.application.CatalogQuery;
 import org.yurlib.server.library.application.CatalogReconciliation;
 import org.yurlib.server.library.application.CatalogStore;
@@ -56,6 +58,9 @@ class YurlibServerIntegrationTest {
     private CatalogQuery catalogQuery;
 
     @Autowired
+    private CatalogCuration catalogCuration;
+
+    @Autowired
     private AssetContentStore assetContentStore;
 
     @Test
@@ -66,7 +71,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("6");
+        assertThat(value).isEqualTo("7");
     }
 
     @Test
@@ -103,7 +108,7 @@ class YurlibServerIntegrationTest {
                         "user_capability",
                         "user_root_deny",
                         "security_audit_event"));
-        assertThat(tables).contains("pdf_metadata_job");
+        assertThat(tables).contains("pdf_metadata_job", "metadata_review_item", "catalog_tag", "work_tag");
     }
 
     @Test
@@ -326,13 +331,18 @@ class YurlibServerIntegrationTest {
                 .update();
         var resolvedId = UUID.randomUUID();
         client.sql("""
+                UPDATE metadata_resolved_value
+                SET active = FALSE
+                WHERE subject_id = :subjectId AND subject_type = 'WORK' AND field_name = 'title'
+                """).param("subjectId", observation.get("subject_id")).update();
+        client.sql("""
                 INSERT INTO metadata_resolved_value (
                     id, subject_id, subject_type, field_name, outcome, resolved_value,
                     selected_fact_id, resolver_name, resolver_version, confidence,
                     resolution_version
                 ) VALUES (
                     :id, :subjectId, 'WORK', 'title', 'PRESENT', 'Resolved',
-                    :factId, 'title-resolver', '1', 'HIGH', 1
+                    :factId, 'title-resolver', '1', 'HIGH', 2
                 )
                 """)
                 .param("id", resolvedId)
@@ -354,7 +364,7 @@ class YurlibServerIntegrationTest {
                     supersedes_value_id
                 ) VALUES (
                     :id, :subjectId, 'WORK', 'title', 'CONFLICT',
-                    CAST(:alternatives AS jsonb), 'title-resolver', '1', 'UNKNOWN', 2,
+                    CAST(:alternatives AS jsonb), 'title-resolver', '1', 'UNKNOWN', 3,
                     :supersedesId
                 )
                 """)
@@ -469,6 +479,56 @@ class YurlibServerIntegrationTest {
         assertThatThrownBy(() -> catalogQuery.search("query", 0, 101)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> catalogQuery.search("x".repeat(201), 0, 25))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void normalizesCuratesAndSearchesSharedMetadataWithoutReplacingOverrides() {
+        var root = saveRoot();
+        var job = scanJobStore.queue(root.id(), "curation", "bounded-metadata-v1", java.time.Instant.now());
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "bounded-metadata-v1", metadata("  A   Raw Title  ", 123)));
+        var client = JdbcClient.create(dataSource);
+        var workId = client.sql("SELECT id FROM work").query(UUID.class).single();
+        var actorId = new UUID(0, 0);
+
+        assertThat(client.sql("""
+                        SELECT normalized_value
+                        FROM metadata_normalized_fact
+                        WHERE subject_type = 'WORK' AND field_name = 'title'
+                        """).query(String.class).single()).isEqualTo("A Raw Title");
+        assertThat(catalogCuration.findWork(workId).title().source()).isEqualTo("RESOLVED");
+
+        var curated = catalogCuration.updateTitle(workId, "The Curated Title", "Corrected from cover", 0, actorId);
+        var contributor = curated.contributors().getFirst();
+        var curatedContributor = catalogCuration.updateContributor(
+                contributor.id(),
+                "Ursula K. Le Guin",
+                List.of("Ursula Le Guin", "U. K. Le Guin"),
+                "Preserve known catalog aliases",
+                contributor.version(),
+                actorId);
+        var tagged = catalogCuration.replaceTags(
+                workId, List.of("Science Fiction", "Classic"), "Add discovery tags", curated.version(), actorId);
+
+        assertThat(curatedContributor.displayName()).isEqualTo("Ursula K. Le Guin");
+        assertThat(curatedContributor.aliases()).contains("U. K. Le Guin", "Ursula Le Guin");
+        assertThat(tagged.title().value()).isEqualTo("The Curated Title");
+        assertThat(tagged.tags()).containsExactly("Classic", "Science Fiction");
+        assertThat(catalogQuery.search("science fiction", 0, 25).items())
+                .singleElement()
+                .extracting(CatalogQuery.WorkSummary::title)
+                .isEqualTo("The Curated Title");
+
+        catalogStore.reconcile(
+                reconciliation(root.id(), job.id(), "bounded-metadata-v2", metadata("Reprocessed Title", 123)));
+
+        assertThat(catalogCuration.findWork(workId).title().value()).isEqualTo("The Curated Title");
+        assertThat(catalogCuration.findWork(workId).reviews())
+                .extracting(CatalogCuration.ReviewItem::reasonCode)
+                .contains("CONFLICT");
+        assertThatThrownBy(() -> catalogCuration.updateTitle(workId, "Stale edit", "Stale browser", 0, actorId))
+                .isInstanceOf(CatalogCurationFailure.class)
+                .hasMessageContaining("Reload");
     }
 
     @Test

@@ -8,6 +8,9 @@ import {
   LibraryRoot,
   OwnerSession,
   ScanJob,
+  MetadataReviewItem,
+  WorkCuration,
+  ContributorCuration,
 } from './library.model';
 
 @Injectable({ providedIn: 'root' })
@@ -58,5 +61,56 @@ export class LibraryApi {
 
   downloadUrl(assetId: string) {
     return `/api/v1/assets/${encodeURIComponent(assetId)}/content`;
+  }
+
+  getWorkCuration(workId: string) {
+    return this.http.get<WorkCuration>(`/api/v1/curation/works/${encodeURIComponent(workId)}`);
+  }
+
+  updateWorkTitle(workId: string, value: string, reason: string, expectedVersion: number) {
+    return this.http.put<WorkCuration>(
+      `/api/v1/curation/works/${encodeURIComponent(workId)}/title`,
+      { value, reason, expectedVersion },
+    );
+  }
+
+  undoWorkTitle(workId: string, reason: string, expectedVersion: number) {
+    return this.http.post<WorkCuration>(
+      `/api/v1/curation/works/${encodeURIComponent(workId)}/title/undo`,
+      { reason, expectedVersion },
+    );
+  }
+
+  replaceWorkTags(workId: string, tags: string[], reason: string, expectedVersion: number) {
+    return this.http.put<WorkCuration>(
+      `/api/v1/curation/works/${encodeURIComponent(workId)}/tags`,
+      { tags, reason, expectedVersion },
+    );
+  }
+
+  listMetadataReviews(limit = 50) {
+    return this.http.get<MetadataReviewItem[]>('/api/v1/curation/reviews', {
+      params: new HttpParams().set('limit', limit),
+    });
+  }
+
+  dismissMetadataReview(reviewId: string, reason: string) {
+    return this.http.post<void>(
+      `/api/v1/curation/reviews/${encodeURIComponent(reviewId)}/dismiss`,
+      { reason },
+    );
+  }
+
+  updateContributor(
+    contributorId: string,
+    displayName: string,
+    aliases: string[],
+    reason: string,
+    expectedVersion: number,
+  ) {
+    return this.http.put<ContributorCuration>(
+      `/api/v1/curation/contributors/${encodeURIComponent(contributorId)}`,
+      { displayName, aliases, reason, expectedVersion },
+    );
   }
 }

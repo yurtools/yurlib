@@ -520,6 +520,109 @@ app-root {
     background: transparent;
     color: var(--accent);
   }
+  .curate-button,
+  .secondary-button {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--accent);
+  }
+  .curate-button {
+    margin-top: 1rem;
+  }
+  .curation-editor,
+  .review-queue {
+    border-top: 1px solid var(--line);
+    margin-left: 4.5rem;
+    padding-block: 2rem;
+  }
+  .curation-editor-heading,
+  .curation-actions,
+  .review-queue > div,
+  .review-queue li,
+  .review-actions {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+  .curation-editor-heading h3,
+  .review-queue h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.6rem;
+    margin: 0.25rem 0;
+  }
+  .curation-editor-heading p,
+  .review-queue p,
+  .curation-empty {
+    color: var(--muted);
+    margin-block: 0.25rem;
+  }
+  .curation-fields {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-block: 1.5rem;
+  }
+  .curation-fields label {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .curation-fields input,
+  .curation-fields select,
+  .curation-fields textarea {
+    background: rgb(255 255 255 / 45%);
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    color: var(--ink);
+    font: inherit;
+    padding: 0.75rem;
+  }
+  .curation-reason,
+  .curation-aliases {
+    grid-column: 1 / -1;
+  }
+  .curation-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .curation-editor details {
+    border-top: 1px solid var(--line);
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+  .curation-editor summary {
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .audit-list {
+    padding-left: 1.25rem;
+  }
+  .active-label {
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+  }
+  .curation-empty {
+    margin-left: 4.5rem;
+  }
+  .review-queue ul {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+  }
+  .review-queue li {
+    border-top: 1px solid var(--line);
+    padding-block: 1rem;
+  }
+  .review-queue small {
+    color: var(--muted);
+  }
+  .review-empty {
+    color: var(--muted);
+  }
   .notice {
     border-left: 3px solid currentColor;
     margin: 0 0 2rem;
@@ -586,7 +689,10 @@ app-root {
     .failures,
     .catalog-list,
     .pagination,
-    .source-summary {
+    .source-summary,
+    .curation-editor,
+    .review-queue,
+    .curation-empty {
       margin-left: 0;
     }
     .root-form {
@@ -615,6 +721,17 @@ app-root {
     }
     .pagination {
       justify-content: space-between;
+    }
+    .curation-fields {
+      grid-template-columns: 1fr;
+    }
+    .curation-editor-heading,
+    .curation-actions,
+    .review-queue > div,
+    .review-queue li,
+    .review-actions {
+      align-items: flex-start;
+      flex-direction: column;
     }
   }
 

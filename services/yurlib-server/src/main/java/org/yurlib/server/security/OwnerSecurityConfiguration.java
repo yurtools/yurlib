@@ -55,6 +55,8 @@ class OwnerSecurityConfiguration {
                         .permitAll()
                         .requestMatchers("/api/v1/admin/**", "/actuator/**")
                         .hasRole("OWNER")
+                        .requestMatchers("/api/v1/curation/**")
+                        .hasAuthority(Capability.CURATE_CATALOG.name())
                         .requestMatchers("/api/v1/library-roots/**", "/api/v1/library-mounts/**", "/api/v1/jobs/**")
                         .hasAuthority(Capability.MANAGE_INGESTION_SOURCES.name())
                         .requestMatchers("/api/**")

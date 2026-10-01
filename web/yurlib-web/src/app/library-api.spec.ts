@@ -26,6 +26,13 @@ describe('LibraryApi', () => {
     api.startScan('root id').subscribe();
     api.getJob('job id').subscribe();
     api.searchCatalog('book', 2, 12).subscribe();
+    api.getWorkCuration('work/id').subscribe();
+    api.updateWorkTitle('work/id', 'Title', 'Reason', 1).subscribe();
+    api.undoWorkTitle('work/id', 'Reason', 2).subscribe();
+    api.replaceWorkTags('work/id', ['classic'], 'Reason', 3).subscribe();
+    api.listMetadataReviews().subscribe();
+    api.dismissMetadataReview('review/id', 'Reason').subscribe();
+    api.updateContributor('contributor/id', 'Name', ['Alias'], 'Reason', 4).subscribe();
 
     expect(
       http.expectOne((request) => request.url === '/api/v1/session' && request.method === 'GET')
@@ -44,6 +51,23 @@ describe('LibraryApi', () => {
     expect(
       http.expectOne((request) => request.url === '/api/v1/catalog/works').request.url,
     ).not.toContain('://');
+    expect(http.expectOne('/api/v1/curation/works/work%2Fid').request.method).toBe('GET');
+    expect(http.expectOne('/api/v1/curation/works/work%2Fid/title').request.method).toBe('PUT');
+    expect(http.expectOne('/api/v1/curation/works/work%2Fid/title/undo').request.method).toBe(
+      'POST',
+    );
+    expect(http.expectOne('/api/v1/curation/works/work%2Fid/tags').request.method).toBe('PUT');
+    expect(
+      http.expectOne((request) => request.url === '/api/v1/curation/reviews').request.params.get(
+        'limit',
+      ),
+    ).toBe('50');
+    expect(http.expectOne('/api/v1/curation/reviews/review%2Fid/dismiss').request.method).toBe(
+      'POST',
+    );
+    expect(
+      http.expectOne('/api/v1/curation/contributors/contributor%2Fid').request.method,
+    ).toBe('PUT');
     expect(api.downloadUrl('asset/id')).toBe('/api/v1/assets/asset%2Fid/content');
   });
 

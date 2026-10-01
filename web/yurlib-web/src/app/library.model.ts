@@ -84,3 +84,58 @@ export interface OwnerSession {
   owner: boolean;
   capabilities: Array<'MANAGE_INGESTION_SOURCES' | 'CURATE_CATALOG'>;
 }
+
+export interface CurationOverrideHistory {
+  id: string;
+  value: string | null;
+  valueState: 'PRESENT' | 'ABSENT';
+  actorId: string;
+  reason: string;
+  version: number;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface MetadataReviewItem {
+  id: string;
+  subjectId: string;
+  subjectType: 'WORK' | 'EDITION' | 'ASSET' | 'CONTRIBUTOR';
+  fieldName: string;
+  reasonCode: 'INVALID_VALUE' | 'AMBIGUOUS_VALUE' | 'CONFLICT';
+  detail: string;
+  ruleName: string;
+  ruleVersion: string;
+  createdAt: string;
+}
+
+export interface CatalogAuditEvent {
+  id: string;
+  eventType: string;
+  actorId: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface WorkCuration {
+  id: string;
+  version: number;
+  title: {
+    value: string | null;
+    source: 'CURATED' | 'RESOLVED' | 'OBSERVED' | 'PROVISIONAL';
+    overrideVersion: number;
+    observedValues: string[];
+    history: CurationOverrideHistory[];
+  };
+  contributors: ContributorCuration[];
+  tags: string[];
+  reviews: MetadataReviewItem[];
+  audit: CatalogAuditEvent[];
+}
+
+export interface ContributorCuration {
+  id: string;
+  displayName: string;
+  role: 'AUTHOR' | 'EDITOR' | 'TRANSLATOR' | 'ILLUSTRATOR' | 'OTHER';
+  version: number;
+  aliases: string[];
+}
