@@ -10,6 +10,10 @@
 
 > continue
 
+Follow-up prompt:
+
+> I have /mnt/nas/data/torrent/flibusta/Flibusta.Net/group_053/ that could be used for thesting
+
 ## Plan
 
 1. Reconcile merged pull request #67 and start issue #56 from merged `main`.
@@ -17,7 +21,7 @@
 3. Enforce bounded discovery queues, parse concurrency, weighted memory, open-file, CPU, and database permits.
 4. Provide fair progress across roots, cooperative cancellation, lease-expiry recovery, and deterministic single-versus-parallel outcomes.
 5. Add operational metrics and a reference benchmark harness/report for local SSD, SMB, and NFS observations without making universal performance claims.
-6. Verify migrations, concurrency and failure recovery, backend/frontend baselines, Compose configuration, and source immutability; then open a pull request that closes #56.
+6. Verify migrations, concurrency and failure recovery, backend/frontend baselines, Compose configuration, and source immutability; then open a draft pull request and close #56 only after all storage evidence is recorded.
 
 ## Actions and results
 
@@ -38,6 +42,11 @@
 - Updated issue #56 to mark the five verified implementation criteria complete and left the SMB/NFS benchmark criterion open with a comment linking the local evidence and verification results.
 - Committed the implementation as `76a2f6a` (`feat(#56): add bounded parallel ingestion`).
 - Pushed `feat/56-bounded-parallel-ingestion` and opened draft pull request [#68](https://github.com/yurtools/yurlib/pull/68). The draft tracks #56 without closing it while SMB/NFS evidence remains pending.
+- Identified the provided reference path as a readable CIFS/SMB 3.0 mount. The first SMB run safely rejected a real corpus file, revealing that the benchmark incorrectly required every real-world file to extract successfully.
+- Updated the harness and evidence format to count extracted, deferred, and safely failed outcomes without logging private filenames or content.
+- Added aggregate outcome reporting by format and error code. The final reference-profile run completed successfully for 136 SMB files: 26 extracted and 110 safely failed. The failures were concentrated in DjVu and EPUB and are recorded as a separate compatibility finding rather than hidden from the benchmark.
+- Created issue [#69](https://github.com/yurtools/yurlib/issues/69) in the Yurlib Engineering Project with Todo status to investigate real-world DjVu and EPUB compatibility using sanitized fixtures while preserving all resource limits.
+- Updated issue #56 and draft pull request #68 with the SMB evidence; NFS is now the only missing benchmark target.
 
 ## Verification
 
@@ -55,7 +64,17 @@
 - `npm --prefix web/yurlib-web run build`: passed.
 - `docker compose config`: passed.
 - `git diff --check`: passed.
+- `YURLIB_RUN_INGESTION_BENCHMARK=true YURLIB_BENCHMARK_SMB=<owner-provided-path> JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 -XX:MaxRAM=8g -Xms256m -Xmx512m' taskset -c 0-3 ./mvnw -B -pl services/yurlib-server -Djacoco.skip=true -Dtest=IngestionReferenceBenchmarkTest test`: passed.
+  - SMB files: 136 total; 26 extracted, 0 deferred, 110 safely failed.
+  - Time to first result: 9.098 ms.
+  - Warm throughput: 243.07 files/s.
+  - Counted bytes: 3,641,034.
+  - Peak heap: 271,154,632 bytes.
+  - Peak open files per task: 2.
+  - Database p95: 3,643.164 microseconds.
+  - Interactive health API p95 under extraction load: 14,331.904 microseconds.
+  - Aggregate failures: 67 `UNSUPPORTED_FORMAT`; 43 `CORRUPT_ASSET`.
 
 ## Blockers
 
-- SMB and NFS benchmark measurements require owner-provided mounted reference paths. The harness and reporting format can be implemented and local evidence recorded independently.
+- The NFS benchmark measurement still requires an owner-provided mounted reference path.

@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
@@ -78,9 +79,8 @@ class IngestionReferenceBenchmarkTest {
 
         resetHeapPeaks();
         var coldStarted = System.nanoTime();
-        var first = extractor.extractMeasured(files.getFirst());
+        extractor.extractMeasured(files.getFirst());
         var timeToFirstMillis = nanosToMillis(System.nanoTime() - coldStarted);
-        assertThat(first.result().state()).isNotEqualTo(MetadataExtractionResult.State.FAILED);
 
         var warmStarted = System.nanoTime();
         List<BoundedMetadataExtractor.MeasuredExtraction> results;
@@ -95,13 +95,13 @@ class IngestionReferenceBenchmarkTest {
             }
         }
         var warmNanos = System.nanoTime() - warmStarted;
-        assertThat(results)
-                .allSatisfy(result ->
-                        assertThat(result.result().state()).isNotEqualTo(MetadataExtractionResult.State.FAILED));
-
         var interactive = measureInteractiveWhileIngesting(extractor, files);
         var bytesRead =
                 results.stream().mapToLong(result -> result.usage().bytesRead()).sum();
+        var extracted = outcomeCount(results, MetadataExtractionResult.State.EXTRACTED);
+        var deferred = outcomeCount(results, MetadataExtractionResult.State.DEFERRED);
+        var failed = outcomeCount(results, MetadataExtractionResult.State.FAILED);
+        reportOutcomeBreakdown(storage, files, results);
         var peakOpenFiles = results.stream()
                 .mapToInt(result -> result.usage().peakOpenFiles())
                 .max()
@@ -109,9 +109,12 @@ class IngestionReferenceBenchmarkTest {
         var filesPerSecond = files.size() * 1_000_000_000.0 / warmNanos;
         System.out.printf(
                 Locale.ROOT,
-                "INGESTION_BENCHMARK|storage=%s|status=observed|files=%d|time_to_first_ms=%.3f|warm_files_per_second=%.2f|counted_bytes=%d|peak_heap_bytes=%d|peak_open_files_per_task=%d|database_p95_us=%.3f|interactive_api_p95_us=%.3f%n",
+                "INGESTION_BENCHMARK|storage=%s|status=observed|files=%d|extracted=%d|deferred=%d|failed=%d|time_to_first_ms=%.3f|warm_files_per_second=%.2f|counted_bytes=%d|peak_heap_bytes=%d|peak_open_files_per_task=%d|database_p95_us=%.3f|interactive_api_p95_us=%.3f%n",
                 storage,
                 files.size(),
+                extracted,
+                deferred,
+                failed,
                 timeToFirstMillis,
                 filesPerSecond,
                 bytesRead,
@@ -137,11 +140,48 @@ class IngestionReferenceBenchmarkTest {
     private static void ingestionLoad(BoundedMetadataExtractor extractor, List<Path> files) {
         for (var iteration = 0; iteration < 50; iteration++) {
             for (var file : files) {
-                if (extractor.extract(file).state() == MetadataExtractionResult.State.FAILED) {
-                    throw new IllegalStateException("The generated benchmark fixture failed extraction.");
-                }
+                extractor.extract(file);
             }
         }
+    }
+
+    private static long outcomeCount(
+            List<BoundedMetadataExtractor.MeasuredExtraction> results, MetadataExtractionResult.State state) {
+        return results.stream()
+                .filter(result -> result.result().state() == state)
+                .count();
+    }
+
+    private static void reportOutcomeBreakdown(
+            String storage, List<Path> files, List<BoundedMetadataExtractor.MeasuredExtraction> results) {
+        var outcomes = new TreeMap<String, long[]>();
+        var failures = new TreeMap<String, Long>();
+        for (var index = 0; index < files.size(); index++) {
+            var result = results.get(index).result();
+            outcomes.computeIfAbsent(
+                            extension(files.get(index)),
+                            ignored -> new long[MetadataExtractionResult.State.values().length])[
+                    result.state().ordinal()]++;
+            if (result.state() == MetadataExtractionResult.State.FAILED) {
+                failures.merge(result.errorCode().name(), 1L, Long::sum);
+            }
+        }
+        outcomes.forEach((format, counts) -> System.out.printf(
+                Locale.ROOT,
+                "INGESTION_BENCHMARK_OUTCOMES|storage=%s|format=%s|extracted=%d|deferred=%d|failed=%d%n",
+                storage,
+                format,
+                counts[MetadataExtractionResult.State.EXTRACTED.ordinal()],
+                counts[MetadataExtractionResult.State.DEFERRED.ordinal()],
+                counts[MetadataExtractionResult.State.FAILED.ordinal()]));
+        failures.forEach((code, count) -> System.out.printf(
+                Locale.ROOT, "INGESTION_BENCHMARK_FAILURES|storage=%s|code=%s|count=%d%n", storage, code, count));
+    }
+
+    private static String extension(Path path) {
+        var name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        var separator = name.lastIndexOf('.');
+        return separator < 0 ? "none" : name.substring(separator + 1);
     }
 
     private double databaseP95Micros() {
