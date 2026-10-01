@@ -49,6 +49,10 @@ public final class FilesystemScanDiscovery implements ScanDiscovery {
         @Override
         public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
             listener.heartbeat();
+            if (listener.cancellationRequested()) {
+                coverageComplete = false;
+                return FileVisitResult.TERMINATE;
+            }
             if (!directory.equals(root) && attributes.isSymbolicLink()) {
                 listener.failed(relative(directory), "PATH_ESCAPE", "A symbolic link was not followed.");
                 return FileVisitResult.SKIP_SUBTREE;
@@ -59,6 +63,10 @@ public final class FilesystemScanDiscovery implements ScanDiscovery {
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
             listener.heartbeat();
+            if (listener.cancellationRequested()) {
+                coverageComplete = false;
+                return FileVisitResult.TERMINATE;
+            }
             var relativePath = relative(file);
             if (attributes.isSymbolicLink()) {
                 listener.failed(relativePath, "PATH_ESCAPE", "A symbolic link was not followed.");

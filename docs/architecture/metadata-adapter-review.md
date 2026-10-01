@@ -2,7 +2,7 @@
 
 - Status: Accepted M2 implementation baseline
 - Scope: EPUB, FB2, MOBI, PDF, DOCX, and DjVu metadata extraction
-- Related issues: [#16](https://github.com/yurtools/yurlib/issues/16), [#49](https://github.com/yurtools/yurlib/issues/49), [#51](https://github.com/yurtools/yurlib/issues/51)
+- Related issues: [#16](https://github.com/yurtools/yurlib/issues/16), [#49](https://github.com/yurtools/yurlib/issues/49), [#51](https://github.com/yurtools/yurlib/issues/51), [#69](https://github.com/yurtools/yurlib/issues/69)
 - Reviewed: 2026-09-30
 
 ## Decision
@@ -42,7 +42,7 @@ Raising a hard boundary requires threat review plus near-limit and over-limit fi
 
 ### EPUB
 
-All entry names and the bounded central directory are validated without extraction. Encryption is rejected. Only `mimetype`, `META-INF/container.xml`, and the selected OPF package are inflated. The 4 MiB selected-entry expansion bound and 100:1 compression-ratio bound apply to those operation-relevant entries; a large unparsed image or content entry is not falsely rejected by the XML limit. ZIP64 structures outside the directory and source bounds are rejected.
+All entry names and the bounded central directory are validated without extraction. Issue #69 must accept ordinary explicit directory entries without treating their trailing slash as path traversal; absolute paths, backslashes, empty segments, and `.` or `..` segments remain rejected. Encryption is rejected. Only `mimetype`, `META-INF/container.xml`, and the selected OPF package are inflated. The 4 MiB selected-entry expansion bound and 100:1 compression-ratio bound apply to those operation-relevant entries; a large unparsed image or content entry is not falsely rejected by the XML limit. ZIP64 structures outside the directory and source bounds are rejected.
 
 ### FB2
 
@@ -58,7 +58,7 @@ The adapter first proves that the ZIP is an OPC Word package. It validates entry
 
 ### DjVu
 
-The adapter performs positional IFF traversal, validates every form/chunk length and padding byte, and keeps a strict page/chunk count. It selects INFO and bounded uncompressed annotation facts. Image chunks, compressed annotations, and text payloads are not decoded. Large sparse fixtures demonstrate that reads stay independent of total file size.
+The adapter performs positional IFF traversal, validates every form/chunk length and padding byte, and keeps a strict page/chunk count. Issue #69 must make multipage `FORM:DJVM` traversal accept bounded nested `FORM:DJVI` shared-information components without decoding their payloads. It must compare terminal padding and declared-length behavior with a reference implementation so valid containers are accepted while malformed boundaries remain safe rejections. The adapter selects INFO and bounded uncompressed annotation facts. Image chunks, compressed annotations, and text payloads are not decoded. Large sparse fixtures demonstrate that reads stay independent of total file size.
 
 ### PDF
 

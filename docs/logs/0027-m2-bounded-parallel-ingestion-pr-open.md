@@ -1,0 +1,102 @@
+# M2 Bounded Parallel Ingestion
+
+- Status: Pull request open
+- Started: 2026-10-01
+- Branch: `feat/56-bounded-parallel-ingestion`
+- Issue: [#56](https://github.com/yurtools/yurlib/issues/56)
+- Repository: `yurtools/yurlib`
+
+## Prompt
+
+> continue
+
+Follow-up prompt:
+
+> I have /mnt/nas/data/torrent/flibusta/Flibusta.Net/group_053/ that could be used for thesting
+
+Follow-up prompt:
+
+> Lets move NFS out of M2 scope
+
+Follow-up prompt:
+
+> add those fixes to m2
+
+Follow-up prompt:
+
+> some checks on the PR failed
+
+## Plan
+
+1. Reconcile merged pull request #67 and start issue #56 from merged `main`.
+2. Replace whole-scan single-worker execution with PostgreSQL-backed staged tasks using transactional claims, leases, heartbeats, bounded attempts, and idempotency keys.
+3. Enforce bounded discovery queues, parse concurrency, weighted memory, open-file, CPU, and database permits.
+4. Provide fair progress across roots, cooperative cancellation, lease-expiry recovery, and deterministic single-versus-parallel outcomes.
+5. Add operational metrics and a reference benchmark harness/report for local SSD and SMB observations without making universal performance claims. Keep optional NFS measurement support for deferred post-M2 work.
+6. Verify migrations, concurrency and failure recovery, backend/frontend baselines, Compose configuration, and source immutability; then open a draft pull request and close #56 only after all storage evidence is recorded.
+
+## Actions and results
+
+- Confirmed pull request #67 was squash-merged as `17763ecf5743fd6b8ae1c9b23eddfa0cc30a60db`; all four CI jobs passed, issue #55 is closed, and its Project item is Done.
+- Fast-forwarded local `main` and created `feat/56-bounded-parallel-ingestion`, preserving the unrelated local Angular analytics preference.
+- Confirmed issue #56 is next in the accepted M2 implementation order and that its prerequisites are merged.
+- Reviewed ADR-0007, M2 design section 8, existing parser resource budgets, scan-job persistence, discovery flow, scheduling, telemetry, and tests.
+- Added Flyway migration V8 for durable ingestion tasks, per-root scheduling state, discovery completion, cancellation requests, task idempotency keys, bounded attempts, and lease/heartbeat state.
+- Refactored scan execution into a bounded discovery producer and metadata consumers. The scheduler permits one discovery worker and one to four metadata workers, with two metadata workers by default.
+- Added transactional PostgreSQL task claims with `FOR UPDATE SKIP LOCKED`, root-fair selection, expiring leases, stale-lease rejection, three-attempt retry exhaustion, and deterministic enqueue idempotency.
+- Added hard resource ceilings for weighted parser memory, open files, CPU work, and database work. Default ceilings are 512 MiB, 32 files, two CPU permits, and two database permits.
+- Revalidated each contained path immediately before parsing and retained parser deadlines and byte budgets for untrusted files.
+- Added cooperative discovery cancellation, queued-task cancellation, a secured scan-job cancellation endpoint, and OpenAPI coverage.
+- Added queue, running-task, memory-permit, and open-file-permit telemetry.
+- Added integration coverage for capacity, idempotency, root fairness, lease recovery, stale-worker rejection, retry exhaustion, and cancellation. Extended the walking-skeleton acceptance test to compare sequential and parallel catalog observations.
+- Added an opt-in reference benchmark and `docs/architecture/m2-ingestion-benchmark-evidence.md`. Recorded local-SSD evidence under the documented 4-core, 8-GiB, 512-MiB-heap profile; the harness accepts owner-provided local, SMB, and NFS corpus paths.
+- Corrected the PMD row-mapper finding and the SpotBugs constructor/finalizer warning without suppressing either rule.
+- Updated issue #56 to mark the five verified implementation criteria complete and left the SMB/NFS benchmark criterion open with a comment linking the local evidence and verification results.
+- Committed the implementation as `76a2f6a` (`feat(#56): add bounded parallel ingestion`).
+- Pushed `feat/56-bounded-parallel-ingestion` and opened draft pull request [#68](https://github.com/yurtools/yurlib/pull/68). The draft tracks #56 without closing it while SMB/NFS evidence remains pending.
+- Identified the provided reference path as a readable CIFS/SMB 3.0 mount. The first SMB run safely rejected a real corpus file, revealing that the benchmark incorrectly required every real-world file to extract successfully.
+- Updated the harness and evidence format to count extracted, deferred, and safely failed outcomes without logging private filenames or content.
+- Added aggregate outcome reporting by format and error code. The final reference-profile run completed successfully for 136 SMB files: 26 extracted and 110 safely failed. The failures were concentrated in DjVu and EPUB and are recorded as a separate compatibility finding rather than hidden from the benchmark.
+- Created issue [#69](https://github.com/yurtools/yurlib/issues/69) in the Yurlib Engineering Project with Todo status to investigate real-world DjVu and EPUB compatibility using sanitized fixtures while preserving all resource limits.
+- Updated issue #56 and draft pull request #68 with the SMB evidence; NFS is now the only missing benchmark target.
+- Recorded the owner's decision to remove NFS evidence from M2 acceptance while retaining host-mounted NFS support. Created post-M2 issue [#70](https://github.com/yurtools/yurlib/issues/70) in Project Todo; no ADR was required because the runtime and storage architecture did not change.
+- Updated issue #56 so all revised acceptance criteria are complete, changed pull request #68 to close #56, and marked the pull request ready for review. The Project item remains In Progress until merge because the Project workflow has no separate review state.
+- Diagnosed the SMB parser outcomes using aggregate-only, read-only checks. Confirmed 67 DjVu false rejections for valid nested `FORM:DJVI` components and 23 EPUB false rejections for ordinary explicit ZIP directory entries. Isolated 19 DjVu padding-boundary outcomes and one top-level length outcome for reference-parser validation without recording filenames or content.
+- Added issue #69 to the explicit M2 implementation order before cover work, assigned it to the M2 milestone, and replaced its investigative criteria with concrete EPUB, DjVu, regression, versioning, and aggregate-corpus acceptance requirements. Updated the M2 design, parser safety review, and benchmark evidence; no ADR changed because the accepted parser and isolation boundaries remain intact.
+- Committed the M2 parser-compatibility scope updates as `7f29b82` (`docs(#69): add parser compatibility to M2`).
+- Investigated pull request #68 run `36888905454`. Frontend, Compose Configuration, and Dependency Review passed; Backend stopped at Spotless before compilation because the expanded M2 acceptance table needed Markdown realignment.
+- Applied the repository Spotless formatter. It changed only `docs/architecture/m2-curation-design.md`; the unrelated local Angular analytics preference remained untouched.
+- Committed and pushed the correction as `2ef73df` (`docs(#69): format M2 acceptance matrix`). Pull request #68 CI run `36889387869` then passed Backend, Frontend, Compose Configuration, and Dependency Review.
+
+## Verification
+
+- `YURLIB_RUN_INGESTION_BENCHMARK=true MAVEN_OPTS='-Xms256m -Xmx512m -XX:ActiveProcessorCount=4' ./mvnw -pl services/yurlib-server -Dtest=IngestionReferenceBenchmarkTest test`: passed for the generated local corpus.
+  - Time to first result: 32.724 ms.
+  - Warm throughput: 645.43 files/s.
+  - Counted bytes: 4,139.
+  - Peak heap: 138,930,424 bytes.
+  - Peak open files per task: 2.
+  - Database p95: 2,606.808 microseconds.
+  - Interactive health API p95 under extraction load: 8,301.418 microseconds.
+- `./mvnw verify`: passed for the complete reactor. The server ran 139 tests with one opt-in benchmark skipped; the isolated document worker ran three tests. Coverage, formatting, OpenAPI compatibility, PMD, and SpotBugs passed with zero findings. Earlier verification runs exposed one PMD finding and one SpotBugs constructor warning; both were corrected without rule suppression.
+- `npm --prefix web/yurlib-web ci`: passed; 267 packages installed, zero reported vulnerabilities. npm reported the existing blocked optional install scripts.
+- `npm --prefix web/yurlib-web test -- --watch=false`: passed, 13 tests in two files.
+- `npm --prefix web/yurlib-web run build`: passed.
+- `docker compose config`: passed.
+- `git diff --check`: passed.
+- `./mvnw -B spotless:check`: passed after the Markdown formatting correction.
+- GitHub Actions run `36889387869`: passed all four required checks at commit `2ef73df`.
+- `YURLIB_RUN_INGESTION_BENCHMARK=true YURLIB_BENCHMARK_SMB=<owner-provided-path> JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 -XX:MaxRAM=8g -Xms256m -Xmx512m' taskset -c 0-3 ./mvnw -B -pl services/yurlib-server -Djacoco.skip=true -Dtest=IngestionReferenceBenchmarkTest test`: passed.
+  - SMB files: 136 total; 26 extracted, 0 deferred, 110 safely failed.
+  - Time to first result: 9.098 ms.
+  - Warm throughput: 243.07 files/s.
+  - Counted bytes: 3,641,034.
+  - Peak heap: 271,154,632 bytes.
+  - Peak open files per task: 2.
+  - Database p95: 3,643.164 microseconds.
+  - Interactive health API p95 under extraction load: 14,331.904 microseconds.
+  - Aggregate failures: 67 `UNSUPPORTED_FORMAT`; 43 `CORRUPT_ASSET`.
+
+## Blockers
+
+- None.

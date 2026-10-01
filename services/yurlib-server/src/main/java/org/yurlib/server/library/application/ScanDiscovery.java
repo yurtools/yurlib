@@ -10,6 +10,10 @@ public interface ScanDiscovery {
 
     interface Listener {
 
+        default boolean cancellationRequested() {
+            return false;
+        }
+
         void heartbeat();
 
         void discovered(Candidate candidate);

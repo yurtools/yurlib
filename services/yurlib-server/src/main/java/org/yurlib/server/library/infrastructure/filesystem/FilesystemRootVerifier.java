@@ -4,14 +4,16 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import org.yurlib.server.library.application.ContainedFileResolver;
 import org.yurlib.server.library.application.LibraryRootFailure;
 import org.yurlib.server.library.application.RootLocationVerifier;
 import org.yurlib.server.library.domain.LibraryRoot;
 
-public final class FilesystemRootVerifier implements RootLocationVerifier {
+public final class FilesystemRootVerifier implements RootLocationVerifier, ContainedFileResolver {
 
     static final String IDENTITY_MARKER = ".yurlib-root-id";
     private static final long MAXIMUM_MARKER_BYTES = 1024;
@@ -73,6 +75,32 @@ public final class FilesystemRootVerifier implements RootLocationVerifier {
             return resolved;
         } catch (IOException exception) {
             throw unavailable(exception);
+        }
+    }
+
+    @Override
+    public Path resolveContainedFile(LibraryRoot root, String normalizedRelativePath) {
+        if (normalizedRelativePath == null
+                || normalizedRelativePath.isBlank()
+                || normalizedRelativePath.startsWith("/")
+                || normalizedRelativePath.contains("\\")
+                || normalizedRelativePath.contains("//")
+                || normalizedRelativePath.matches("(^|.*/)\\.\\.?(/.*|$)")) {
+            throw pathEscape();
+        }
+        var verified = verifyConfigured(root).path();
+        var candidate = verified.resolve(normalizedRelativePath).normalize();
+        try {
+            if (!candidate.startsWith(verified) || Files.isSymbolicLink(candidate)) {
+                throw pathEscape();
+            }
+            var actual = candidate.toRealPath(LinkOption.NOFOLLOW_LINKS);
+            if (!actual.startsWith(verified) || !Files.isRegularFile(actual, LinkOption.NOFOLLOW_LINKS)) {
+                throw pathEscape();
+            }
+            return actual;
+        } catch (IOException failure) {
+            throw unavailable(failure);
         }
     }
 

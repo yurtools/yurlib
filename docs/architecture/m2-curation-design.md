@@ -32,7 +32,7 @@ M2 does not deliver full-text or semantic search, document editing, macros or ac
 
 Priority order is safety and authorization, correctness and recovery, operability, useful incremental results, then throughput. Performance work must preserve the first four.
 
-The reference environment is one Yurlib application instance with 4 CPU cores, 8 GiB RAM, PostgreSQL, x86-64 and ARM64 coverage, local SSD, and representative SMB and NFS roots. Cold and warm results are reported separately. Numeric defaults below are initial safe defaults, not universal capacity claims.
+The reference environment is one Yurlib application instance with 4 CPU cores, 8 GiB RAM, PostgreSQL, x86-64 and ARM64 coverage, local SSD, and a representative SMB root. Cold and warm results are reported separately. Numeric defaults below are initial safe defaults, not universal capacity claims. NFS benchmark evidence is deferred beyond M2 in issue [#70](https://github.com/yurtools/yurlib/issues/70); NFS remains a supported host-mounted source option.
 
 ## 4. Component map
 
@@ -260,17 +260,17 @@ Acceptance includes a destructive disposable-environment restore drill for local
 
 ## 16. Acceptance matrix
 
-| Area               | Required evidence                                                                                                                                                                        |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Canonical model    | Migrations and tests for observation → normalized → resolved → curated precedence, conflicts, reprocessing, undo, merge/split, and source preservation                                   |
-| Authorization      | Two-user tests for default visibility, denies, mixed-root Works, direct IDs, totals, covers, downloads, conversions, personal state, session invalidation, and owner-only administration |
-| Formats            | Generated/licensed valid, multilingual, malformed, encrypted, adversarial, near/over-limit fixtures for all six formats; byte/read and constrained-heap evidence                         |
-| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable NAS, and benchmark report                                              |
-| Covers             | Hostile image limits, PDF/DjVu page one, DOCX thumbnail, fallback, provenance, caching, and source hashes unchanged                                                                      |
-| Conversion         | Worker isolation, no egress/DB/source mount, two route corpora, timeout/OOM/cancel/retry, atomic publication, lineage authorization, and no original mutation                            |
-| Personal curation  | Favorite contributors, Work read state with Edition evidence, private collections, shared tags, merge/split reconciliation, privacy/export/removal                                       |
-| Recovery           | PostgreSQL plus managed-root backup/restore, manifest validation, missing sources, interrupted jobs, and authorization preservation                                                      |
-| UI/API             | OpenAPI compatibility, RFC 9457 codes, CSRF, optimistic concurrency, accessible desktop/mobile workflows, and no denied-data disclosure                                                  |
+| Area               | Required evidence                                                                                                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canonical model    | Migrations and tests for observation → normalized → resolved → curated precedence, conflicts, reprocessing, undo, merge/split, and source preservation                                                                                  |
+| Authorization      | Two-user tests for default visibility, denies, mixed-root Works, direct IDs, totals, covers, downloads, conversions, personal state, session invalidation, and owner-only administration                                                |
+| Formats            | Generated/licensed valid, multilingual, malformed, encrypted, adversarial, near/over-limit fixtures for all six formats; real-world EPUB directory-entry and DjVu `DJVI`/padding compatibility; byte/read and constrained-heap evidence |
+| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable NAS, and benchmark report                                                                                             |
+| Covers             | Hostile image limits, PDF/DjVu page one, DOCX thumbnail, fallback, provenance, caching, and source hashes unchanged                                                                                                                     |
+| Conversion         | Worker isolation, no egress/DB/source mount, two route corpora, timeout/OOM/cancel/retry, atomic publication, lineage authorization, and no original mutation                                                                           |
+| Personal curation  | Favorite contributors, Work read state with Edition evidence, private collections, shared tags, merge/split reconciliation, privacy/export/removal                                                                                      |
+| Recovery           | PostgreSQL plus managed-root backup/restore, manifest validation, missing sources, interrupted jobs, and authorization preservation                                                                                                     |
+| UI/API             | OpenAPI compatibility, RFC 9457 codes, CSRF, optimistic concurrency, accessible desktop/mobile workflows, and no denied-data disclosure                                                                                                 |
 
 ## 17. Walking skeleton and implementation order
 
@@ -284,11 +284,12 @@ Implementation proceeds in this order:
 4. PDF/DOCX/DjVu dependency decision and adapters (#51);
 5. normalization, resolution, curation, contributors, and shared tags ([#55](https://github.com/yurtools/yurlib/issues/55));
 6. bounded parallel ingestion and benchmark harness ([#56](https://github.com/yurtools/yurlib/issues/56));
-7. managed roots, cover normalization, and representative rendering ([#57](https://github.com/yurtools/yurlib/issues/57));
-8. favorites, Work read state, and private collections ([#58](https://github.com/yurtools/yurlib/issues/58));
-9. merge/split and duplicate-review recovery ([#59](https://github.com/yurtools/yurlib/issues/59));
-10. isolated worker and the two conversion routes ([#60](https://github.com/yurtools/yurlib/issues/60));
-11. backup/restore and full M2 walking-skeleton acceptance ([#61](https://github.com/yurtools/yurlib/issues/61)).
+7. real-world EPUB and DjVu metadata compatibility while preserving parser bounds ([#69](https://github.com/yurtools/yurlib/issues/69));
+8. managed roots, cover normalization, and representative rendering ([#57](https://github.com/yurtools/yurlib/issues/57));
+9. favorites, Work read state, and private collections ([#58](https://github.com/yurtools/yurlib/issues/58));
+10. merge/split and duplicate-review recovery ([#59](https://github.com/yurtools/yurlib/issues/59));
+11. isolated worker and the two conversion routes ([#60](https://github.com/yurtools/yurlib/issues/60));
+12. backup/restore and full M2 walking-skeleton acceptance ([#61](https://github.com/yurtools/yurlib/issues/61)).
 
 Each implementation issue must preserve a deployable, releasable `main` and include objective automated evidence plus owner-facing acceptance where UI behavior changes.
 

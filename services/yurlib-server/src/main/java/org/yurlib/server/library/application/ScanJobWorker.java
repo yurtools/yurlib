@@ -4,6 +4,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.locks.LockSupport;
 import org.yurlib.server.library.domain.FileOutcome;
 
 public final class ScanJobWorker {
@@ -11,11 +12,12 @@ public final class ScanJobWorker {
     private final LibraryRootStore roots;
     private final ScanJobStore jobs;
     private final ScanDiscovery discovery;
-    private final CatalogCandidateReconciler candidateReconciler;
+    private final IngestionTaskStore tasks;
     private final MissingLocationReconciler reconciler;
     private final Clock clock;
     private final Duration leaseTimeout;
     private final ScanJobTelemetry telemetry;
+    private final int queueCapacity;
 
     @SuppressFBWarnings(
             value = "EI_EXPOSE_REP2",
@@ -24,19 +26,24 @@ public final class ScanJobWorker {
             LibraryRootStore roots,
             ScanJobStore jobs,
             ScanDiscovery discovery,
-            CatalogCandidateReconciler candidateReconciler,
+            IngestionTaskStore tasks,
             MissingLocationReconciler reconciler,
             Clock clock,
             Duration leaseTimeout,
-            ScanJobTelemetry telemetry) {
+            ScanJobTelemetry telemetry,
+            int queueCapacity) {
         this.roots = roots;
         this.jobs = jobs;
         this.discovery = discovery;
-        this.candidateReconciler = candidateReconciler;
+        this.tasks = tasks;
         this.reconciler = reconciler;
         this.clock = clock;
         this.leaseTimeout = leaseTimeout;
         this.telemetry = telemetry;
+        if (queueCapacity <= 0 || queueCapacity > 256) {
+            throw new IllegalArgumentException("queueCapacity must be between 1 and 256");
+        }
+        this.queueCapacity = queueCapacity;
     }
 
     public boolean runNext() {
@@ -51,17 +58,21 @@ public final class ScanJobWorker {
         try {
             var root = roots.findById(job.libraryRootId()).orElseThrow();
             var listener = new PersistingDiscoveryListener(
-                    root.id(), job.id(), job.extractionVersion(), jobs, candidateReconciler, clock, telemetry);
+                    root.id(), job.id(), job.extractionVersion(), jobs, tasks, clock, telemetry, queueCapacity);
             var result = discovery.discover(root, listener);
-            if (result.coverageComplete()) {
-                reconciler.reconcileAfterCompleteScan(root.id(), job.id());
-            }
             var completedAt = clock.instant();
-            var completed = jobs.complete(job.id(), result.coverageComplete(), completedAt);
-            telemetry.completed(completed, Duration.between(claimedAt, completedAt));
+            jobs.finishDiscovery(job.id(), result.coverageComplete(), completedAt);
+            jobs.completeIfReady(job.id(), completedAt).ifPresent(completed -> {
+                if (completed.completionCoverage()
+                        && completed.state() != org.yurlib.server.library.domain.ScanJob.State.CANCELLED) {
+                    reconciler.reconcileAfterCompleteScan(root.id(), job.id());
+                }
+                telemetry.completed(completed, Duration.between(claimedAt, completedAt));
+            });
         } catch (RuntimeException failure) {
             var failedAt = clock.instant();
             var summary = safeSummary(failure);
+            tasks.cancelQueued(job.id(), failedAt);
             var failed = jobs.fail(job.id(), summary, failedAt);
             telemetry.failed(failed, summary, Duration.between(claimedAt, failedAt));
         }
@@ -81,25 +92,33 @@ public final class ScanJobWorker {
         private final UUID rootId;
         private final String extractionVersion;
         private final ScanJobStore jobs;
-        private final CatalogCandidateReconciler candidateReconciler;
+        private final IngestionTaskStore tasks;
         private final Clock clock;
         private final ScanJobTelemetry telemetry;
+        private final int queueCapacity;
 
         private PersistingDiscoveryListener(
                 UUID rootId,
                 UUID jobId,
                 String extractionVersion,
                 ScanJobStore jobs,
-                CatalogCandidateReconciler candidateReconciler,
+                IngestionTaskStore tasks,
                 Clock clock,
-                ScanJobTelemetry telemetry) {
+                ScanJobTelemetry telemetry,
+                int queueCapacity) {
             this.rootId = rootId;
             this.jobId = jobId;
             this.extractionVersion = extractionVersion;
             this.jobs = jobs;
-            this.candidateReconciler = candidateReconciler;
+            this.tasks = tasks;
             this.clock = clock;
             this.telemetry = telemetry;
+            this.queueCapacity = queueCapacity;
+        }
+
+        @Override
+        public boolean cancellationRequested() {
+            return jobs.isCancellationRequested(jobId) || Thread.currentThread().isInterrupted();
         }
 
         @Override
@@ -109,18 +128,11 @@ public final class ScanJobWorker {
 
         @Override
         public void discovered(ScanDiscovery.Candidate candidate) {
-            var result = candidateReconciler.reconcile(rootId, jobId, extractionVersion, candidate);
-            if (result.state() == CandidateReconciliationResult.State.FAILED) {
-                telemetry.fileFailed(result.errorCode());
+            while (!cancellationRequested()
+                    && !tasks.enqueue(rootId, jobId, extractionVersion, candidate, queueCapacity, clock.instant())) {
+                jobs.heartbeat(jobId, clock.instant());
+                LockSupport.parkNanos(Duration.ofMillis(10).toNanos());
             }
-            jobs.recordOutcome(new FileOutcome(
-                    jobId,
-                    candidate.normalizedRelativePath(),
-                    FileOutcome.State.valueOf(result.state().name()),
-                    result.errorCode(),
-                    result.safeDiagnostic(),
-                    1,
-                    clock.instant()));
         }
 
         @Override

@@ -11,6 +11,8 @@ public interface ScanJobUseCases {
 
     ScanJobView get(UUID jobId);
 
+    ScanJobView cancel(UUID jobId);
+
     record ScanJobView(ScanJob job, List<FileOutcome> failures) {
         public ScanJobView {
             failures = List.copyOf(failures);

@@ -48,5 +48,14 @@ yurlib:
     mounts: []
     scan:
       lease-timeout: 1m
+      task-lease-duration: 1m
       poll-delay: 1s
       worker-enabled: true
+      discovery-workers: 1
+      metadata-workers: 2
+      queue-capacity: 256
+      maximum-attempts: 3
+      memory-mib: 512
+      open-files: 32
+      cpu-permits: 2
+      database-permits: 2

@@ -86,8 +86,10 @@ public class JdbcScanJobStore implements ScanJobStore {
         var jobId = jdbc.sql("""
                 SELECT id
                 FROM scan_job
-                WHERE state = 'QUEUED'
-                   OR (state = 'RUNNING' AND heartbeat_at < :leaseExpiredBefore)
+                WHERE cancellation_requested = FALSE
+                  AND (state = 'QUEUED'
+                       OR (state = 'RUNNING' AND discovery_completed = FALSE
+                           AND heartbeat_at < :leaseExpiredBefore))
                 ORDER BY created_at, id
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
@@ -111,6 +113,83 @@ public class JdbcScanJobStore implements ScanJobStore {
                 .param("id", jobId.get())
                 .update();
         return findById(jobId.get());
+    }
+
+    @Override
+    public void finishDiscovery(UUID jobId, boolean coverageComplete, Instant completedAt) {
+        jdbc.sql("""
+                UPDATE scan_job
+                SET discovery_completed = TRUE,
+                    completion_coverage = :coverageComplete,
+                    heartbeat_at = :completedAt
+                WHERE id = :id AND state = 'RUNNING'
+                """)
+                .param("coverageComplete", coverageComplete)
+                .param("completedAt", timestamp(completedAt))
+                .param("id", jobId)
+                .update();
+    }
+
+    @Override
+    public boolean isCancellationRequested(UUID jobId) {
+        return jdbc.sql("SELECT cancellation_requested FROM scan_job WHERE id = :id")
+                .param("id", jobId)
+                .query(Boolean.class)
+                .optional()
+                .orElse(true);
+    }
+
+    @Override
+    public ScanJob cancel(UUID jobId, Instant cancelledAt) {
+        jdbc.sql("""
+                UPDATE scan_job
+                SET cancellation_requested = TRUE,
+                    state = CASE WHEN state = 'QUEUED' THEN 'CANCELLED' ELSE state END,
+                    discovery_completed = CASE WHEN state = 'QUEUED' THEN TRUE ELSE discovery_completed END,
+                    completion_coverage = FALSE,
+                    completed_at = CASE WHEN state = 'QUEUED' THEN :cancelledAt ELSE completed_at END,
+                    heartbeat_at = :cancelledAt
+                WHERE id = :id
+                  AND state IN ('QUEUED', 'RUNNING')
+                """)
+                .param("cancelledAt", timestamp(cancelledAt))
+                .param("id", jobId)
+                .update();
+        return requireJob(jobId);
+    }
+
+    @Override
+    @Transactional
+    public Optional<ScanJob> completeIfReady(UUID jobId, Instant completedAt) {
+        var ready =
+                jdbc.sql("""
+                SELECT discovery_completed
+                   AND NOT EXISTS (
+                       SELECT 1 FROM ingestion_task
+                       WHERE scan_job_id = scan_job.id AND state IN ('QUEUED', 'RUNNING')
+                   )
+                FROM scan_job
+                WHERE id = :id AND state = 'RUNNING'
+                FOR UPDATE
+                """).param("id", jobId).query(Boolean.class).optional().orElse(false);
+        if (!ready) {
+            return Optional.empty();
+        }
+        jdbc.sql("""
+                UPDATE scan_job
+                SET state = CASE
+                        WHEN cancellation_requested THEN 'CANCELLED'
+                        WHEN failed_count = 0 AND completion_coverage THEN 'SUCCEEDED'
+                        ELSE 'COMPLETED_WITH_FAILURES'
+                    END,
+                    heartbeat_at = :completedAt,
+                    completed_at = :completedAt
+                WHERE id = :id AND state = 'RUNNING'
+                """)
+                .param("completedAt", timestamp(completedAt))
+                .param("id", jobId)
+                .update();
+        return findById(jobId);
     }
 
     @Override

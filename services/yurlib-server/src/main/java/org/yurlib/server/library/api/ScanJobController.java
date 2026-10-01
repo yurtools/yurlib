@@ -32,4 +32,9 @@ public class ScanJobController {
     public ScanJobResponse get(@PathVariable UUID jobId) {
         return ScanJobResponse.from(useCases.get(jobId));
     }
+
+    @PostMapping("/jobs/{jobId}/cancel")
+    public ScanJobResponse cancel(@PathVariable UUID jobId) {
+        return ScanJobResponse.from(useCases.cancel(jobId));
+    }
 }

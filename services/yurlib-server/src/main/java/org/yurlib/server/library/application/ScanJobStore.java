@@ -17,6 +17,14 @@ public interface ScanJobStore {
 
     Optional<ScanJob> claimNext(Instant claimedAt, Instant leaseExpiredBefore);
 
+    void finishDiscovery(UUID jobId, boolean coverageComplete, Instant completedAt);
+
+    boolean isCancellationRequested(UUID jobId);
+
+    ScanJob cancel(UUID jobId, Instant cancelledAt);
+
+    Optional<ScanJob> completeIfReady(UUID jobId, Instant completedAt);
+
     long queuedCount();
 
     void recordOutcome(FileOutcome outcome);
