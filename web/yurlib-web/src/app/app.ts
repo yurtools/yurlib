@@ -23,6 +23,8 @@ import {
   ProblemDetails,
   ScanJob,
   ScanState,
+  MetadataReviewItem,
+  WorkCuration,
 } from './library.model';
 
 const TERMINAL_SCAN_STATES: ReadonlySet<ScanState> = new Set([
@@ -124,6 +126,17 @@ export class App {
   protected readonly signingIn = signal(false);
   protected readonly signingOut = signal(false);
   protected readonly accessError = signal('');
+  protected readonly selectedCuration = signal<WorkCuration | undefined>(undefined);
+  protected readonly reviewQueue = signal<MetadataReviewItem[]>([]);
+  protected readonly loadingCuration = signal(false);
+  protected readonly savingCuration = signal(false);
+  protected readonly curationError = signal('');
+  protected readonly curationTitle = signal('');
+  protected readonly curationTags = signal('');
+  protected readonly curationReason = signal('');
+  protected readonly curationContributorId = signal('');
+  protected readonly curationContributorName = signal('');
+  protected readonly curationContributorAliases = signal('');
 
   protected readonly selectedRoot = computed(() =>
     this.roots().find((root) => root.id === this.selectedRootId()),
@@ -132,6 +145,11 @@ export class App {
     () =>
       this.session()?.mode === 'LOOPBACK_DEVELOPMENT' ||
       this.session()?.capabilities?.includes('MANAGE_INGESTION_SOURCES'),
+  );
+  protected readonly canCurate = computed(
+    () =>
+      this.session()?.mode === 'LOOPBACK_DEVELOPMENT' ||
+      this.session()?.capabilities?.includes('CURATE_CATALOG'),
   );
   protected readonly catalogStart = computed(() =>
     this.catalog().totalElements === 0 ? 0 : this.catalog().page * this.catalog().size + 1,
@@ -252,6 +270,135 @@ export class App {
     return this.api.downloadUrl(assetId);
   }
 
+  protected async openCuration(workId: string) {
+    this.loadingCuration.set(true);
+    this.curationError.set('');
+    try {
+      const detail = await firstValueFrom(this.api.getWorkCuration(workId));
+      this.setCuration(detail);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The curation record could not be loaded.'));
+    } finally {
+      this.loadingCuration.set(false);
+    }
+  }
+
+  protected closeCuration() {
+    this.selectedCuration.set(undefined);
+    this.curationError.set('');
+    this.curationReason.set('');
+  }
+
+  protected async saveCuratedTitle() {
+    const detail = this.selectedCuration();
+    if (!detail || this.savingCuration()) return;
+    const title = this.curationTitle().trim();
+    const reason = this.curationReason().trim();
+    if (!title || !reason) {
+      this.curationError.set('Enter a title and a reason for the correction.');
+      return;
+    }
+    await this.runCurationUpdate(
+      this.api.updateWorkTitle(detail.id, title, reason, detail.title.overrideVersion),
+    );
+  }
+
+  protected async undoCuratedTitle() {
+    const detail = this.selectedCuration();
+    if (!detail || this.savingCuration()) return;
+    const reason = this.curationReason().trim();
+    if (!reason) {
+      this.curationError.set('Enter a reason for the undo.');
+      return;
+    }
+    await this.runCurationUpdate(
+      this.api.undoWorkTitle(detail.id, reason, detail.title.overrideVersion),
+    );
+  }
+
+  protected async saveCuratedTags() {
+    const detail = this.selectedCuration();
+    if (!detail || this.savingCuration()) return;
+    const reason = this.curationReason().trim();
+    if (!reason) {
+      this.curationError.set('Enter a reason for the tag change.');
+      return;
+    }
+    const tags = this.curationTags()
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== '');
+    await this.runCurationUpdate(
+      this.api.replaceWorkTags(detail.id, tags, reason, detail.version),
+    );
+  }
+
+  protected selectCurationContributor(contributorId: string) {
+    const contributor = this.selectedCuration()?.contributors.find(
+      (candidate) => candidate.id === contributorId,
+    );
+    this.curationContributorId.set(contributor?.id ?? '');
+    this.curationContributorName.set(contributor?.displayName ?? '');
+    this.curationContributorAliases.set(contributor?.aliases.join(', ') ?? '');
+  }
+
+  protected async saveCuratedContributor() {
+    const detail = this.selectedCuration();
+    const contributor = detail?.contributors.find(
+      (candidate) => candidate.id === this.curationContributorId(),
+    );
+    if (!detail || !contributor || this.savingCuration()) return;
+    const displayName = this.curationContributorName().trim();
+    const reason = this.curationReason().trim();
+    if (!displayName || !reason) {
+      this.curationError.set('Enter a contributor display name and a reason for the change.');
+      return;
+    }
+    const aliases = this.curationContributorAliases()
+      .split(',')
+      .map((alias) => alias.trim())
+      .filter((alias) => alias !== '');
+    this.savingCuration.set(true);
+    this.curationError.set('');
+    try {
+      await firstValueFrom(
+        this.api.updateContributor(
+          contributor.id,
+          displayName,
+          aliases,
+          reason,
+          contributor.version,
+        ),
+      );
+      this.curationReason.set('');
+      await Promise.all([this.openCuration(detail.id), this.loadCatalog(this.catalog().page)]);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The contributor change could not be saved.'));
+    } finally {
+      this.savingCuration.set(false);
+    }
+  }
+
+  protected async dismissReview(reviewId: string) {
+    const reason = this.curationReason().trim();
+    if (!reason) {
+      this.curationError.set('Enter a reason before dismissing a review item.');
+      return;
+    }
+    this.savingCuration.set(true);
+    this.curationError.set('');
+    try {
+      await firstValueFrom(this.api.dismissMetadataReview(reviewId, reason));
+      await this.loadReviews();
+      const detail = this.selectedCuration();
+      if (detail) await this.openCuration(detail.id);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The review item could not be dismissed.'));
+    } finally {
+      this.savingCuration.set(false);
+    }
+  }
+
   protected formatBytes(bytes: number) {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -286,6 +433,7 @@ export class App {
       this.loadingWorkspace.set(false);
     }
     await this.loadCatalog(0);
+    if (this.canCurate()) await this.loadReviews();
   }
 
   private async loadSession() {
@@ -309,6 +457,8 @@ export class App {
     this.selectedRootId.set('');
     this.job.set(undefined);
     this.catalog.set({ items: [], page: 0, size: App.CATALOG_PAGE_SIZE, totalElements: 0 });
+    this.selectedCuration.set(undefined);
+    this.reviewQueue.set([]);
   }
 
   private async loadCatalog(page: number) {
@@ -356,6 +506,35 @@ export class App {
           );
         },
       });
+  }
+
+  private async runCurationUpdate(request: ReturnType<LibraryApi['updateWorkTitle']>) {
+    this.savingCuration.set(true);
+    this.curationError.set('');
+    try {
+      this.setCuration(await firstValueFrom(request));
+      this.curationReason.set('');
+      await Promise.all([this.loadCatalog(this.catalog().page), this.loadReviews()]);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The catalog change could not be saved.'));
+    } finally {
+      this.savingCuration.set(false);
+    }
+  }
+
+  private setCuration(detail: WorkCuration) {
+    this.selectedCuration.set(detail);
+    this.curationTitle.set(detail.title.value ?? '');
+    this.curationTags.set(detail.tags.join(', '));
+    this.selectCurationContributor(detail.contributors[0]?.id ?? '');
+  }
+
+  private async loadReviews() {
+    try {
+      this.reviewQueue.set(await firstValueFrom(this.api.listMetadataReviews()));
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The metadata review queue could not be loaded.'));
+    }
   }
 
   private problemMessage(error: unknown, fallback: string) {

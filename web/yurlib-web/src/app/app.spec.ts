@@ -71,6 +71,8 @@ describe('App', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
     await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/reviews').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
     expect(element.querySelector('#workspace')).not.toBeNull();
@@ -317,6 +319,42 @@ describe('App', () => {
     await fixture.whenStable();
   });
 
+  it('exposes accessible title correction, tags, review, and audit state to curators', async () => {
+    await initialize([], {
+      items: [{ id: 'work-1', title: 'Observed', contributors: [], provisional: false, assets: [] }],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.curate-button')!.click();
+    http.expectOne('/api/v1/curation/works/work-1').flush(curation('Observed', 0));
+    await fixture.whenStable();
+
+    const title = element.querySelector<HTMLInputElement>('.curation-fields input')!;
+    const reason = element.querySelector<HTMLTextAreaElement>('.curation-fields textarea')!;
+    setInput(title, 'Corrected title');
+    reason.value = 'Verified against the cover';
+    reason.dispatchEvent(new Event('input'));
+    element.querySelector<HTMLButtonElement>('.curation-actions button')!.click();
+
+    const update = http.expectOne('/api/v1/curation/works/work-1/title');
+    expect(update.request.body).toEqual({
+      value: 'Corrected title',
+      reason: 'Verified against the cover',
+      expectedVersion: 0,
+    });
+    update.flush(curation('Corrected title', 1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    http.expectOne((request) => request.url === '/api/v1/curation/reviews').flush([]);
+    await fixture.whenStable();
+
+    expect(element.querySelector('.curation-editor')?.textContent).toContain('Corrected title');
+    expect(element.querySelector('.curation-editor')?.textContent).toContain('Evidence and correction history');
+    expect(element.querySelector('.review-queue')).not.toBeNull();
+  });
+
   function setInput(input: HTMLInputElement, value: string) {
     input.value = value;
     input.dispatchEvent(new Event('input'));
@@ -339,6 +377,8 @@ describe('App', () => {
     http.expectOne('/api/v1/library-roots').flush(roots);
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(catalog);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/reviews').flush([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
   }
@@ -370,6 +410,24 @@ describe('App', () => {
       coverageComplete: false,
       failures: [],
       createdAt: '2026-09-29T12:00:00Z',
+    };
+  }
+
+  function curation(title: string, version: number) {
+    return {
+      id: 'work-1',
+      version: 0,
+      title: {
+        value: title,
+        source: version === 0 ? 'RESOLVED' : 'CURATED',
+        overrideVersion: version,
+        observedValues: ['Observed'],
+        history: [],
+      },
+      contributors: [],
+      tags: ['classic'],
+      reviews: [],
+      audit: [],
     };
   }
 });

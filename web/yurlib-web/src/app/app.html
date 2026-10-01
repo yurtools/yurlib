@@ -299,6 +299,11 @@
                       : 'Contributor unknown'
                   }}
                 </p>
+                @if (canCurate()) {
+                  <button class="curate-button" type="button" (click)="openCuration(work.id)">
+                    Curate metadata
+                  </button>
+                }
               </div>
               <ul class="asset-list" aria-label="Available files">
                 @for (asset of work.assets; track asset.id) {
@@ -337,6 +342,192 @@
         </nav>
       }
     </section>
+
+    @if (canCurate()) {
+      <section class="workspace-section curation-section" aria-labelledby="curation-heading">
+        <div class="section-heading">
+          <p class="step">04</p>
+          <div>
+            <h2 id="curation-heading">Catalog curation</h2>
+            <p>Correct shared metadata, manage tags, and review deterministic parser outcomes.</p>
+          </div>
+        </div>
+
+        @if (curationError()) {
+          <p class="notice notice-error" role="alert">{{ curationError() }}</p>
+        }
+
+        @if (loadingCuration()) {
+          <p class="loading" aria-live="polite">Loading curation history…</p>
+        } @else if (selectedCuration(); as detail) {
+          <div class="curation-editor">
+            <div class="curation-editor-heading">
+              <div>
+                <p class="summary-label">Selected work</p>
+                <h3>{{ detail.title.value || 'Untitled work' }}</h3>
+                <p>Displayed from {{ formatState(detail.title.source) }} metadata.</p>
+              </div>
+              <button type="button" class="secondary-button" (click)="closeCuration()">
+                Close
+              </button>
+            </div>
+
+            <div class="curation-fields">
+              <label>
+                <span>Corrected title</span>
+                <input
+                  [value]="curationTitle()"
+                  maxlength="2000"
+                  (input)="curationTitle.set($any($event.target).value)"
+                />
+              </label>
+              <label>
+                <span>Shared tags <em>comma-separated</em></span>
+                <input
+                  [value]="curationTags()"
+                  maxlength="5000"
+                  placeholder="science fiction, favorite"
+                  (input)="curationTags.set($any($event.target).value)"
+                />
+              </label>
+              @if (detail.contributors.length > 0) {
+                <label>
+                  <span>Contributor</span>
+                  <select
+                    [value]="curationContributorId()"
+                    (change)="selectCurationContributor($any($event.target).value)"
+                  >
+                    @for (contributor of detail.contributors; track contributor.id) {
+                      <option [value]="contributor.id">
+                        {{ contributor.displayName }} · {{ formatState(contributor.role) }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Contributor display name</span>
+                  <input
+                    [value]="curationContributorName()"
+                    maxlength="1000"
+                    (input)="curationContributorName.set($any($event.target).value)"
+                  />
+                </label>
+                <label class="curation-aliases">
+                  <span>Contributor aliases <em>comma-separated</em></span>
+                  <input
+                    [value]="curationContributorAliases()"
+                    maxlength="10000"
+                    (input)="curationContributorAliases.set($any($event.target).value)"
+                  />
+                </label>
+              }
+              <label class="curation-reason">
+                <span>Reason for change</span>
+                <textarea
+                  [value]="curationReason()"
+                  maxlength="1000"
+                  rows="3"
+                  (input)="curationReason.set($any($event.target).value)"
+                ></textarea>
+              </label>
+            </div>
+            <div class="curation-actions">
+              <button type="button" (click)="saveCuratedTitle()" [disabled]="savingCuration()">
+                Save title correction
+              </button>
+              <button type="button" (click)="saveCuratedTags()" [disabled]="savingCuration()">
+                Save shared tags
+              </button>
+              @if (detail.contributors.length > 0) {
+                <button
+                  type="button"
+                  (click)="saveCuratedContributor()"
+                  [disabled]="savingCuration()"
+                >
+                  Save contributor and aliases
+                </button>
+              }
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="undoCuratedTitle()"
+                [disabled]="savingCuration() || detail.title.overrideVersion === 0"
+              >
+                Undo latest title correction
+              </button>
+            </div>
+
+            <details>
+              <summary>Evidence and correction history</summary>
+              <h4>Observed titles</h4>
+              <ul>
+                @for (value of detail.title.observedValues; track value) {
+                  <li>{{ value }}</li>
+                } @empty {
+                  <li>No observed title values.</li>
+                }
+              </ul>
+              <h4>Corrections</h4>
+              <ol class="audit-list">
+                @for (entry of detail.title.history; track entry.id) {
+                  <li>
+                    <strong>Version {{ entry.version }}</strong> · {{ entry.reason }}
+                    @if (entry.active) { <span class="active-label">Active</span> }
+                  </li>
+                } @empty {
+                  <li>No curator corrections.</li>
+                }
+              </ol>
+              <h4>Audit history</h4>
+              <ol class="audit-list">
+                @for (event of detail.audit; track event.id) {
+                  <li><strong>{{ formatState(event.eventType) }}</strong> · {{ event.reason }}</li>
+                } @empty {
+                  <li>No curator actions.</li>
+                }
+              </ol>
+            </details>
+          </div>
+        } @else {
+          <p class="curation-empty">Choose “Curate metadata” on a catalog work to edit it.</p>
+        }
+
+        <div class="review-queue" aria-labelledby="review-heading">
+          <div>
+            <h3 id="review-heading">Open metadata reviews</h3>
+            <p>{{ reviewQueue().length }} items shown, oldest first.</p>
+          </div>
+          <ul>
+            @for (review of reviewQueue(); track review.id) {
+              <li>
+                <div>
+                  <strong>{{ formatState(review.reasonCode) }} · {{ review.fieldName }}</strong>
+                  <p>{{ review.detail }}</p>
+                  <small>{{ review.ruleName }} v{{ review.ruleVersion }}</small>
+                </div>
+                <div class="review-actions">
+                  @if (review.subjectType === 'WORK') {
+                    <button type="button" class="secondary-button" (click)="openCuration(review.subjectId)">
+                      Open work
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="secondary-button"
+                    (click)="dismissReview(review.id)"
+                    [disabled]="savingCuration()"
+                  >
+                    Dismiss with reason
+                  </button>
+                </div>
+              </li>
+            } @empty {
+              <li class="review-empty">No metadata requires curator review.</li>
+            }
+          </ul>
+        </div>
+      </section>
+    }
   </main>
 }
 

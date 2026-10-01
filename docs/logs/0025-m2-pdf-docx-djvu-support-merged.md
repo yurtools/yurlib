@@ -1,6 +1,6 @@
 # M2 PDF, DOCX, and DjVu Support
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-09-30
 - Branch: `feat/51-pdf-docx-djvu`
 - Issue: [#51](https://github.com/yurtools/yurlib/issues/51)
@@ -52,4 +52,9 @@
 
 ## Blockers
 
-- None. Pull request #66 awaits review and merge.
+- None.
+
+## Merge
+
+- Pull request #66 was squash-merged on 2026-10-01 as `93445850ae4afba5e65890de7f2c1dff20b3721d`.
+- Issue #51 closed automatically and its Project item is Done.

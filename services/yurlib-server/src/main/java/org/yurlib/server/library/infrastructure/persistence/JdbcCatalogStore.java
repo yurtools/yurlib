@@ -1,5 +1,6 @@
 package org.yurlib.server.library.infrastructure.persistence;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,11 +31,21 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     private final JdbcClient jdbc;
     private final ObjectMapper objectMapper;
     private final LibraryAccessContext accessContext;
+    private final JdbcMetadataProcessor metadataProcessor;
 
-    public JdbcCatalogStore(JdbcClient jdbc, ObjectMapper objectMapper, LibraryAccessContext accessContext) {
+    @SuppressFBWarnings(
+            value = "EI_EXPOSE_REP2",
+            justification =
+                    "The Spring-managed metadata processor is intentionally retained as a persistence collaborator.")
+    public JdbcCatalogStore(
+            JdbcClient jdbc,
+            ObjectMapper objectMapper,
+            LibraryAccessContext accessContext,
+            JdbcMetadataProcessor metadataProcessor) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper.rebuild().build();
         this.accessContext = accessContext;
+        this.metadataProcessor = metadataProcessor;
     }
 
     @Override
@@ -124,7 +135,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
         var works = findWorks(pattern, formatNames, page, size, access);
         var workIds = works.stream().map(WorkRow::id).toList();
-        var contributors = findContributors(workIds, access);
+        var contributors = findContributors(workIds);
         var assets = findAssets(workIds, access);
         var items = works.stream()
                 .map(work -> new WorkSummary(
@@ -342,6 +353,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 metadata.format().name(),
                 0,
                 reconciliation);
+        metadataProcessor.process(observationSetId, reconciliation.observedAt());
     }
 
     private UUID insertObservationSet(UUID assetId, CatalogReconciliation reconciliation) {
@@ -433,7 +445,13 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                           WHERE lineage.derived_asset_id = visible_asset.id
                       ))
                 )
-                AND (lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
+                AND (lower(COALESCE((
+                       SELECT display.display_value
+                       FROM catalog_metadata_display display
+                       WHERE display.subject_type = 'WORK'
+                         AND display.subject_id = work.id
+                         AND display.field_name = 'title'
+                   ), work.provisional_title)) LIKE :pattern ESCAPE '\\'
                    OR EXISTS (
                        SELECT 1
                        FROM edition path_edition
@@ -465,7 +483,14 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                             jsonb_each_text(identifier_edition.identifiers) identifier
                        WHERE identifier_edition.work_id = work.id
                          AND (lower(identifier.key) LIKE :pattern ESCAPE '\\'
-                              OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                             OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                   )
+                   OR EXISTS (
+                       SELECT 1
+                       FROM work_tag assigned
+                       JOIN catalog_tag tag ON tag.id = assigned.tag_id
+                       WHERE assigned.work_id = work.id
+                         AND lower(tag.name) LIKE :pattern ESCAPE '\\'
                    ))
                 """)
                 .param("pattern", pattern)
@@ -479,8 +504,22 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     private List<WorkRow> findWorks(
             String pattern, List<String> formats, int page, int size, LibraryAccessContext.Access access) {
         return jdbc.sql("""
-                SELECT work.id, work.provisional_title AS title,
-                       work.resolution_state = 'PROVISIONAL' AS provisional
+                SELECT work.id,
+                       COALESCE((
+                           SELECT display.display_value
+                           FROM catalog_metadata_display display
+                           WHERE display.subject_type = 'WORK'
+                             AND display.subject_id = work.id
+                             AND display.field_name = 'title'
+                       ), work.provisional_title) AS title,
+                       NOT EXISTS (
+                           SELECT 1
+                           FROM catalog_metadata_display display
+                           WHERE display.subject_type = 'WORK'
+                             AND display.subject_id = work.id
+                             AND display.field_name = 'title'
+                             AND display.metadata_source IN ('CURATED', 'RESOLVED')
+                       ) AS provisional
                 FROM work
                 WHERE EXISTS (
                     SELECT 1
@@ -505,7 +544,13 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                           WHERE lineage.derived_asset_id = visible_asset.id
                       ))
                 )
-                AND (lower(work.provisional_title) LIKE :pattern ESCAPE '\\'
+                AND (lower(COALESCE((
+                       SELECT display.display_value
+                       FROM catalog_metadata_display display
+                       WHERE display.subject_type = 'WORK'
+                         AND display.subject_id = work.id
+                         AND display.field_name = 'title'
+                   ), work.provisional_title)) LIKE :pattern ESCAPE '\\'
                    OR EXISTS (
                        SELECT 1
                        FROM edition path_edition
@@ -537,7 +582,14 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                             jsonb_each_text(identifier_edition.identifiers) identifier
                        WHERE identifier_edition.work_id = work.id
                          AND (lower(identifier.key) LIKE :pattern ESCAPE '\\'
-                              OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                             OR lower(identifier.value) LIKE :pattern ESCAPE '\\')
+                   )
+                   OR EXISTS (
+                       SELECT 1
+                       FROM work_tag assigned
+                       JOIN catalog_tag tag ON tag.id = assigned.tag_id
+                       WHERE assigned.work_id = work.id
+                         AND lower(tag.name) LIKE :pattern ESCAPE '\\'
                    ))
                 ORDER BY title, work.id
                 LIMIT :size OFFSET :offset
@@ -552,24 +604,16 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .list();
     }
 
-    private Map<UUID, List<String>> findContributors(List<UUID> workIds, LibraryAccessContext.Access access) {
+    private Map<UUID, List<String>> findContributors(List<UUID> workIds) {
         var result = new LinkedHashMap<UUID, List<String>>();
         jdbc.sql("""
-                SELECT subject_id AS work_id, observed_value
-                FROM metadata_observation
-                WHERE subject_type = 'WORK'
-                  AND field_name = 'contributor'
-                  AND subject_id IN (:workIds)
-                  AND (:unrestricted OR NOT EXISTS (
-                      SELECT 1 FROM user_root_deny denied
-                      WHERE denied.user_id = :userId
-                        AND denied.library_root_id = metadata_observation.source_root_id
-                  ))
-                ORDER BY subject_id, observed_value
+                SELECT linked.work_id, contributor.display_name AS observed_value
+                FROM work_contributor linked
+                JOIN contributor ON contributor.id = linked.contributor_id
+                WHERE linked.work_id IN (:workIds)
+                ORDER BY linked.work_id, linked.role, linked.ordinal, contributor.display_name
                 """)
                 .param("workIds", workIds)
-                .param("unrestricted", access.unrestricted())
-                .param("userId", access.userId())
                 .query((row, rowNumber) ->
                         new ContributorRow(row.getObject("work_id", UUID.class), row.getString("observed_value")))
                 .list()

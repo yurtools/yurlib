@@ -200,6 +200,176 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkPage"
+  /api/v1/curation/works/{workId}:
+    get:
+      operationId: getWorkCuration
+      summary: Read authorized metadata evidence, tags, reviews, and audit history
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      responses:
+        "200":
+          description: Work curation view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/works/{workId}/title:
+    put:
+      operationId: updateCuratedWorkTitle
+      summary: Create a versioned curator title override
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MetadataUpdateRequest"
+      responses:
+        "200":
+          description: Updated work curation view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/works/{workId}/title/undo:
+    post:
+      operationId: undoCuratedWorkTitle
+      summary: Undo the active curator title override
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionedReasonRequest"
+      responses:
+        "200":
+          description: Updated work curation view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/works/{workId}/tags:
+    put:
+      operationId: replaceWorkTags
+      summary: Replace a work's curator-managed shared tags
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/WorkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagUpdateRequest"
+      responses:
+        "200":
+          description: Updated work curation view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/reviews:
+    get:
+      operationId: listMetadataReviews
+      summary: List the bounded authorization-filtered metadata review queue
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Open metadata review items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MetadataReviewItem"
+  /api/v1/curation/contributors/{contributorId}:
+    put:
+      operationId: updateCuratedContributor
+      summary: Correct a contributor display name and curated aliases
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - name: contributorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributorUpdateRequest"
+      responses:
+        "200":
+          description: Updated contributor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributorCuration"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/reviews/{reviewId}/dismiss:
+    post:
+      operationId: dismissMetadataReview
+      summary: Dismiss an open metadata review item with a reason
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+      responses:
+        "204":
+          description: Review dismissed
+        "404":
+          $ref: "#/components/responses/Problem"
   /api/v1/assets/{assetId}/content:
     get:
       operationId: downloadOriginalAsset
@@ -396,6 +566,13 @@ components:
         format: uuid
     UserId:
       name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    WorkId:
+      name: workId
       in: path
       required: true
       schema:
@@ -608,6 +785,238 @@ components:
         metadataState:
           type: string
           enum: [PENDING, READY, FAILED_SAFE]
+    WorkCuration:
+      type: object
+      additionalProperties: false
+      required: [id, version, title, contributors, tags, reviews, audit]
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        title:
+          $ref: "#/components/schemas/MetadataField"
+        contributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributorCuration"
+        tags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetadataReviewItem"
+        audit:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CatalogAuditEvent"
+    MetadataField:
+      type: object
+      additionalProperties: false
+      required: [value, source, overrideVersion, observedValues, history]
+      properties:
+        value:
+          type: [string, "null"]
+        source:
+          type: string
+          enum: [CURATED, RESOLVED, OBSERVED, PROVISIONAL]
+        overrideVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        observedValues:
+          type: array
+          items:
+            type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/OverrideHistory"
+    ContributorCuration:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, role, version, aliases]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [AUTHOR, EDITOR, TRANSLATOR, ILLUSTRATOR, OTHER]
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        aliases:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+    OverrideHistory:
+      type: object
+      additionalProperties: false
+      required: [id, value, valueState, actorId, reason, version, active, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        value:
+          type: [string, "null"]
+        valueState:
+          type: string
+          enum: [PRESENT, ABSENT]
+        actorId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    MetadataReviewItem:
+      type: object
+      additionalProperties: false
+      required: [id, subjectId, subjectType, fieldName, reasonCode, detail, ruleName, ruleVersion, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        subjectId:
+          type: string
+          format: uuid
+        subjectType:
+          type: string
+          enum: [WORK, EDITION, ASSET, CONTRIBUTOR]
+        fieldName:
+          type: string
+        reasonCode:
+          type: string
+          enum: [INVALID_VALUE, AMBIGUOUS_VALUE, CONFLICT]
+        detail:
+          type: string
+        ruleName:
+          type: string
+        ruleVersion:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CatalogAuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, eventType, actorId, reason, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        actorId:
+          type: [string, "null"]
+          format: uuid
+        reason:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+    MetadataUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [value, reason, expectedVersion]
+      properties:
+        value:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    VersionedReasonRequest:
+      type: object
+      additionalProperties: false
+      required: [reason, expectedVersion]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    TagUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [tags, reason, expectedVersion]
+      properties:
+        tags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    ReasonRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ContributorUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, aliases, reason, expectedVersion]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        aliases:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
     Capability:
       type: string
       enum: [MANAGE_INGESTION_SOURCES, CURATE_CATALOG]
