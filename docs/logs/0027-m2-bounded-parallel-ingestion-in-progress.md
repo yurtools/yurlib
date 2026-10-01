@@ -37,6 +37,7 @@
 - Corrected the PMD row-mapper finding and the SpotBugs constructor/finalizer warning without suppressing either rule.
 - Updated issue #56 to mark the five verified implementation criteria complete and left the SMB/NFS benchmark criterion open with a comment linking the local evidence and verification results.
 - Committed the implementation as `76a2f6a` (`feat(#56): add bounded parallel ingestion`).
+- Pushed `feat/56-bounded-parallel-ingestion` and opened draft pull request [#68](https://github.com/yurtools/yurlib/pull/68). The draft tracks #56 without closing it while SMB/NFS evidence remains pending.
 
 ## Verification
 
