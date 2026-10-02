@@ -111,8 +111,12 @@ public class JdbcCatalogRecovery implements CatalogRecovery {
                 .update();
         jdbc.sql("""
                 INSERT INTO catalog_redirect (
-                    id, subject_type, former_id, canonical_id, reason, actor_id
-                ) VALUES (:id, :subjectType, :sourceId, :survivorId, 'MERGE', :actorId)
+                    id, subject_type, former_id, canonical_id, reason, actor_id, version
+                )
+                SELECT :id, :subjectType, :sourceId, :survivorId, 'MERGE', :actorId,
+                       COALESCE(MAX(version), -1) + 1
+                FROM catalog_redirect
+                WHERE subject_type = :subjectType AND former_id = :sourceId
                 """)
                 .param("id", UUID.randomUUID())
                 .param("subjectType", subjectType.name())
@@ -653,7 +657,8 @@ public class JdbcCatalogRecovery implements CatalogRecovery {
                 ids("work_cover_preference", "source_asset_id", "work_id", type == SubjectType.WORK ? id : null),
                 readStateFingerprints(type, id),
                 collectionFingerprints(type, id),
-                coverPreferenceFingerprints(type, id));
+                coverPreferenceFingerprints(type, id),
+                curatedOverrideFingerprints(type, id));
     }
 
     private List<UUID> ids(String table, String selectedColumn, String filterColumn, UUID id) {
@@ -710,6 +715,22 @@ public class JdbcCatalogRecovery implements CatalogRecovery {
                 SELECT concat_ws('|', work_id, source_asset_id, actor_user_id, reason, version, updated_at)
                 FROM work_cover_preference WHERE work_id = :id
                 """).param("id", id).query(String.class).list();
+    }
+
+    private List<String> curatedOverrideFingerprints(SubjectType type, UUID id) {
+        return jdbc.sql("""
+                SELECT concat_ws(
+                    '|', id, field_name, value_state, curated_value,
+                    override_version, supersedes_override_id, undo_of_override_id, active
+                )
+                FROM metadata_curated_override
+                WHERE subject_type = :subjectType AND subject_id = :id
+                ORDER BY field_name, override_version, id
+                """)
+                .param("subjectType", type.name())
+                .param("id", id)
+                .query(String.class)
+                .list();
     }
 
     private boolean hasRecoveryConflict(MergeOperation operation) {
@@ -1109,7 +1130,8 @@ public class JdbcCatalogRecovery implements CatalogRecovery {
             List<UUID> coverPreferenceAssetIds,
             List<String> readStateFingerprints,
             List<String> collectionFingerprints,
-            List<String> coverPreferenceFingerprints) {}
+            List<String> coverPreferenceFingerprints,
+            List<String> curatedOverrideFingerprints) {}
 
     private record PairSnapshot(SubjectSnapshot survivor, SubjectSnapshot source) {}
 }

@@ -44,6 +44,9 @@
 - Manual desktop/mobile acceptance on commit `667c53a` found six workflow defects: unreliable keyboard activation, incomplete identifier validation, missing not-the-same confirmation, an undo reason hidden with the cleared merge preview, generic unsafe-undo feedback, and history loaded only after a new preview.
 - Reworked the preview control as a keyboard-safe submit flow, added client-side Work UUID validation, explicit success status, an independent undo reason, visible guided-split instructions, and recovery-history loading whenever a Work is opened.
 - Added Angular regression coverage for keyboard preview and disclosure activation, empty/malformed identifiers, not-the-same confirmation, persisted history, undo eligibility without a reason, and unsafe-undo guidance.
+- The second manual retest passed five remediated interaction paths but reproduced one backend defect: merge, undo, re-merge, and a later curated-title edit was incorrectly considered safe, while a subsequent undo collided with a retired redirect version.
+- Added curated-override fingerprints to recovery snapshots so later title corrections require a guided split, and allocated monotonically increasing redirect versions across repeated merge/undo cycles.
+- Added a PostgreSQL regression covering two clean merge/undo cycles followed by re-merge, later title curation, unsafe split preview, and a stable `SPLIT_CONFLICT` result without a duplicate-key failure.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference without staging or modifying it.
 
 ## Verification
@@ -59,6 +62,8 @@
 - Post-acceptance remediation: `npm --prefix web/yurlib-web test -- --watch=false` — passed; 18 tests, including the six failed interaction paths.
 - Post-acceptance remediation: `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
 - Post-acceptance remediation: `./mvnw spotless:check -DskipTests` — passed for repository documents, frontend files, Java, and Maven POMs.
+- Second-retest remediation: `./mvnw -pl services/yurlib-server -Dtest=CatalogRecoveryIntegrationTest test` — passed; 6 PostgreSQL integration tests, including repeated redirect recovery and later curated-title conflict detection.
+- Second-retest remediation: `./mvnw verify` — passed; 160 server tests with 0 failures, 0 errors, and 1 skipped, plus 7 worker tests with no failures. Formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs checks are clean.
 - `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
 - `docker compose config` — passed.
 - `git diff --check` — passed.

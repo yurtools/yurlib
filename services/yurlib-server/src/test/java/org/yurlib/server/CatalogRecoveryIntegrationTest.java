@@ -154,6 +154,50 @@ class CatalogRecoveryIntegrationTest {
     }
 
     @Test
+    void supportsRepeatedRecoveryAndRequiresGuidedSplitAfterALaterCuratedTitle() {
+        var fixture = seedFixture();
+
+        var firstMerge = mergeWork(fixture, "First duplicate decision");
+        assertThat(recovery.undo(firstMerge.id(), "Restore for another review", fixture.actor())
+                        .status())
+                .isEqualTo("UNDONE");
+
+        var secondMerge = mergeWork(fixture, "Second duplicate decision");
+        assertThat(recovery.undo(secondMerge.id(), "Restore again", fixture.actor())
+                        .status())
+                .isEqualTo("UNDONE");
+
+        var thirdMerge = mergeWork(fixture, "Third duplicate decision");
+        jdbc.sql("""
+                INSERT INTO metadata_curated_override (
+                    id, subject_id, subject_type, field_name, value_state, curated_value,
+                    actor_id, reason, override_version, active
+                ) VALUES (
+                    :id, :workId, 'WORK', 'title', 'PRESENT', 'Later curated title',
+                    :actorId, 'Verified after merge', 1, TRUE
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("workId", fixture.survivorWork())
+                .param("actorId", fixture.actor())
+                .update();
+
+        var splitPreview = recovery.splitPreview(thirdMerge.id());
+        assertThat(splitPreview.automaticUndoAllowed()).isFalse();
+        assertThat(splitPreview.conflicts())
+                .containsExactly("The merged catalog state changed after this operation; use a guided split.");
+        assertThatThrownBy(() -> recovery.undo(thirdMerge.id(), "Unsafe undo", fixture.actor()))
+                .isInstanceOf(CatalogRecoveryFailure.class)
+                .extracting(failure -> ((CatalogRecoveryFailure) failure).code())
+                .isEqualTo(CatalogRecoveryFailure.Code.SPLIT_CONFLICT);
+        assertThat(count(
+                        "SELECT count(*) FROM catalog_redirect WHERE former_id = :id AND active", fixture.sourceWork()))
+                .isEqualTo(1);
+        assertThat(count("SELECT max(version) FROM catalog_redirect WHERE former_id = :id", fixture.sourceWork()))
+                .isEqualTo(4);
+    }
+
+    @Test
     void rollsBackEveryMoveWhenRecoveryFailsMidTransaction() {
         var fixture = seedFixture();
         doThrow(new IllegalStateException("injected failure"))
@@ -324,6 +368,19 @@ class CatalogRecoveryIntegrationTest {
                 .param("rootId", root)
                 .update();
         return new Fixture(actor, reader, root, survivorWork, survivorEdition, sourceWork, sourceEdition, sourceAsset);
+    }
+
+    private CatalogRecovery.MergeOperation mergeWork(Fixture fixture, String reason) {
+        var preview = recovery.preview(CatalogRecovery.SubjectType.WORK, fixture.survivorWork(), fixture.sourceWork());
+        return recovery.merge(
+                CatalogRecovery.SubjectType.WORK,
+                fixture.survivorWork(),
+                fixture.sourceWork(),
+                preview.survivor().version(),
+                preview.source().version(),
+                UUID.randomUUID(),
+                reason,
+                fixture.actor());
     }
 
     private void seedWork(UUID root, UUID work, UUID edition, UUID asset, String title, String path) {
