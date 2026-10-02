@@ -660,6 +660,8 @@ Application services may run directly from the IDE/build tool or in containers.
 
 Library storage is deployment-owned. Each allowed source is configured as a lowercase mount alias plus a canonical host path; API clients submit only the alias and a normalized relative path. The supported Compose deployment binds the source at `/library/<alias>` read-only and publishes server and database ports on the host loopback interface by default. A `.yurlib-root-id` marker is verified without modification, and only its SHA-256 digest is persisted. PostgreSQL 18 data is mounted at `/var/lib/postgresql` so its version-specific data directory remains upgrade-compatible.
 
+The optional document-worker Compose profile handles native rendering and the approved FB2 → EPUB and MOBI → EPUB routes. Configure one private `YURLIB_WORKER_TOKEN` for the server and worker, then start `docker compose --profile worker up --build`. The worker is non-root, read-only, quota-bound, and attached only to the internal worker network. It receives server-staged inputs and has no database credentials or library mounts. A `MANAGED_OUTPUT` root must be selected with `defaultForConversions: true`; the server alone validates and publishes derived EPUB assets.
+
 Kubernetes is optional future functionality.
 
 If Kubernetes is adopted:

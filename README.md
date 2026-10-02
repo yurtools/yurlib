@@ -6,9 +6,9 @@ It is designed for people who already have books stored on local disks or NAS de
 
 Yurlib is also being developed as an **AI-native software engineering project**: architecture, requirements, implementation, testing, review, and delivery are designed to work well with modern coding agents while keeping important technical decisions under human control.
 
-> **Project status:** M1 — Local Library is complete. M2 implementation is in progress, including secure PDF, DOCX, and DjVu catalog support.
+> **Project status:** M1 — Local Library is complete. M2 implementation is in progress.
 
-M2 also targets secure PDF, DOCX, and DjVu discovery, bounded metadata extraction, cataloging, search, and original downloads. Full-text indexing, editing, active-content execution, and conversion routes require separate approved design.
+M2 includes secure PDF, DOCX, and DjVu catalog support and the approved isolated FB2 → EPUB and MOBI → EPUB conversion routes. Full-text indexing, editing, active-content execution, and other conversion routes remain out of scope.
 
 ---
 
@@ -207,17 +207,16 @@ The AI layer is intended to support multiple providers, including cloud and loca
 
 ## Format Conversion
 
-Yurlib will support asynchronous ebook conversion.
+Yurlib supports bounded asynchronous conversion through explicitly versioned routes.
 
 Examples:
 
 ```text
 FB2 → EPUB
-EPUB → MOBI
 MOBI → EPUB
 ```
 
-Conversion engines are isolated behind an adapter so that the catalog domain is not tied to a specific converter.
+These are the only approved routes. Conversion engines are isolated behind an adapter so that the catalog domain is not tied to a specific converter.
 
 Converted files are stored as new assets and do not silently replace originals.
 
@@ -369,7 +368,7 @@ unset YURLIB_OWNER_RECOVERY_PASSWORD
 
 Recovery increments the owner's authorization version, invalidates existing sessions, records an audit event, and does not log the password.
 
-The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. Configure the `managed` alias as a `MANAGED_OUTPUT` root and select it as the default cover output; source roots remain read-only. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_LIBRARY_MANAGED_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the source at `/library/main` read-only and the managed output at `/library/managed` writable, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
+The marker token must be at least 16 characters and is supplied once when the root is configured through the API. Yurlib stores only its SHA-256 digest. Configure the `managed` alias as a `MANAGED_OUTPUT` root and select it as the default cover and conversion output; source roots remain read-only. For the container deployment, set `YURLIB_LIBRARY_MAIN_PATH`, `YURLIB_LIBRARY_MANAGED_PATH`, `YURLIB_OWNER_PASSWORD`, and the TLS/reverse-proxy configuration. Compose mounts the source at `/library/main` read-only and the managed output at `/library/managed` writable, and publishes the server and database on `127.0.0.1` by default. Set `YURLIB_SERVER_HOST` or `YURLIB_DB_HOST` only when deliberate remote exposure is required; non-loopback server exposure also requires TLS and secure session cookies. No owner password or marker token belongs in Git.
 
 The backend health endpoint is `http://localhost:8080/actuator/health`; the frontend is served at `http://localhost:4200`.
 
@@ -380,7 +379,7 @@ export YURLIB_WORKER_TOKEN="$(openssl rand -hex 32)"
 docker compose --profile worker up --build
 ```
 
-The worker receives only server-staged read-only inputs. It has no source-library mount, managed-output mount, database credentials, or egress-capable network. It extracts declared ebook covers and DOCX thumbnails, renders bounded PDF/DjVu first pages, and returns an unpublished normalized image for independent server validation and atomic publication.
+The worker receives only server-staged read-only inputs. It has no source-library mount, managed-output mount, database credentials, or egress-capable network. It extracts declared ebook covers and DOCX thumbnails, renders bounded PDF/DjVu first pages, and runs only the pinned FB2 → EPUB and MOBI → EPUB contracts. The server independently validates and atomically publishes worker output. Calibre packaging, checksums, licensing, route settings, and resource limits are recorded in `docs/architecture/m2-conversion-dependency-review.md`.
 
 ## Repository Structure
 

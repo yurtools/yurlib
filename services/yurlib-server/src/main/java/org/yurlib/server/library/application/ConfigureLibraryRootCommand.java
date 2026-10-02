@@ -8,14 +8,15 @@ public record ConfigureLibraryRootCommand(
         String relativePath,
         String identityToken,
         LibraryRoot.Mode mode,
-        boolean defaultForCovers) {
+        boolean defaultForCovers,
+        boolean defaultForConversions) {
 
     public ConfigureLibraryRootCommand(
             String name, String mountAlias, String relativePath, String identityToken, LibraryRoot.Mode mode) {
-        this(name, mountAlias, relativePath, identityToken, mode, false);
+        this(name, mountAlias, relativePath, identityToken, mode, false, false);
     }
 
     public ConfigureLibraryRootCommand(String name, String mountAlias, String relativePath, String identityToken) {
-        this(name, mountAlias, relativePath, identityToken, LibraryRoot.Mode.READ_ONLY_SOURCE, false);
+        this(name, mountAlias, relativePath, identityToken, LibraryRoot.Mode.READ_ONLY_SOURCE, false, false);
     }
 }

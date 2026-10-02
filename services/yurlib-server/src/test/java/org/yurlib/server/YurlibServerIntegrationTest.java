@@ -71,7 +71,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("11");
+        assertThat(value).isEqualTo("12");
     }
 
     @Test
@@ -115,7 +115,8 @@ class YurlibServerIntegrationTest {
                         "catalog_tag",
                         "work_tag",
                         "ingestion_task",
-                        "ingestion_root_schedule");
+                        "ingestion_root_schedule",
+                        "conversion_job");
     }
 
     @Test

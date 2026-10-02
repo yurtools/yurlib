@@ -444,13 +444,21 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                             AND denied.library_root_id = visible_location.library_root_id
                       ))
                       AND (visible_asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                          WITH RECURSIVE source_lineage(asset_id) AS (
+                              SELECT source_asset_id
+                              FROM asset_derivation_source
+                              WHERE derived_asset_id = visible_asset.id
+                              UNION
+                              SELECT source.source_asset_id
+                              FROM asset_derivation_source source
+                              JOIN source_lineage ON source.derived_asset_id = source_lineage.asset_id
+                          )
                           SELECT 1
-                          FROM asset_derivation_source lineage
-                          JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                          FROM source_lineage lineage
+                          JOIN asset_location source_location ON source_location.asset_id = lineage.asset_id
                           JOIN user_root_deny denied_source
                             ON denied_source.library_root_id = source_location.library_root_id
                            AND denied_source.user_id = :userId
-                          WHERE lineage.derived_asset_id = visible_asset.id
                       ))
                 )
                 AND (lower(COALESCE((
@@ -544,13 +552,21 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                             AND denied.library_root_id = visible_location.library_root_id
                       ))
                       AND (visible_asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                          WITH RECURSIVE source_lineage(asset_id) AS (
+                              SELECT source_asset_id
+                              FROM asset_derivation_source
+                              WHERE derived_asset_id = visible_asset.id
+                              UNION
+                              SELECT source.source_asset_id
+                              FROM asset_derivation_source source
+                              JOIN source_lineage ON source.derived_asset_id = source_lineage.asset_id
+                          )
                           SELECT 1
-                          FROM asset_derivation_source lineage
-                          JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                          FROM source_lineage lineage
+                          JOIN asset_location source_location ON source_location.asset_id = lineage.asset_id
                           JOIN user_root_deny denied_source
                             ON denied_source.library_root_id = source_location.library_root_id
                            AND denied_source.user_id = :userId
-                          WHERE lineage.derived_asset_id = visible_asset.id
                       ))
                 )
                 AND (lower(COALESCE((
@@ -649,13 +665,21 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                         AND denied.library_root_id = location.library_root_id
                   ))
                   AND (asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                      WITH RECURSIVE source_lineage(asset_id) AS (
+                          SELECT source_asset_id
+                          FROM asset_derivation_source
+                          WHERE derived_asset_id = asset.id
+                          UNION
+                          SELECT source.source_asset_id
+                          FROM asset_derivation_source source
+                          JOIN source_lineage ON source.derived_asset_id = source_lineage.asset_id
+                      )
                       SELECT 1
-                      FROM asset_derivation_source lineage
-                      JOIN asset_location source_location ON source_location.asset_id = lineage.source_asset_id
+                      FROM source_lineage lineage
+                      JOIN asset_location source_location ON source_location.asset_id = lineage.asset_id
                       JOIN user_root_deny denied_source
                         ON denied_source.library_root_id = source_location.library_root_id
                        AND denied_source.user_id = :userId
-                      WHERE lineage.derived_asset_id = asset.id
                   ))
                 GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
                          asset.metadata_state

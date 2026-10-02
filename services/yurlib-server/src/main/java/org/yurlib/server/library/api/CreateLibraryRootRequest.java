@@ -17,4 +17,7 @@ public record CreateLibraryRootRequest(
         @NotNull LibraryRoot.Mode mode,
 
         @JsonProperty(required = false, defaultValue = "false")
-        Boolean defaultForCovers) {}
+        Boolean defaultForCovers,
+
+        @JsonProperty(required = false, defaultValue = "false")
+        Boolean defaultForConversions) {}

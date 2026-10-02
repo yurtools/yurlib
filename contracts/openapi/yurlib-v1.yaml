@@ -575,7 +575,7 @@ paths:
   /api/v1/assets/{assetId}/content:
     get:
       operationId: downloadOriginalAsset
-      summary: Stream an available original asset
+      summary: Stream an available authorized original or derived asset
       parameters:
         - name: assetId
           in: path
@@ -598,6 +598,90 @@ paths:
             application/vnd.openxmlformats-officedocument.wordprocessingml.document: {}
             image/vnd.djvu: {}
             application/octet-stream: {}
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/assets/{assetId}/conversions:
+    post:
+      operationId: requestAssetConversion
+      summary: Queue or return the idempotent supported conversion for an authorized source asset
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversionRequest"
+      responses:
+        "202":
+          description: Durable conversion job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionJob"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/conversions/{jobId}:
+    get:
+      operationId: getConversionJob
+      summary: Read an authorized conversion job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current conversion job state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionJob"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/conversions/{jobId}/cancel:
+    post:
+      operationId: cancelConversionJob
+      summary: Cooperatively cancel a queued or running conversion
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelConversionRequest"
+      responses:
+        "200":
+          description: Current conversion job state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionJob"
         "404":
           $ref: "#/components/responses/Problem"
         "409":
@@ -1108,6 +1192,9 @@ components:
         defaultForCovers:
           type: boolean
           default: false
+        defaultForConversions:
+          type: boolean
+          default: false
     LibraryRoot:
       type: object
       required: [id, name, mountAlias, relativePath, mode, availability, defaultForCovers]
@@ -1131,6 +1218,77 @@ components:
           format: date-time
         defaultForCovers:
           type: boolean
+        defaultForConversions:
+          type: boolean
+    ConversionRequest:
+      type: object
+      additionalProperties: false
+      required: [route]
+      properties:
+        route:
+          $ref: "#/components/schemas/ConversionRoute"
+    CancelConversionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    ConversionRoute:
+      type: string
+      enum: [FB2_TO_EPUB_V1, MOBI_TO_EPUB_V1]
+    ConversionJob:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - sourceAssetId
+        - route
+        - state
+        - attemptCount
+        - cancellationRequested
+        - createdAt
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceAssetId:
+          type: string
+          format: uuid
+        derivedAssetId:
+          type: [string, "null"]
+          format: uuid
+        route:
+          $ref: "#/components/schemas/ConversionRoute"
+        state:
+          type: string
+          enum: [QUEUED, RUNNING, SUCCEEDED, FAILED_SAFE, CANCELLED]
+        attemptCount:
+          type: integer
+          minimum: 0
+          maximum: 3
+        cancellationRequested:
+          type: boolean
+        errorCode:
+          type: [string, "null"]
+        safeDiagnostic:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: [string, "null"]
+          format: date-time
+        completedAt:
+          type: [string, "null"]
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 0
     RootAvailability:
       type: string
       enum: [UNKNOWN, AVAILABLE, UNAVAILABLE, IDENTITY_MISMATCH]

@@ -61,6 +61,21 @@ final class WorkerClient implements AutoCloseable {
         }
     }
 
+    Optional<ConversionClaim> claimConversion() throws IOException, InterruptedException {
+        var request = authorized(HttpRequest.newBuilder(resolve("internal/v1/conversions/jobs/claim")))
+                .timeout(REQUEST_TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        try (var body = response.body()) {
+            if (response.statusCode() == 204) {
+                return Optional.empty();
+            }
+            requireStatus(response.statusCode(), 200);
+            return Optional.of(WorkerJson.MAPPER.readValue(body, ConversionClaim.class));
+        }
+    }
+
     void download(WorkerClaim claim, Path target) throws IOException, InterruptedException {
         download(
                 "internal/v1/pdf-metadata/jobs/" + claim.id() + "/input",
@@ -77,6 +92,45 @@ final class WorkerClient implements AutoCloseable {
                 claim.byteSize(),
                 claim.sha256(),
                 target);
+    }
+
+    void download(ConversionClaim claim, Path target) throws IOException, InterruptedException {
+        download(
+                "internal/v1/conversions/jobs/" + claim.id() + "/input",
+                claim.leaseToken().toString(),
+                claim.byteSize(),
+                claim.sha256(),
+                target);
+    }
+
+    boolean heartbeat(ConversionClaim claim) throws IOException, InterruptedException {
+        var request = authorized(
+                        HttpRequest.newBuilder(resolve("internal/v1/conversions/jobs/" + claim.id() + "/heartbeat")))
+                .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
+                .timeout(REQUEST_TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        requireStatus(response.statusCode(), 200);
+        try (var body = response.body()) {
+            return WorkerJson.MAPPER
+                    .readTree(body)
+                    .path("cancellationRequested")
+                    .asBoolean();
+        }
+    }
+
+    void upload(ConversionClaim claim, Path output, String sha256) throws IOException, InterruptedException {
+        var request = authorized(
+                        HttpRequest.newBuilder(resolve("internal/v1/conversions/jobs/" + claim.id() + "/output")))
+                .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
+                .header("X-Yurlib-Content-SHA256", sha256)
+                .header("Content-Type", "application/epub+zip")
+                .timeout(Duration.ofMinutes(10))
+                .PUT(HttpRequest.BodyPublishers.ofFile(output))
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.discarding());
+        requireStatus(response.statusCode(), 204);
     }
 
     private void download(String path, String leaseToken, long expectedSize, String expectedHash, Path target)
@@ -126,6 +180,18 @@ final class WorkerClient implements AutoCloseable {
 
     void complete(CoverClaim claim, CoverResult result) throws IOException, InterruptedException {
         var request = authorized(HttpRequest.newBuilder(resolve("internal/v1/covers/jobs/" + claim.id() + "/result")))
+                .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
+                .header("Content-Type", "application/json")
+                .timeout(REQUEST_TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(WorkerJson.MAPPER.writeValueAsBytes(result)))
+                .build();
+        var response = http.send(request, HttpResponse.BodyHandlers.discarding());
+        requireStatus(response.statusCode(), 204);
+    }
+
+    void complete(ConversionClaim claim, ConversionResult result) throws IOException, InterruptedException {
+        var request = authorized(
+                        HttpRequest.newBuilder(resolve("internal/v1/conversions/jobs/" + claim.id() + "/result")))
                 .header("X-Yurlib-Lease-Token", claim.leaseToken().toString())
                 .header("Content-Type", "application/json")
                 .timeout(REQUEST_TIMEOUT)

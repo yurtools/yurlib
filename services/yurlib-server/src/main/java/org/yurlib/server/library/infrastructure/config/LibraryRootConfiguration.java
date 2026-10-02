@@ -45,7 +45,12 @@ import org.yurlib.server.library.infrastructure.filesystem.MountAliasRegistry;
 import org.yurlib.server.library.infrastructure.metadata.BoundedMetadataExtractor;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({LibraryStorageProperties.class, PdfWorkerProperties.class, CoverWorkerProperties.class})
+@EnableConfigurationProperties({
+    LibraryStorageProperties.class,
+    PdfWorkerProperties.class,
+    CoverWorkerProperties.class,
+    ConversionWorkerProperties.class
+})
 @EnableScheduling
 public class LibraryRootConfiguration {
 

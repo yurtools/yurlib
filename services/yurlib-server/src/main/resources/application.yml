@@ -41,6 +41,9 @@ yurlib:
   cover-worker:
     staging-directory: ${YURLIB_COVER_STAGING_DIRECTORY:.local/staging/covers}
     lease-duration: 2m
+  conversion-worker:
+    staging-directory: ${YURLIB_CONVERSION_STAGING_DIRECTORY:.local/staging/conversions}
+    lease-duration: 2m
   security:
     owner:
       username: ${YURLIB_OWNER_USERNAME:owner}
