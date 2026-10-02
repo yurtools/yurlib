@@ -41,6 +41,9 @@
 - Extended the OpenAPI contract and added a restrained duplicate-proofing desk to the existing curation workspace. The UI keeps the selected Work as survivor, requires an impact preview and reason, displays association counts and conflicts, records not-the-same decisions, and checks automatic-undo safety before recovery.
 - Corrected PMD findings in recovery query helpers and removed an unnecessary SpotBugs suppression; the final static-analysis run is clean.
 - Committed the implementation as `8602131` and opened pull request #74 with `Closes #59`.
+- Manual desktop/mobile acceptance on commit `667c53a` found six workflow defects: unreliable keyboard activation, incomplete identifier validation, missing not-the-same confirmation, an undo reason hidden with the cleared merge preview, generic unsafe-undo feedback, and history loaded only after a new preview.
+- Reworked the preview control as a keyboard-safe submit flow, added client-side Work UUID validation, explicit success status, an independent undo reason, visible guided-split instructions, and recovery-history loading whenever a Work is opened.
+- Added Angular regression coverage for keyboard preview and disclosure activation, empty/malformed identifiers, not-the-same confirmation, persisted history, undo eligibility without a reason, and unsafe-undo guidance.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference without staging or modifying it.
 
 ## Verification
@@ -53,13 +56,16 @@
 - `./mvnw -pl services/yurlib-server -Dtest=CatalogRecoveryIntegrationTest,CatalogRecoveryControllerTest,OpenApiContractTest test` — passed against the final code; 8 tests, 0 failures, 0 errors, and 0 skipped.
 - `npm --prefix web/yurlib-web ci` — passed; 267 packages installed, 0 vulnerabilities. npm reported the repository's existing blocked optional install scripts.
 - `npm --prefix web/yurlib-web test -- --watch=false` — passed; 16 tests, including duplicate-impact preview interaction.
+- Post-acceptance remediation: `npm --prefix web/yurlib-web test -- --watch=false` — passed; 18 tests, including the six failed interaction paths.
+- Post-acceptance remediation: `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
+- Post-acceptance remediation: `./mvnw spotless:check -DskipTests` — passed for repository documents, frontend files, Java, and Maven POMs.
 - `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
 - `docker compose config` — passed.
 - `git diff --check` — passed.
 
 ## Remaining acceptance
 
-- Manual desktop and mobile visual acceptance of the recovery workspace remains for pull-request review.
+- Repeat manual desktop and mobile visual acceptance after the PR #74 remediation is pushed.
 
 ## Blockers
 

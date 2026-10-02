@@ -648,24 +648,47 @@
                   The selected Work remains the stable survivor. No merge runs without a preview.
                 </p>
               </div>
-              <div class="recovery-inputs">
+              <form class="recovery-inputs" (submit)="$event.preventDefault(); previewWorkMerge()">
                 <label>
                   <span>Source Work ID</span>
                   <input
+                    id="recovery-source-id"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-describedby="recovery-source-help"
                     [value]="recoverySourceId()"
                     placeholder="UUID of the duplicate Work"
                     (input)="recoverySourceId.set($any($event.target).value)"
                   />
+                  <small id="recovery-source-help">Enter the complete UUID of another Work.</small>
                 </label>
                 <button
-                  type="button"
+                  type="submit"
                   class="secondary-button"
                   [disabled]="runningRecovery()"
-                  (click)="previewWorkMerge()"
+                  (keydown)="previewWorkMergeFromKeyboard($event)"
                 >
                   Preview impact
                 </button>
-              </div>
+              </form>
+
+              @if (recoveryNotice()) {
+                <p class="notice notice-success recovery-notice" role="status" aria-live="polite">
+                  {{ recoveryNotice() }}
+                </p>
+              }
+
+              @if (recoveryGuidance().length > 0) {
+                <aside class="recovery-guidance" aria-live="polite">
+                  <strong>Guided split required</strong>
+                  <ul>
+                    @for (guidance of recoveryGuidance(); track guidance) {
+                      <li>{{ guidance }}</li>
+                    }
+                  </ul>
+                </aside>
+              }
 
               @if (recoveryPreview(); as preview) {
                 <div class="recovery-preview" aria-live="polite">
@@ -722,6 +745,7 @@
                       type="button"
                       [disabled]="runningRecovery() || !preview.mergeAllowed"
                       (click)="mergePreviewedWork()"
+                      (keydown)="previewDecisionFromKeyboard($event, 'MERGE')"
                     >
                       Merge into survivor
                     </button>
@@ -730,6 +754,7 @@
                       class="secondary-button"
                       [disabled]="runningRecovery()"
                       (click)="markPreviewNotSame()"
+                      (keydown)="previewDecisionFromKeyboard($event, 'NOT_SAME')"
                     >
                       Mark as not the same
                     </button>
@@ -740,6 +765,21 @@
               @if (recoveryHistory().length > 0) {
                 <div class="recovery-history">
                   <h5>Merge history</h5>
+                  @if (hasAppliedRecovery()) {
+                    <label class="recovery-undo-reason">
+                      <span>Undo reason</span>
+                      <textarea
+                        rows="2"
+                        maxlength="1000"
+                        [value]="recoveryUndoReason()"
+                        (input)="recoveryUndoReason.set($any($event.target).value)"
+                      ></textarea>
+                      <small>
+                        Check eligibility without a reason, or enter a reason before confirming an
+                        available automatic undo.
+                      </small>
+                    </label>
+                  }
                   <ol class="audit-list">
                     @for (operation of recoveryHistory(); track operation.id) {
                       <li>
@@ -754,6 +794,7 @@
                             class="secondary-button"
                             [disabled]="runningRecovery()"
                             (click)="undoMerge(operation)"
+                            (keydown)="undoMergeFromKeyboard($event, operation)"
                           >
                             Check and undo
                           </button>
@@ -765,8 +806,10 @@
               }
             </section>
 
-            <details>
-              <summary>Evidence and correction history</summary>
+            <details #evidenceHistory>
+              <summary (keydown)="toggleEvidenceHistory($event, evidenceHistory)">
+                Evidence and correction history
+              </summary>
               <h4>Observed titles</h4>
               <ul>
                 @for (value of detail.title.observedValues; track value) {

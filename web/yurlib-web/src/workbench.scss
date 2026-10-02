@@ -746,7 +746,8 @@ app-root {
     padding-top: 1rem;
   }
   .recovery-inputs label,
-  .recovery-preview label {
+  .recovery-preview label,
+  .recovery-undo-reason {
     display: grid;
     flex: 1;
     gap: 0.4rem;
@@ -801,10 +802,30 @@ app-root {
     color: var(--danger);
     margin: 0;
   }
+  .recovery-notice {
+    margin-block: 1rem 0;
+  }
+  .recovery-guidance {
+    background: rgb(143 51 43 / 7%);
+    border-left: 3px solid var(--danger);
+    color: var(--danger);
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+  }
+  .recovery-guidance ul {
+    margin-bottom: 0;
+  }
   .recovery-history {
     border-top: 1px solid var(--line);
     margin-top: 1.25rem;
     padding-top: 1rem;
+  }
+  .recovery-undo-reason {
+    margin-block: 0.75rem 1rem;
+  }
+  .recovery-undo-reason small,
+  .recovery-inputs small {
+    color: var(--muted);
   }
   .recovery-history li div {
     display: grid;
@@ -856,6 +877,10 @@ app-root {
   .notice-error {
     background: rgb(143 51 43 / 7%);
     color: var(--danger);
+  }
+  .notice-success {
+    background: rgb(45 106 79 / 8%);
+    color: var(--accent);
   }
   footer {
     border-top: 1px solid var(--line);
