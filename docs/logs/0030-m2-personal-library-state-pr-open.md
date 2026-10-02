@@ -44,6 +44,20 @@
 - Fixed PostgreSQL timestamp writes to use explicit JDBC timestamps after the first integration test exposed ambiguous `Instant` binding.
 - Added complete invalid-request Problem Details handling for the new API and documented the Spring-owned application-port lifetime for SpotBugs after the first static-analysis run reported `EI_EXPOSE_REP2`.
 - Committed the implementation as `1884237`, pushed the feature branch, and opened pull request #73 with `Closes #58` and an explicit manual desktop/mobile acceptance checklist.
+- During manual acceptance, the documented owner-recovery command exposed two issue-#58 defects: its non-web context still created the internal servlet security chain, and its default recovery-mode property was overridden by `application.yml`. Scoped the worker chain to servlet web applications, forced recovery arguments at command-line precedence, and added focused regression tests. The repaired command completed without exposing the temporary credential.
+- The sign-out/sign-in persistence check exposed a stale-CSRF defect: sign-out rendered the login form without fetching the replacement anonymous session and CSRF cookie, so an immediate login was denied until reload. The Angular shell now reloads anonymous session state after logout, with regression coverage; immediate keyboard sign-in then passed without a reload.
+
+## Manual visual acceptance
+
+- Environment: retained PostgreSQL catalog and volume, backend on `127.0.0.1:18080`, PostgreSQL on `127.0.0.1:55432`, and Angular on `http://localhost:4200/` through a temporary `.local/proxy.visual.json`. No scan was started and no catalog/source data was removed.
+- Desktop `1440×900`: passed. The initial access/loading shell and authenticated header rendered with owner identity; the full workspace had no clipping, overlap, off-screen controls, or horizontal overflow. `document.documentElement.scrollWidth === document.documentElement.clientWidth` returned `true`.
+- Mobile `390×844`: passed. The responsive header, workspace, catalog actions, collection editor, and footer remained readable and operable without clipping, overlap, or horizontal overflow. `document.documentElement.scrollWidth === document.documentElement.clientWidth` returned `true`.
+- Favorite/read state: at both viewports, favorited and unfavorited a canonical contributor; marked a Work read, refreshed and observed persisted read state, then returned it to unread.
+- Collections: at both viewports, submitted a whitespace-only name and received the expected `INVALID_REQUEST`; created the unordered private collection `Избранное`; added two different Works and observed `2 visible works`; refreshed and retained both memberships; renamed it to `Осеннее чтение`; enabled ordered mode, saved, refreshed, and retained both the ordered flag and stable Work order; removed one Work and observed `1 visible work`; then deleted the collection and confirmed the editor and membership controls disappeared without stale UI.
+- Optimistic concurrency: opened the same collection in two built-in-browser tabs, renamed it in tab A, and submitted a stale rename from tab B without refreshing. Tab B displayed `The personal library state changed. Reload it and try again. (PERSONAL_VERSION_CONFLICT)`, and a reload confirmed tab A's name remained authoritative.
+- Authentication and keyboard: visible `2.4px` focus outlines were present on focused controls. Enter activated sign-in, Space activated the explicit keyboard sign-in control, and immediate sign-out/sign-in hid private workspace data while signed out and restored the persisted favorite after authentication.
+- Diagnostics: the console contained only the permitted Electron development CSP warning. Network inspection recorded the expected empty-name `400`; the conflict UI returned its expected version-conflict response in the second tab. One deliberate malformed-credential keyboard attempt returned `401`; after correcting the input and after the CSRF fix, authentication and all Yurlib requests completed without unexpected errors.
+- Final personal state: zero favorites, zero read Works, and no private collections. Angular and Compose services were stopped; `.local/proxy.visual.json` and the temporary credential were removed; the named PostgreSQL volume remains; no volumes were deleted.
 
 ## Verification
 
@@ -57,7 +71,13 @@
 - Full Maven verification completed all 150 server tests with one benchmark skipped; its first static-analysis pass then reported one SpotBugs dependency-lifetime warning in the new controller. The constructor now carries the same scoped suppression and justification used by existing Spring controllers.
 - `./mvnw -pl services/yurlib-server -Dtest=PersonalLibraryControllerTest,PersonalLibraryIntegrationTest test` — passed after the final controller change; five tests.
 - `./mvnw verify -DskipTests` — passed after the final controller change; formatting, additive API compatibility, compilation, packaging, coverage checks from the completed test run, PMD, and SpotBugs are clean for both Java modules.
+- `./mvnw -pl services/yurlib-server -Dtest=InternalWorkerSecurityConfigurationTest,OwnerRecoveryCommandTest test` — passed; two focused tests cover the non-web recovery context and forced recovery arguments.
+- Re-ran the documented owner-recovery command against the retained local database after the fix — passed.
+- `npm --prefix web/yurlib-web test -- --watch=false` — passed after the sign-out session-refresh fix; 15 tests.
+- `npm --prefix web/yurlib-web run build` — passed after the final frontend change.
+- `./mvnw -pl services/yurlib-server -DskipTests verify` — passed after the recovery fix; compilation, packaging, PMD, and SpotBugs are clean with zero findings.
+- Final `git diff --check` — passed.
 
 ## Blockers
 
-- Automated verification is complete. Manual desktop/mobile acceptance remains on pull request #73.
+- None. Automated verification and the pull request's desktop/mobile manual acceptance are complete.

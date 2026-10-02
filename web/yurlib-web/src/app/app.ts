@@ -210,16 +210,11 @@ export class App {
     this.accessError.set('');
     try {
       await firstValueFrom(this.api.logout());
+      const session = await firstValueFrom(this.api.session());
       this.clearWorkspace();
       this.loginModel.update((model) => ({ ...model, password: '' }));
       this.loginForm().reset();
-      this.session.set({
-        mode: 'OWNER',
-        authenticated: false,
-        username: null,
-        owner: false,
-        capabilities: [],
-      });
+      this.session.set(session);
     } catch (error) {
       this.accessError.set(this.problemMessage(error, 'Sign-out failed. Try again.'));
     } finally {

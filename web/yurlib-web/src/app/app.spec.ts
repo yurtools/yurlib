@@ -82,7 +82,17 @@ describe('App', () => {
 
     element.querySelector<HTMLButtonElement>('.sign-out')?.click();
     http.expectOne('/api/v1/session/logout').flush(null, { status: 204, statusText: 'No Content' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne('/api/v1/session').flush({
+      mode: 'OWNER',
+      authenticated: false,
+      username: null,
+      owner: false,
+      capabilities: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
+    fixture.detectChanges();
     expect(
       element.querySelector<HTMLInputElement>('.login-form input[type="password"]')?.value,
     ).toBe('');

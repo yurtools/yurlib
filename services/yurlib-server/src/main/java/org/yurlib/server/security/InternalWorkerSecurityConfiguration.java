@@ -1,6 +1,7 @@
 package org.yurlib.server.security;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -16,6 +17,7 @@ class InternalWorkerSecurityConfiguration {
 
     @Bean
     @Order(1)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @SuppressFBWarnings(
             value = "THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION",
             justification = "HttpSecurity.build declares Exception in the Spring Security API.")
