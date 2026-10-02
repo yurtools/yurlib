@@ -472,6 +472,207 @@ paths:
           $ref: "#/components/responses/Problem"
         "409":
           $ref: "#/components/responses/Problem"
+  /api/v1/me/library-state:
+    get:
+      operationId: getPersonalLibraryState
+      summary: Read the current user's access-filtered personal library state
+      responses:
+        "200":
+          description: Private favorites, read state, and collections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLibraryState"
+  /api/v1/me/export:
+    get:
+      operationId: exportPersonalLibraryState
+      summary: Export the current user's access-filtered personal library state
+      responses:
+        "200":
+          description: Portable personal library state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLibraryState"
+  /api/v1/me/favorite-contributors/{contributorId}:
+    parameters:
+      - $ref: "#/components/parameters/ContributorId"
+    put:
+      operationId: addFavoriteContributor
+      summary: Add an idempotent favorite for a visible canonical contributor
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Favorite contributor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteContributor"
+        "404":
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: removeFavoriteContributor
+      summary: Remove a favorite contributor
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      responses:
+        "204":
+          description: Favorite removed or already absent
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/me/works/{workId}/read-state:
+    parameters:
+      - $ref: "#/components/parameters/WorkId"
+    put:
+      operationId: markWorkRead
+      summary: Create or replace the current user's Work-level read state
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadRequest"
+      responses:
+        "200":
+          description: Updated read state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkReadState"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: markWorkUnread
+      summary: Remove the current user's Work-level read state
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "204":
+          description: Read state removed
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/me/collections:
+    post:
+      operationId: createPersonalCollection
+      summary: Create a private collection
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePersonalCollectionRequest"
+      responses:
+        "201":
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalCollection"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/me/collections/{collectionId}:
+    parameters:
+      - $ref: "#/components/parameters/CollectionId"
+    put:
+      operationId: updatePersonalCollection
+      summary: Rename a private collection or change its ordering mode
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePersonalCollectionRequest"
+      responses:
+        "200":
+          description: Collection updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalCollection"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deletePersonalCollection
+      summary: Delete a private collection
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "204":
+          description: Collection deleted
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/me/collections/{collectionId}/works/{workId}:
+    parameters:
+      - $ref: "#/components/parameters/CollectionId"
+      - $ref: "#/components/parameters/WorkId"
+    put:
+      operationId: addWorkToPersonalCollection
+      summary: Add a visible Work to a private collection
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollectionVersionRequest"
+      responses:
+        "200":
+          description: Updated collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalCollection"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: removeWorkFromPersonalCollection
+      summary: Remove a Work from a private collection
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "200":
+          description: Updated collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalCollection"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
   /api/v1/admin/users:
     get:
       operationId: listUsers
@@ -504,6 +705,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserAccount"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/admin/users/{userId}:
+    delete:
+      operationId: removeUser
+      summary: Remove a non-owner account and its private personal state
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: User removed and identity anonymized for retained audit records
+        "404":
+          $ref: "#/components/responses/Problem"
         "409":
           $ref: "#/components/responses/Problem"
   /api/v1/admin/users/{userId}/enabled:
@@ -650,6 +867,28 @@ components:
       schema:
         type: string
         format: uuid
+    ContributorId:
+      name: contributorId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CollectionId:
+      name: collectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExpectedVersion:
+      name: expectedVersion
+      in: query
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
   responses:
     Problem:
       description: RFC 9457 problem response
@@ -834,6 +1073,10 @@ components:
           type: array
           items:
             type: string
+        contributorDetails:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogContributor"
         provisional:
           type: boolean
         assets:
@@ -842,6 +1085,16 @@ components:
             $ref: "#/components/schemas/AssetSummary"
         coverAvailable:
           type: boolean
+    CatalogContributor:
+      type: object
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
     AssetSummary:
       type: object
       required: [id, format, size, availability, original, metadataState]
@@ -1123,6 +1376,140 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    PersonalLibraryState:
+      type: object
+      additionalProperties: false
+      required: [favoriteContributors, readStates, collections]
+      properties:
+        favoriteContributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FavoriteContributor"
+        readStates:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkReadState"
+        collections:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonalCollection"
+    FavoriteContributor:
+      type: object
+      additionalProperties: false
+      required: [contributorId, displayName, favoritedAt]
+      properties:
+        contributorId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        favoritedAt:
+          type: string
+          format: date-time
+    WorkReadState:
+      type: object
+      additionalProperties: false
+      required: [workId, completedEditionId, completedAt, version]
+      properties:
+        workId:
+          type: string
+          format: uuid
+        completedEditionId:
+          type: [string, "null"]
+          format: uuid
+        completedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+    PersonalCollection:
+      type: object
+      additionalProperties: false
+      required: [id, name, ordered, version, works]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ordered:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        works:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonalCollectionWork"
+    PersonalCollectionWork:
+      type: object
+      additionalProperties: false
+      required: [workId, title, position, addedAt]
+      properties:
+        workId:
+          type: string
+          format: uuid
+        title:
+          type: [string, "null"]
+        position:
+          type: [integer, "null"]
+          minimum: 0
+        addedAt:
+          type: string
+          format: date-time
+    MarkReadRequest:
+      type: object
+      additionalProperties: false
+      required: [completedEditionId, completedAt, expectedVersion]
+      properties:
+        completedEditionId:
+          type: [string, "null"]
+          format: uuid
+        completedAt:
+          type: string
+          format: date-time
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: -1
+    CreatePersonalCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [name, ordered]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ordered:
+          type: boolean
+    UpdatePersonalCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [name, ordered, expectedVersion]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ordered:
+          type: boolean
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    CollectionVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
         expectedVersion:
           type: integer
           format: int64

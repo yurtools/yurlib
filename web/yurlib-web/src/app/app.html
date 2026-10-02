@@ -325,6 +325,45 @@
                       : 'Contributor unknown'
                   }}
                 </p>
+                <div class="personal-work-actions" aria-label="Personal library actions">
+                  <button
+                    class="quiet-action"
+                    type="button"
+                    [attr.aria-pressed]="readState(work.id) !== undefined"
+                    [disabled]="savingPersonalState()"
+                    (click)="toggleRead(work.id)"
+                  >
+                    {{ readState(work.id) ? 'Read' : 'Mark as read' }}
+                  </button>
+                  @for (contributor of work.contributorDetails || []; track contributor.id) {
+                    <button
+                      class="quiet-action"
+                      type="button"
+                      [attr.aria-pressed]="isFavorite(contributor.id)"
+                      [disabled]="savingPersonalState()"
+                      (click)="toggleFavorite(contributor.id)"
+                    >
+                      {{ isFavorite(contributor.id) ? '★' : '☆' }} {{ contributor.displayName }}
+                    </button>
+                  }
+                </div>
+                @if (personalState().collections.length > 0) {
+                  <div class="collection-add">
+                    <label [for]="'collection-' + work.id">Add to collection</label>
+                    <select #collection [id]="'collection-' + work.id">
+                      @for (item of personalState().collections; track item.id) {
+                        <option [value]="item.id">{{ item.name }}</option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      [disabled]="savingPersonalState()"
+                      (click)="addWorkToCollection(work.id, collection.value)"
+                    >
+                      Add
+                    </button>
+                  </div>
+                }
                 @if (canCurate()) {
                   <button class="curate-button" type="button" (click)="openCuration(work.id)">
                     Curate metadata
@@ -369,10 +408,121 @@
       }
     </section>
 
+    <section class="workspace-section personal-section" aria-labelledby="personal-heading">
+      <div class="section-heading">
+        <p class="step">04</p>
+        <div>
+          <h2 id="personal-heading">Your library</h2>
+          <p>Favorite contributors, reading history, and private collections belong only to you.</p>
+        </div>
+      </div>
+
+      @if (personalStateError()) {
+        <p class="notice notice-error" role="alert">{{ personalStateError() }}</p>
+      }
+
+      @if (loadingPersonalState()) {
+        <p class="loading" aria-live="polite">Loading your library…</p>
+      } @else {
+        <div class="personal-summary">
+          <p>
+            <strong>{{ personalState().favoriteContributors.length }}</strong>
+            favorite {{ personalState().favoriteContributors.length === 1 ? 'contributor' : 'contributors' }}
+          </p>
+          <p>
+            <strong>{{ personalState().readStates.length }}</strong>
+            {{ personalState().readStates.length === 1 ? 'work' : 'works' }} read
+          </p>
+        </div>
+
+        <form class="collection-create" (submit)="createCollection($event)">
+          <label for="collection-name">New private collection</label>
+          <input
+            id="collection-name"
+            type="text"
+            placeholder="Collection name"
+            [formField]="collectionForm.name"
+          />
+          <label class="inline-check">
+            <input type="checkbox" [formField]="collectionForm.ordered" />
+            Keep works in added order
+          </label>
+          <button
+            type="submit"
+            [disabled]="collectionForm().invalid() || savingPersonalState()"
+          >
+            Create collection
+          </button>
+          @if (collectionForm.name().touched() && collectionForm.name().errors()[0]; as error) {
+            <small class="field-error">{{ error.message }}</small>
+          }
+        </form>
+
+        <div class="collection-list">
+          @for (collection of personalState().collections; track collection.id) {
+            <article class="collection-row">
+              <div class="collection-edit">
+                <label [for]="'collection-name-' + collection.id">Collection name</label>
+                <input
+                  #editedName
+                  [id]="'collection-name-' + collection.id"
+                  type="text"
+                  maxlength="200"
+                  [value]="collection.name"
+                />
+                <label class="inline-check">
+                  <input #ordered type="checkbox" [checked]="collection.ordered" />
+                  Ordered
+                </label>
+                <button
+                  type="button"
+                  [disabled]="savingPersonalState()"
+                  (click)="updateCollection(collection, editedName.value, ordered.checked)"
+                >
+                  Save
+                </button>
+                <button
+                  class="quiet-action danger-action"
+                  type="button"
+                  [disabled]="savingPersonalState()"
+                  (click)="deleteCollection(collection)"
+                >
+                  Delete
+                </button>
+              </div>
+              <p class="collection-count">
+                {{ collection.works.length }} visible
+                {{ collection.works.length === 1 ? 'work' : 'works' }}
+              </p>
+              <ol [class.unordered-collection]="!collection.ordered">
+                @for (work of collection.works; track work.workId) {
+                  <li>
+                    <span>{{ work.title || 'Untitled work' }}</span>
+                    <button
+                      class="quiet-action"
+                      type="button"
+                      [disabled]="savingPersonalState()"
+                      (click)="removeWorkFromCollection(collection, work.workId)"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="collection-empty">No visible works in this collection.</li>
+                }
+              </ol>
+            </article>
+          } @empty {
+            <p class="collection-empty">Create a collection to group Works privately.</p>
+          }
+        </div>
+      }
+    </section>
+
     @if (canCurate()) {
       <section class="workspace-section curation-section" aria-labelledby="curation-heading">
         <div class="section-heading">
-          <p class="step">04</p>
+          <p class="step">05</p>
           <div>
             <h2 id="curation-heading">Catalog curation</h2>
             <p>Correct shared metadata, manage tags, and review deterministic parser outcomes.</p>

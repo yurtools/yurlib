@@ -76,9 +76,50 @@ public class JdbcUserAccountStore implements UserDetailsService {
     }
 
     public List<UserAccountSummary> listUsers() {
-        return jdbc.sql("SELECT id FROM user_account ORDER BY normalized_username").query(UUID.class).list().stream()
+        return jdbc
+                .sql("SELECT id FROM user_account WHERE removed_at IS NULL ORDER BY normalized_username")
+                .query(UUID.class)
+                .list()
+                .stream()
                 .map(this::requireSummary)
                 .toList();
+    }
+
+    @Transactional
+    public void removeUser(UUID actorId, UUID userId) {
+        var target = requirePrincipal(userId);
+        if (target.owner()) {
+            throw new UserAccountFailure(
+                    UserAccountFailure.Code.OWNER_MUTATION_FORBIDDEN, "The persisted owner cannot be removed.");
+        }
+        jdbc.sql("DELETE FROM user_contributor_favorite WHERE user_id = :id")
+                .param("id", userId)
+                .update();
+        jdbc.sql("DELETE FROM user_work_read_state WHERE user_id = :id")
+                .param("id", userId)
+                .update();
+        jdbc.sql("DELETE FROM personal_collection WHERE user_id = :id")
+                .param("id", userId)
+                .update();
+        jdbc.sql("DELETE FROM user_capability WHERE user_id = :id")
+                .param("id", userId)
+                .update();
+        jdbc.sql("DELETE FROM user_root_deny WHERE user_id = :id")
+                .param("id", userId)
+                .update();
+        var removedUsername = "removed-" + userId;
+        jdbc.sql("""
+                UPDATE user_account
+                SET username = :username,
+                    normalized_username = :username,
+                    password_hash = '{noop}removed',
+                    enabled = FALSE,
+                    authorization_version = authorization_version + 1,
+                    removed_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                """).param("username", removedUsername).param("id", userId).update();
+        audit(actorId, userId, "USER_REMOVED", java.util.Map.of());
     }
 
     @Transactional
@@ -175,7 +216,7 @@ public class JdbcUserAccountStore implements UserDetailsService {
         return jdbc.sql("""
                 SELECT id, username, password_hash, owner, enabled, authorization_version
                 FROM user_account
-                WHERE id = :id
+                WHERE id = :id AND removed_at IS NULL
                 """).param("id", id).query(UserRow.class).optional().map(this::toPrincipal);
     }
 
@@ -183,7 +224,7 @@ public class JdbcUserAccountStore implements UserDetailsService {
         return jdbc.sql("""
                 SELECT id, username, password_hash, owner, enabled, authorization_version
                 FROM user_account
-                WHERE owner
+                WHERE owner AND removed_at IS NULL
                 """).query(UserRow.class).optional().map(this::toPrincipal);
     }
 
@@ -191,7 +232,7 @@ public class JdbcUserAccountStore implements UserDetailsService {
         return jdbc.sql("""
                 SELECT id, username, password_hash, owner, enabled, authorization_version
                 FROM user_account
-                WHERE normalized_username = :username
+                WHERE normalized_username = :username AND removed_at IS NULL
                 """)
                 .param("username", username)
                 .query(UserRow.class)

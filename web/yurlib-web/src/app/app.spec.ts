@@ -70,6 +70,7 @@ describe('App', () => {
     http.expectOne('/api/v1/library-roots').flush([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    http.expectOne('/api/v1/me/library-state').flush(emptyPersonalState());
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/curation/reviews').flush([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -98,6 +99,7 @@ describe('App', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(emptyCatalog());
+    http.expectOne('/api/v1/me/library-state').flush(emptyPersonalState());
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
     fixture.detectChanges();
@@ -288,6 +290,80 @@ describe('App', () => {
     expect(element.querySelector('.work-cover-fallback')?.textContent).toContain('T');
   });
 
+  it('marks a work as read and favorites a canonical contributor', async () => {
+    await initialize([], {
+      items: [
+        {
+          id: 'work-1',
+          title: 'The Dispossessed',
+          contributors: ['Ursula K. Le Guin'],
+          contributorDetails: [{ id: 'contributor-1', displayName: 'Ursula K. Le Guin' }],
+          provisional: false,
+          assets: [],
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+
+    const element = fixture.nativeElement as HTMLElement;
+    const personalActions = element.querySelectorAll<HTMLButtonElement>('.personal-work-actions button');
+    personalActions[0].click();
+    const readRequest = http.expectOne('/api/v1/me/works/work-1/read-state');
+    expect(readRequest.request.body).toEqual({
+      completedEditionId: null,
+      completedAt: expect.any(String),
+      expectedVersion: -1,
+    });
+    readRequest.flush({
+      workId: 'work-1',
+      completedEditionId: null,
+      completedAt: '2026-10-02T12:00:00Z',
+      version: 0,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne('/api/v1/me/library-state').flush({
+      ...emptyPersonalState(),
+      readStates: [
+        {
+          workId: 'work-1',
+          completedEditionId: null,
+          completedAt: '2026-10-02T12:00:00Z',
+          version: 0,
+        },
+      ],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(personalActions[0].textContent).toContain('Read');
+    expect(personalActions[0].getAttribute('aria-pressed')).toBe('true');
+
+    personalActions[1].click();
+    http.expectOne('/api/v1/me/favorite-contributors/contributor-1').flush({
+      contributorId: 'contributor-1',
+      displayName: 'Ursula K. Le Guin',
+      favoritedAt: '2026-10-02T12:00:00Z',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne('/api/v1/me/library-state').flush({
+      ...emptyPersonalState(),
+      favoriteContributors: [
+        {
+          contributorId: 'contributor-1',
+          displayName: 'Ursula K. Le Guin',
+          favoritedAt: '2026-10-02T12:00:00Z',
+        },
+      ],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(personalActions[1].textContent).toContain('★ Ursula K. Le Guin');
+    expect(personalActions[1].getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('searches and pages with bounded relative catalog requests', async () => {
     await initialize([], { ...emptyCatalog(), totalElements: 13 });
     const element = fixture.nativeElement as HTMLElement;
@@ -402,6 +478,7 @@ describe('App', () => {
     http.expectOne('/api/v1/library-roots').flush(roots);
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/catalog/works').flush(catalog);
+    http.expectOne('/api/v1/me/library-state').flush(emptyPersonalState());
     await new Promise((resolve) => setTimeout(resolve, 0));
     http.expectOne((request) => request.url === '/api/v1/curation/reviews').flush([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -410,6 +487,10 @@ describe('App', () => {
 
   function emptyCatalog(): CatalogPage {
     return { items: [], page: 0, size: 12, totalElements: 0 };
+  }
+
+  function emptyPersonalState() {
+    return { favoriteContributors: [], readStates: [], collections: [] };
   }
 
   function root(): LibraryRoot {
