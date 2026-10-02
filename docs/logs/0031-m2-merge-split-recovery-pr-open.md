@@ -1,9 +1,10 @@
 # M2 Merge, Split, and Duplicate-Review Recovery
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-10-02
 - Branch: `feat/59-merge-split-recovery`
 - Issue: [#59](https://github.com/yurtools/yurlib/issues/59)
+- Pull request: [#74](https://github.com/yurtools/yurlib/pull/74)
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -39,6 +40,7 @@
 - Excluded merged Work and Contributor tombstones from catalog search and ordinary curation lookups while retaining redirect/history access through the survivor.
 - Extended the OpenAPI contract and added a restrained duplicate-proofing desk to the existing curation workspace. The UI keeps the selected Work as survivor, requires an impact preview and reason, displays association counts and conflicts, records not-the-same decisions, and checks automatic-undo safety before recovery.
 - Corrected PMD findings in recovery query helpers and removed an unnecessary SpotBugs suppression; the final static-analysis run is clean.
+- Committed the implementation as `8602131` and opened pull request #74 with `Closes #59`.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference without staging or modifying it.
 
 ## Verification
