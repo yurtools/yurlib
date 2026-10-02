@@ -11,6 +11,10 @@ import {
   MetadataReviewItem,
   WorkCuration,
   ContributorCuration,
+  PersonalCollection,
+  PersonalLibraryState,
+  WorkReadState,
+  FavoriteContributor,
 } from './library.model';
 
 @Injectable({ providedIn: 'root' })
@@ -115,6 +119,69 @@ export class LibraryApi {
     return this.http.put<ContributorCuration>(
       `/api/v1/curation/contributors/${encodeURIComponent(contributorId)}`,
       { displayName, aliases, reason, expectedVersion },
+    );
+  }
+
+  personalLibraryState() {
+    return this.http.get<PersonalLibraryState>('/api/v1/me/library-state');
+  }
+
+  addFavoriteContributor(contributorId: string) {
+    return this.http.put<FavoriteContributor>(
+      `/api/v1/me/favorite-contributors/${encodeURIComponent(contributorId)}`,
+      undefined,
+    );
+  }
+
+  removeFavoriteContributor(contributorId: string) {
+    return this.http.delete<void>(
+      `/api/v1/me/favorite-contributors/${encodeURIComponent(contributorId)}`,
+    );
+  }
+
+  markWorkRead(workId: string, expectedVersion: number) {
+    return this.http.put<WorkReadState>(
+      `/api/v1/me/works/${encodeURIComponent(workId)}/read-state`,
+      { completedEditionId: null, completedAt: new Date().toISOString(), expectedVersion },
+    );
+  }
+
+  markWorkUnread(workId: string, expectedVersion: number) {
+    return this.http.delete<void>(
+      `/api/v1/me/works/${encodeURIComponent(workId)}/read-state`,
+      { params: new HttpParams().set('expectedVersion', expectedVersion) },
+    );
+  }
+
+  createCollection(name: string, ordered: boolean) {
+    return this.http.post<PersonalCollection>('/api/v1/me/collections', { name, ordered });
+  }
+
+  updateCollection(collection: PersonalCollection, name: string, ordered: boolean) {
+    return this.http.put<PersonalCollection>(
+      `/api/v1/me/collections/${encodeURIComponent(collection.id)}`,
+      { name, ordered, expectedVersion: collection.version },
+    );
+  }
+
+  deleteCollection(collection: PersonalCollection) {
+    return this.http.delete<void>(
+      `/api/v1/me/collections/${encodeURIComponent(collection.id)}`,
+      { params: new HttpParams().set('expectedVersion', collection.version) },
+    );
+  }
+
+  addWorkToCollection(collection: PersonalCollection, workId: string) {
+    return this.http.put<PersonalCollection>(
+      `/api/v1/me/collections/${encodeURIComponent(collection.id)}/works/${encodeURIComponent(workId)}`,
+      { expectedVersion: collection.version },
+    );
+  }
+
+  removeWorkFromCollection(collection: PersonalCollection, workId: string) {
+    return this.http.delete<PersonalCollection>(
+      `/api/v1/me/collections/${encodeURIComponent(collection.id)}/works/${encodeURIComponent(workId)}`,
+      { params: new HttpParams().set('expectedVersion', collection.version) },
     );
   }
 }

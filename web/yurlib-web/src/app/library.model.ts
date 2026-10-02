@@ -64,6 +64,12 @@ export interface CatalogWork {
   provisional: boolean;
   assets: CatalogAsset[];
   coverAvailable?: boolean;
+  contributorDetails?: CatalogContributor[];
+}
+
+export interface CatalogContributor {
+  id: string;
+  displayName: string;
 }
 
 export interface CatalogPage {
@@ -78,6 +84,40 @@ export interface ProblemDetails {
   detail?: string;
   code?: string;
   correlationId?: string;
+}
+
+export interface FavoriteContributor {
+  contributorId: string;
+  displayName: string;
+  favoritedAt: string;
+}
+
+export interface WorkReadState {
+  workId: string;
+  completedEditionId: string | null;
+  completedAt: string;
+  version: number;
+}
+
+export interface PersonalCollectionWork {
+  workId: string;
+  title: string;
+  position: number | null;
+  addedAt: string;
+}
+
+export interface PersonalCollection {
+  id: string;
+  name: string;
+  ordered: boolean;
+  version: number;
+  works: PersonalCollectionWork[];
+}
+
+export interface PersonalLibraryState {
+  favoriteContributors: FavoriteContributor[];
+  readStates: WorkReadState[];
+  collections: PersonalCollection[];
 }
 
 export interface OwnerSession {

@@ -10,11 +10,13 @@ public record CatalogWorkResponse(
         List<String> contributors,
         boolean provisional,
         List<CatalogAssetResponse> assets,
-        boolean coverAvailable) {
+        boolean coverAvailable,
+        List<CatalogQuery.ContributorSummary> contributorDetails) {
 
     public CatalogWorkResponse {
         contributors = List.copyOf(contributors);
         assets = List.copyOf(assets);
+        contributorDetails = List.copyOf(contributorDetails);
     }
 
     static CatalogWorkResponse from(CatalogQuery.WorkSummary work) {
@@ -24,6 +26,7 @@ public record CatalogWorkResponse(
                 work.contributors(),
                 work.provisional(),
                 work.assets().stream().map(CatalogAssetResponse::from).toList(),
-                work.coverAvailable());
+                work.coverAvailable(),
+                work.contributorDetails());
     }
 }

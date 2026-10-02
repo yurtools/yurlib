@@ -144,9 +144,12 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                         work.id(),
                         work.title(),
                         work.provisional(),
-                        contributors.getOrDefault(work.id(), List.of()),
+                        contributors.getOrDefault(work.id(), List.of()).stream()
+                                .map(ContributorSummary::displayName)
+                                .toList(),
                         assets.getOrDefault(work.id(), List.of()),
-                        covers.contains(work.id())))
+                        covers.contains(work.id()),
+                        contributors.getOrDefault(work.id(), List.of())))
                 .toList();
         return new CatalogPage(items, page, size, total);
     }
@@ -608,21 +611,23 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .list();
     }
 
-    private Map<UUID, List<String>> findContributors(List<UUID> workIds) {
-        var result = new LinkedHashMap<UUID, List<String>>();
+    private Map<UUID, List<ContributorSummary>> findContributors(List<UUID> workIds) {
+        var result = new LinkedHashMap<UUID, List<ContributorSummary>>();
         jdbc.sql("""
-                SELECT linked.work_id, contributor.display_name AS observed_value
+                SELECT linked.work_id, contributor.id, contributor.display_name
                 FROM work_contributor linked
                 JOIN contributor ON contributor.id = linked.contributor_id
                 WHERE linked.work_id IN (:workIds)
                 ORDER BY linked.work_id, linked.role, linked.ordinal, contributor.display_name
                 """)
                 .param("workIds", workIds)
-                .query((row, rowNumber) ->
-                        new ContributorRow(row.getObject("work_id", UUID.class), row.getString("observed_value")))
+                .query((row, rowNumber) -> new ContributorRow(
+                        row.getObject("work_id", UUID.class),
+                        row.getObject("id", UUID.class),
+                        row.getString("display_name")))
                 .list()
                 .forEach(row -> result.computeIfAbsent(row.workId(), ignored -> new ArrayList<>())
-                        .add(row.value()));
+                        .add(new ContributorSummary(row.id(), row.displayName())));
         return result;
     }
 
@@ -761,7 +766,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
 
     private record WorkRow(UUID id, String title, boolean provisional) {}
 
-    private record ContributorRow(UUID workId, String value) {}
+    private record ContributorRow(UUID workId, UUID id, String displayName) {}
 
     private record AssetRow(
             UUID workId,

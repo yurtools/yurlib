@@ -86,6 +86,12 @@ class UserAdministrationController {
         return users.allowRoot(actor.userId(), userId, rootId);
     }
 
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void removeUser(@AuthenticationPrincipal PersistedUserPrincipal actor, @PathVariable UUID userId) {
+        users.removeUser(actor.userId(), userId);
+    }
+
     record CreateUserRequest(
             @NotBlank @Size(max = 100) String username,
             @NotBlank @Size(min = 12, max = 200) String password) {}

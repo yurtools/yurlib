@@ -25,17 +25,31 @@ public interface CatalogQuery {
             boolean provisional,
             List<String> contributors,
             List<AssetSummary> assets,
-            boolean coverAvailable) {
+            boolean coverAvailable,
+            List<ContributorSummary> contributorDetails) {
         public WorkSummary {
             contributors = List.copyOf(contributors);
             assets = List.copyOf(assets);
+            contributorDetails = List.copyOf(contributorDetails);
         }
 
         public WorkSummary(
                 UUID id, String title, boolean provisional, List<String> contributors, List<AssetSummary> assets) {
-            this(id, title, provisional, contributors, assets, false);
+            this(id, title, provisional, contributors, assets, false, List.of());
+        }
+
+        public WorkSummary(
+                UUID id,
+                String title,
+                boolean provisional,
+                List<String> contributors,
+                List<AssetSummary> assets,
+                boolean coverAvailable) {
+            this(id, title, provisional, contributors, assets, coverAvailable, List.of());
         }
     }
+
+    record ContributorSummary(UUID id, String displayName) {}
 
     record AssetSummary(
             UUID id,

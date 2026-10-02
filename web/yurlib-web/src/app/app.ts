@@ -11,7 +11,7 @@ import {
   submit,
   validate,
 } from '@angular/forms/signals';
-import { EMPTY, Subscription, expand, firstValueFrom, switchMap, timer } from 'rxjs';
+import { EMPTY, Observable, Subscription, expand, firstValueFrom, switchMap, timer } from 'rxjs';
 import { LibraryApi } from './library-api';
 import {
   CatalogPage,
@@ -24,6 +24,8 @@ import {
   ScanJob,
   ScanState,
   MetadataReviewItem,
+  PersonalCollection,
+  PersonalLibraryState,
   WorkCuration,
 } from './library.model';
 
@@ -96,6 +98,12 @@ export class App {
     maxLength(schema.query, 200, { message: 'Use 200 characters or fewer.' });
   });
 
+  protected readonly collectionModel = signal({ name: '', ordered: false });
+  protected readonly collectionForm = form(this.collectionModel, (schema) => {
+    required(schema.name, { message: 'Enter a collection name.' });
+    maxLength(schema.name, 200, { message: 'Use 200 characters or fewer.' });
+  });
+
   protected readonly loginModel = signal({ username: 'owner', password: '' });
   protected readonly loginForm = form(this.loginModel, (schema) => {
     required(schema.username, { message: 'Enter the owner username.' });
@@ -138,6 +146,14 @@ export class App {
   protected readonly curationContributorId = signal('');
   protected readonly curationContributorName = signal('');
   protected readonly curationContributorAliases = signal('');
+  protected readonly personalState = signal<PersonalLibraryState>({
+    favoriteContributors: [],
+    readStates: [],
+    collections: [],
+  });
+  protected readonly loadingPersonalState = signal(false);
+  protected readonly savingPersonalState = signal(false);
+  protected readonly personalStateError = signal('');
 
   protected readonly selectedRoot = computed(() =>
     this.roots().find((root) => root.id === this.selectedRootId()),
@@ -194,16 +210,11 @@ export class App {
     this.accessError.set('');
     try {
       await firstValueFrom(this.api.logout());
+      const session = await firstValueFrom(this.api.session());
       this.clearWorkspace();
       this.loginModel.update((model) => ({ ...model, password: '' }));
       this.loginForm().reset();
-      this.session.set({
-        mode: 'OWNER',
-        authenticated: false,
-        username: null,
-        owner: false,
-        capabilities: [],
-      });
+      this.session.set(session);
     } catch (error) {
       this.accessError.set(this.problemMessage(error, 'Sign-out failed. Try again.'));
     } finally {
@@ -287,6 +298,73 @@ export class App {
 
   protected setDefaultForCovers(enabled: boolean) {
     this.rootModel.update((model) => ({ ...model, defaultForCovers: enabled }));
+  }
+
+  protected isFavorite(contributorId: string) {
+    return this.personalState().favoriteContributors.some(
+      (favorite) => favorite.contributorId === contributorId,
+    );
+  }
+
+  protected readState(workId: string) {
+    return this.personalState().readStates.find((state) => state.workId === workId);
+  }
+
+  protected async toggleFavorite(contributorId: string) {
+    if (this.savingPersonalState()) return;
+    await this.runPersonalMutation(
+      this.isFavorite(contributorId)
+        ? this.api.removeFavoriteContributor(contributorId)
+        : this.api.addFavoriteContributor(contributorId),
+    );
+  }
+
+  protected async toggleRead(workId: string) {
+    if (this.savingPersonalState()) return;
+    const current = this.readState(workId);
+    await this.runPersonalMutation(
+      current
+        ? this.api.markWorkUnread(workId, current.version)
+        : this.api.markWorkRead(workId, -1),
+    );
+  }
+
+  protected createCollection(event: SubmitEvent) {
+    event.preventDefault();
+    submit(this.collectionForm, async () => {
+      const model = this.collectionModel();
+      await this.runPersonalMutation(this.api.createCollection(model.name.trim(), model.ordered));
+      if (!this.personalStateError()) {
+        this.collectionModel.set({ name: '', ordered: false });
+        this.collectionForm().reset();
+      }
+    });
+  }
+
+  protected async updateCollection(
+    collection: PersonalCollection,
+    name: string,
+    ordered: boolean,
+  ) {
+    if (!name.trim()) {
+      this.personalStateError.set('Enter a collection name.');
+      return;
+    }
+    await this.runPersonalMutation(this.api.updateCollection(collection, name.trim(), ordered));
+  }
+
+  protected async deleteCollection(collection: PersonalCollection) {
+    await this.runPersonalMutation(this.api.deleteCollection(collection));
+  }
+
+  protected async addWorkToCollection(workId: string, collectionId: string) {
+    const collection = this.personalState().collections.find((item) => item.id === collectionId);
+    if (!collection) return;
+    await this.runPersonalMutation(this.api.addWorkToCollection(collection, workId));
+  }
+
+  protected async removeWorkFromCollection(collection: PersonalCollection, workId: string) {
+    await this.runPersonalMutation(this.api.removeWorkFromCollection(collection, workId));
   }
 
   protected async openCuration(workId: string) {
@@ -451,7 +529,7 @@ export class App {
     } finally {
       this.loadingWorkspace.set(false);
     }
-    await this.loadCatalog(0);
+    await Promise.all([this.loadCatalog(0), this.loadPersonalState()]);
     if (this.canCurate()) await this.loadReviews();
   }
 
@@ -478,6 +556,7 @@ export class App {
     this.catalog.set({ items: [], page: 0, size: App.CATALOG_PAGE_SIZE, totalElements: 0 });
     this.selectedCuration.set(undefined);
     this.reviewQueue.set([]);
+    this.personalState.set({ favoriteContributors: [], readStates: [], collections: [] });
   }
 
   private async loadCatalog(page: number) {
@@ -498,6 +577,35 @@ export class App {
       this.catalogError.set(this.problemMessage(error, 'The catalog could not be loaded.'));
     } finally {
       this.loadingCatalog.set(false);
+    }
+  }
+
+  private async loadPersonalState() {
+    this.loadingPersonalState.set(true);
+    this.personalStateError.set('');
+    try {
+      this.personalState.set(await firstValueFrom(this.api.personalLibraryState()));
+    } catch (error) {
+      this.personalStateError.set(
+        this.problemMessage(error, 'Your personal library state could not be loaded.'),
+      );
+    } finally {
+      this.loadingPersonalState.set(false);
+    }
+  }
+
+  private async runPersonalMutation(request: Observable<unknown>) {
+    this.savingPersonalState.set(true);
+    this.personalStateError.set('');
+    try {
+      await firstValueFrom(request);
+      await this.loadPersonalState();
+    } catch (error) {
+      this.personalStateError.set(
+        this.problemMessage(error, 'Your personal library change could not be saved.'),
+      );
+    } finally {
+      this.savingPersonalState.set(false);
     }
   }
 
