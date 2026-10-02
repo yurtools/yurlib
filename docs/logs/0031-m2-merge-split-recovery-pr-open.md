@@ -47,6 +47,10 @@
 - The second manual retest passed five remediated interaction paths but reproduced one backend defect: merge, undo, re-merge, and a later curated-title edit was incorrectly considered safe, while a subsequent undo collided with a retired redirect version.
 - Added curated-override fingerprints to recovery snapshots so later title corrections require a guided split, and allocated monotonically increasing redirect versions across repeated merge/undo cycles.
 - Added a PostgreSQL regression covering two clean merge/undo cycles followed by re-merge, later title curation, unsafe split preview, and a stable `SPLIT_CONFLICT` result without a duplicate-key failure.
+- Completed final manual acceptance at commit `05cdeef7bd10047ac8043fbbc0f88c4dcc8489e8` in the built-in browser at 1440×900 and 390×844. Both viewports passed two merge/undo cycles, a third merge, later title correction, and unsafe-undo eligibility. The third merge remained applied, the curated title remained intact, and the eligibility check did not mutate the catalog.
+- Confirmed the final recovery UI displayed `Automatic undo is unavailable; this merge requires a guided split.` together with `The merged catalog state changed after this operation; use a guided split.` Controls remained readable and accessible with no overflow, clipping, or overlap.
+- Confirmed the final browser console contained no Yurlib errors and backend logs contained no `DuplicateKeyException`, redirect-version constraint error, or other error. Only the permitted Electron development CSP warning appeared.
+- Removed the disposable Angular server, Compose containers, networks, database volumes, credentials, proxy, root markers, and synthetic books after acceptance. Existing persistent volumes were untouched, test ports were closed, and the pre-existing user-owned Angular analytics preference remained the only worktree change.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference without staging or modifying it.
 
 ## Verification
@@ -64,13 +68,14 @@
 - Post-acceptance remediation: `./mvnw spotless:check -DskipTests` — passed for repository documents, frontend files, Java, and Maven POMs.
 - Second-retest remediation: `./mvnw -pl services/yurlib-server -Dtest=CatalogRecoveryIntegrationTest test` — passed; 6 PostgreSQL integration tests, including repeated redirect recovery and later curated-title conflict detection.
 - Second-retest remediation: `./mvnw verify` — passed; 160 server tests with 0 failures, 0 errors, and 1 skipped, plus 7 worker tests with no failures. Formatting, OpenAPI compatibility, coverage, PMD, and SpotBugs checks are clean.
+- Final manual acceptance — passed at 1440×900 and 390×844 for repeated merge/undo, later title curation, safe conflict detection, guided-split messaging, retained state, responsive layout, browser console, and backend logs.
 - `npm --prefix web/yurlib-web run build` — passed; production bundle generated.
 - `docker compose config` — passed.
 - `git diff --check` — passed.
 
 ## Remaining acceptance
 
-- Repeat manual desktop and mobile visual acceptance after the PR #74 remediation is pushed.
+- None. Automated verification and desktop/mobile manual acceptance are complete.
 
 ## Blockers
 
