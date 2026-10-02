@@ -1,9 +1,10 @@
 # M2 Personal Library State
 
-- Status: In progress
+- Status: Pull request open
 - Started: 2026-10-02
 - Branch: `feat/58-personal-library-state`
 - Issue: [#58](https://github.com/yurtools/yurlib/issues/58)
+- Pull request: [#73](https://github.com/yurtools/yurlib/pull/73)
 - Repository: `yurtools/yurlib`
 
 ## Prompt
@@ -42,6 +43,7 @@
 - Preserved the accepted implementation boundary: issue #59 owns merge/split operations and previews, while this change supplies private-state ownership and restrictive references; issue #61 owns the destructive backup/restore drill, while these relational tables are included in PostgreSQL backup state.
 - Fixed PostgreSQL timestamp writes to use explicit JDBC timestamps after the first integration test exposed ambiguous `Instant` binding.
 - Added complete invalid-request Problem Details handling for the new API and documented the Spring-owned application-port lifetime for SpotBugs after the first static-analysis run reported `EI_EXPOSE_REP2`.
+- Committed the implementation as `1884237`, pushed the feature branch, and opened pull request #73 with `Closes #58` and an explicit manual desktop/mobile acceptance checklist.
 
 ## Verification
 
@@ -58,4 +60,4 @@
 
 ## Blockers
 
-- None.
+- Automated verification is complete. Manual desktop/mobile acceptance remains on pull request #73.
