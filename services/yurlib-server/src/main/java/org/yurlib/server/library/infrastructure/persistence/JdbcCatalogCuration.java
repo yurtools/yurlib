@@ -435,6 +435,7 @@ public class JdbcCatalogCuration implements CatalogCuration {
                        contributor.version
                 FROM contributor
                 WHERE contributor.id = :contributorId
+                  AND contributor.merged_into_id IS NULL
                   AND EXISTS (
                     SELECT 1
                     FROM work_contributor linked
@@ -466,6 +467,7 @@ public class JdbcCatalogCuration implements CatalogCuration {
                 SELECT work.id, work.version
                 FROM work
                 WHERE work.id = :workId
+                  AND work.merged_into_id IS NULL
                   AND EXISTS (
                     SELECT 1
                     FROM edition

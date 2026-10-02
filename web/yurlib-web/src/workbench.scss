@@ -714,6 +714,123 @@ app-root {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
+  .recovery-desk {
+    background: rgb(255 255 255 / 32%);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    margin-top: 1.75rem;
+    padding: 1.25rem;
+  }
+  .recovery-heading,
+  .recovery-inputs,
+  .recovery-history li {
+    align-items: end;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+  .recovery-heading h4,
+  .recovery-history h5 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.25rem;
+    margin: 0.2rem 0;
+  }
+  .recovery-heading > p {
+    color: var(--muted);
+    margin: 0;
+    max-width: 34rem;
+  }
+  .recovery-inputs {
+    border-top: 1px solid var(--line);
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+  .recovery-inputs label,
+  .recovery-preview label,
+  .recovery-undo-reason {
+    display: grid;
+    flex: 1;
+    gap: 0.4rem;
+  }
+  .recovery-desk input,
+  .recovery-desk textarea {
+    background: rgb(255 255 255 / 55%);
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    color: var(--ink);
+    font: inherit;
+    padding: 0.75rem;
+  }
+  .recovery-preview {
+    border-left: 3px solid var(--accent);
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-left: 1rem;
+  }
+  .recovery-preview > div:not(.curation-actions) {
+    display: grid;
+    gap: 0.2rem;
+  }
+  .recovery-preview small,
+  .recovery-history small {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .impact-list {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+  }
+  .impact-list div {
+    border-top: 1px solid var(--line);
+    display: grid;
+    padding-top: 0.5rem;
+  }
+  .impact-list dt {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+  .impact-list dd {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.4rem;
+    margin: 0;
+  }
+  .recovery-conflicts {
+    color: var(--danger);
+    margin: 0;
+  }
+  .recovery-notice {
+    margin-block: 1rem 0;
+  }
+  .recovery-guidance {
+    background: rgb(143 51 43 / 7%);
+    border-left: 3px solid var(--danger);
+    color: var(--danger);
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+  }
+  .recovery-guidance ul {
+    margin-bottom: 0;
+  }
+  .recovery-history {
+    border-top: 1px solid var(--line);
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+  }
+  .recovery-undo-reason {
+    margin-block: 0.75rem 1rem;
+  }
+  .recovery-undo-reason small,
+  .recovery-inputs small {
+    color: var(--muted);
+  }
+  .recovery-history li div {
+    display: grid;
+    gap: 0.2rem;
+  }
   .curation-editor details {
     border-top: 1px solid var(--line);
     margin-top: 1.5rem;
@@ -760,6 +877,10 @@ app-root {
   .notice-error {
     background: rgb(143 51 43 / 7%);
     color: var(--danger);
+  }
+  .notice-success {
+    background: rgb(45 106 79 / 8%);
+    color: var(--accent);
   }
   footer {
     border-top: 1px solid var(--line);
@@ -869,11 +990,17 @@ app-root {
     }
     .curation-editor-heading,
     .curation-actions,
+    .recovery-heading,
+    .recovery-inputs,
+    .recovery-history li,
     .review-queue > div,
     .review-queue li,
     .review-actions {
       align-items: flex-start;
       flex-direction: column;
+    }
+    .impact-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

@@ -1,6 +1,6 @@
 # M2 Personal Library State
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-10-02
 - Branch: `feat/58-personal-library-state`
 - Issue: [#58](https://github.com/yurtools/yurlib/issues/58)
@@ -46,6 +46,7 @@
 - Committed the implementation as `1884237`, pushed the feature branch, and opened pull request #73 with `Closes #58` and an explicit manual desktop/mobile acceptance checklist.
 - During manual acceptance, the documented owner-recovery command exposed two issue-#58 defects: its non-web context still created the internal servlet security chain, and its default recovery-mode property was overridden by `application.yml`. Scoped the worker chain to servlet web applications, forced recovery arguments at command-line precedence, and added focused regression tests. The repaired command completed without exposing the temporary credential.
 - The sign-out/sign-in persistence check exposed a stale-CSRF defect: sign-out rendered the login form without fetching the replacement anonymous session and CSRF cookie, so an immediate login was denied until reload. The Angular shell now reloads anonymous session state after logout, with regression coverage; immediate keyboard sign-in then passed without a reload.
+- Pull request #73 was squash-merged as `752586b`; issue #58 is closed and its Project item is Done.
 
 ## Manual visual acceptance
 

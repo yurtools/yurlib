@@ -7,7 +7,9 @@
       <span class="health-dot" aria-hidden="true"></span>Backend health
     </a>
     @if (session()?.authenticated && session()?.mode === 'OWNER') {
-      <span class="owner-identity">Signed in as <strong>{{ session()?.username }}</strong></span>
+      <span class="owner-identity"
+        >Signed in as <strong>{{ session()?.username }}</strong></span
+      >
       <button class="sign-out" type="button" (click)="signOut()" [disabled]="signingOut()">
         {{ signingOut() ? 'Signing out…' : 'Sign out' }}
       </button>
@@ -30,7 +32,12 @@
         <h1 id="access-heading">Enter the workbench.</h1>
         <p>Sign in with your Yurlib account.</p>
       </div>
-      <form class="login-form" (submit)="signIn($event)" (keydown.enter)="signIn($event)" novalidate>
+      <form
+        class="login-form"
+        (submit)="signIn($event)"
+        (keydown.enter)="signIn($event)"
+        novalidate
+      >
         <label>
           <span>Username</span>
           <input autocomplete="username" [formField]="loginForm.username" />
@@ -79,43 +86,43 @@
 
     @if (canManageSources()) {
       <section class="workspace-section setup-section" aria-labelledby="source-heading">
-      <div class="section-heading">
-        <p class="step">01</p>
-        <div>
-          <h2 id="source-heading">Library source</h2>
-          <p>Yurlib reads this location without modifying the source files.</p>
-        </div>
-      </div>
-
-      @if (loadingWorkspace()) {
-        <p class="loading" aria-live="polite">Loading configured sources…</p>
-      } @else if (selectedRoot(); as root) {
-        <div class="source-summary">
+        <div class="section-heading">
+          <p class="step">01</p>
           <div>
-            <p class="summary-label">Configured root</p>
-            <p class="source-name">{{ root.name }}</p>
-            <p class="source-path">
-              {{ root.mountAlias }}{{ root.relativePath ? '/' + root.relativePath : '' }}
-            </p>
-          </div>
-          <div class="source-actions">
-            <span class="status" [attr.data-state]="root.availability">
-              {{ formatState(root.availability) }}
-            </span>
-            <button
-              type="button"
-              (click)="startScan()"
-              [disabled]="startingScan() || root.mode !== 'READ_ONLY_SOURCE'"
-            >
-              {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
-            </button>
+            <h2 id="source-heading">Library source</h2>
+            <p>Yurlib reads this location without modifying the source files.</p>
           </div>
         </div>
-        @if (scanError()) {
-          <p class="notice notice-error" role="alert">{{ scanError() }}</p>
+
+        @if (loadingWorkspace()) {
+          <p class="loading" aria-live="polite">Loading configured sources…</p>
+        } @else if (selectedRoot(); as root) {
+          <div class="source-summary">
+            <div>
+              <p class="summary-label">Configured root</p>
+              <p class="source-name">{{ root.name }}</p>
+              <p class="source-path">
+                {{ root.mountAlias }}{{ root.relativePath ? '/' + root.relativePath : '' }}
+              </p>
+            </div>
+            <div class="source-actions">
+              <span class="status" [attr.data-state]="root.availability">
+                {{ formatState(root.availability) }}
+              </span>
+              <button
+                type="button"
+                (click)="startScan()"
+                [disabled]="startingScan() || root.mode !== 'READ_ONLY_SOURCE'"
+              >
+                {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
+              </button>
+            </div>
+          </div>
+          @if (scanError()) {
+            <p class="notice notice-error" role="alert">{{ scanError() }}</p>
+          }
         }
-      }
-      <form class="root-form" (submit)="configureRoot($event)" novalidate>
+        <form class="root-form" (submit)="configureRoot($event)" novalidate>
           <label>
             <span>Root mode</span>
             <select [formField]="rootForm.mode">
@@ -190,10 +197,10 @@
             </button>
             <p>The identity token is verified and never returned by the server.</p>
           </div>
-      </form>
-      @if (rootError()) {
-        <p class="notice notice-error" role="alert">{{ rootError() }}</p>
-      }
+        </form>
+        @if (rootError()) {
+          <p class="notice notice-error" role="alert">{{ rootError() }}</p>
+        }
       </section>
     }
 
@@ -427,7 +434,8 @@
         <div class="personal-summary">
           <p>
             <strong>{{ personalState().favoriteContributors.length }}</strong>
-            favorite {{ personalState().favoriteContributors.length === 1 ? 'contributor' : 'contributors' }}
+            favorite
+            {{ personalState().favoriteContributors.length === 1 ? 'contributor' : 'contributors' }}
           </p>
           <p>
             <strong>{{ personalState().readStates.length }}</strong>
@@ -447,10 +455,7 @@
             <input type="checkbox" [formField]="collectionForm.ordered" />
             Keep works in added order
           </label>
-          <button
-            type="submit"
-            [disabled]="collectionForm().invalid() || savingPersonalState()"
-          >
+          <button type="submit" [disabled]="collectionForm().invalid() || savingPersonalState()">
             Create collection
           </button>
           @if (collectionForm.name().touched() && collectionForm.name().errors()[0]; as error) {
@@ -633,8 +638,178 @@
               </button>
             </div>
 
-            <details>
-              <summary>Evidence and correction history</summary>
+            <section class="recovery-desk" aria-labelledby="recovery-heading">
+              <div class="recovery-heading">
+                <div>
+                  <p class="summary-label">Duplicate proofing</p>
+                  <h4 id="recovery-heading">Merge and recovery</h4>
+                </div>
+                <p>
+                  The selected Work remains the stable survivor. No merge runs without a preview.
+                </p>
+              </div>
+              <form class="recovery-inputs" (submit)="$event.preventDefault(); previewWorkMerge()">
+                <label>
+                  <span>Source Work ID</span>
+                  <input
+                    id="recovery-source-id"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-describedby="recovery-source-help"
+                    [value]="recoverySourceId()"
+                    placeholder="UUID of the duplicate Work"
+                    (input)="recoverySourceId.set($any($event.target).value)"
+                  />
+                  <small id="recovery-source-help">Enter the complete UUID of another Work.</small>
+                </label>
+                <button
+                  type="submit"
+                  class="secondary-button"
+                  [disabled]="runningRecovery()"
+                  (keydown)="previewWorkMergeFromKeyboard($event)"
+                >
+                  Preview impact
+                </button>
+              </form>
+
+              @if (recoveryNotice()) {
+                <p class="notice notice-success recovery-notice" role="status" aria-live="polite">
+                  {{ recoveryNotice() }}
+                </p>
+              }
+
+              @if (recoveryGuidance().length > 0) {
+                <aside class="recovery-guidance" aria-live="polite">
+                  <strong>Guided split required</strong>
+                  <ul>
+                    @for (guidance of recoveryGuidance(); track guidance) {
+                      <li>{{ guidance }}</li>
+                    }
+                  </ul>
+                </aside>
+              }
+
+              @if (recoveryPreview(); as preview) {
+                <div class="recovery-preview" aria-live="polite">
+                  <div>
+                    <span>Survivor</span>
+                    <strong>{{ preview.survivor.displayName }}</strong>
+                    <small>{{ preview.survivor.id }}</small>
+                  </div>
+                  <div>
+                    <span>Source</span>
+                    <strong>{{ preview.source.displayName }}</strong>
+                    <small>{{ preview.source.id }}</small>
+                  </div>
+                  <dl class="impact-list">
+                    <div>
+                      <dt>Assets</dt>
+                      <dd>{{ preview.impact.assets }}</dd>
+                    </div>
+                    <div>
+                      <dt>Observations</dt>
+                      <dd>{{ preview.impact.observations }}</dd>
+                    </div>
+                    <div>
+                      <dt>Tags</dt>
+                      <dd>{{ preview.impact.tags }}</dd>
+                    </div>
+                    <div>
+                      <dt>Read states</dt>
+                      <dd>{{ preview.impact.personalReadStates }}</dd>
+                    </div>
+                    <div>
+                      <dt>Collections</dt>
+                      <dd>{{ preview.impact.collectionMemberships }}</dd>
+                    </div>
+                  </dl>
+                  @if (preview.conflicts.length > 0) {
+                    <ul class="recovery-conflicts">
+                      @for (conflict of preview.conflicts; track conflict) {
+                        <li>{{ conflict }}</li>
+                      }
+                    </ul>
+                  }
+                  <label>
+                    <span>Decision reason</span>
+                    <textarea
+                      rows="3"
+                      maxlength="1000"
+                      [value]="recoveryReason()"
+                      (input)="recoveryReason.set($any($event.target).value)"
+                    ></textarea>
+                  </label>
+                  <div class="curation-actions">
+                    <button
+                      type="button"
+                      [disabled]="runningRecovery() || !preview.mergeAllowed"
+                      (click)="mergePreviewedWork()"
+                      (keydown)="previewDecisionFromKeyboard($event, 'MERGE')"
+                    >
+                      Merge into survivor
+                    </button>
+                    <button
+                      type="button"
+                      class="secondary-button"
+                      [disabled]="runningRecovery()"
+                      (click)="markPreviewNotSame()"
+                      (keydown)="previewDecisionFromKeyboard($event, 'NOT_SAME')"
+                    >
+                      Mark as not the same
+                    </button>
+                  </div>
+                </div>
+              }
+
+              @if (recoveryHistory().length > 0) {
+                <div class="recovery-history">
+                  <h5>Merge history</h5>
+                  @if (hasAppliedRecovery()) {
+                    <label class="recovery-undo-reason">
+                      <span>Undo reason</span>
+                      <textarea
+                        rows="2"
+                        maxlength="1000"
+                        [value]="recoveryUndoReason()"
+                        (input)="recoveryUndoReason.set($any($event.target).value)"
+                      ></textarea>
+                      <small>
+                        Check eligibility without a reason, or enter a reason before confirming an
+                        available automatic undo.
+                      </small>
+                    </label>
+                  }
+                  <ol class="audit-list">
+                    @for (operation of recoveryHistory(); track operation.id) {
+                      <li>
+                        <div>
+                          <strong>{{ formatState(operation.status) }}</strong>
+                          <span>{{ operation.reason }}</span>
+                          <small>{{ operation.createdAt }}</small>
+                        </div>
+                        @if (operation.status === 'APPLIED') {
+                          <button
+                            type="button"
+                            class="secondary-button"
+                            [disabled]="runningRecovery()"
+                            (click)="undoMerge(operation)"
+                            (keydown)="undoMergeFromKeyboard($event, operation)"
+                          >
+                            Check and undo
+                          </button>
+                        }
+                      </li>
+                    }
+                  </ol>
+                </div>
+              }
+            </section>
+
+            <details #evidenceHistory>
+              <summary (keydown)="toggleEvidenceHistory($event, evidenceHistory)">
+                Evidence and correction history
+              </summary>
               <h4>Observed titles</h4>
               <ul>
                 @for (value of detail.title.observedValues; track value) {
@@ -648,7 +823,9 @@
                 @for (entry of detail.title.history; track entry.id) {
                   <li>
                     <strong>Version {{ entry.version }}</strong> · {{ entry.reason }}
-                    @if (entry.active) { <span class="active-label">Active</span> }
+                    @if (entry.active) {
+                      <span class="active-label">Active</span>
+                    }
                   </li>
                 } @empty {
                   <li>No curator corrections.</li>
@@ -657,7 +834,9 @@
               <h4>Audit history</h4>
               <ol class="audit-list">
                 @for (event of detail.audit; track event.id) {
-                  <li><strong>{{ formatState(event.eventType) }}</strong> · {{ event.reason }}</li>
+                  <li>
+                    <strong>{{ formatState(event.eventType) }}</strong> · {{ event.reason }}
+                  </li>
                 } @empty {
                   <li>No curator actions.</li>
                 }
@@ -683,7 +862,11 @@
                 </div>
                 <div class="review-actions">
                   @if (review.subjectType === 'WORK') {
-                    <button type="button" class="secondary-button" (click)="openCuration(review.subjectId)">
+                    <button
+                      type="button"
+                      class="secondary-button"
+                      (click)="openCuration(review.subjectId)"
+                    >
                       Open work
                     </button>
                   }

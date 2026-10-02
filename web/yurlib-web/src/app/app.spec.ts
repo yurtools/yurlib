@@ -5,6 +5,8 @@ import { App } from './app';
 import { CatalogPage, LibraryRoot, ScanJob } from './library.model';
 
 describe('App', () => {
+  const survivorId = '21cae7c7-4f67-4cf1-9678-148178276ceb';
+  const sourceId = '0128c287-a03c-40ce-9626-069789a686f3';
   let fixture: ComponentFixture<App>;
   let http: HttpTestingController;
 
@@ -159,10 +161,12 @@ describe('App', () => {
       .dispatchEvent(
         new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }),
       );
-    http.expectOne('/api/v1/session').flush(
-      { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
-      { status: 401, statusText: 'Unauthorized' },
-    );
+    http
+      .expectOne('/api/v1/session')
+      .flush(
+        { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await fixture.whenStable();
     expect(password.value).toBe('');
   });
@@ -318,7 +322,9 @@ describe('App', () => {
     });
 
     const element = fixture.nativeElement as HTMLElement;
-    const personalActions = element.querySelectorAll<HTMLButtonElement>('.personal-work-actions button');
+    const personalActions = element.querySelectorAll<HTMLButtonElement>(
+      '.personal-work-actions button',
+    );
     personalActions[0].click();
     const readRequest = http.expectOne('/api/v1/me/works/work-1/read-state');
     expect(readRequest.request.body).toEqual({
@@ -423,8 +429,7 @@ describe('App', () => {
     http
       .expectOne(
         (request) =>
-          request.url === '/api/v1/catalog/works' &&
-          request.params.get('query') === 'тестова',
+          request.url === '/api/v1/catalog/works' && request.params.get('query') === 'тестова',
       )
       .flush(emptyCatalog());
     await fixture.whenStable();
@@ -432,7 +437,9 @@ describe('App', () => {
 
   it('exposes accessible title correction, tags, review, and audit state to curators', async () => {
     await initialize([], {
-      items: [{ id: 'work-1', title: 'Observed', contributors: [], provisional: false, assets: [] }],
+      items: [
+        { id: 'work-1', title: 'Observed', contributors: [], provisional: false, assets: [] },
+      ],
       page: 0,
       size: 12,
       totalElements: 1,
@@ -440,6 +447,9 @@ describe('App', () => {
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('.curate-button')!.click();
     http.expectOne('/api/v1/curation/works/work-1').flush(curation('Observed', 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/recovery/history').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
     const title = element.querySelector<HTMLInputElement>('.curation-fields input')!;
@@ -462,8 +472,178 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(element.querySelector('.curation-editor')?.textContent).toContain('Corrected title');
-    expect(element.querySelector('.curation-editor')?.textContent).toContain('Evidence and correction history');
+    expect(element.querySelector('.curation-editor')?.textContent).toContain(
+      'Evidence and correction history',
+    );
     expect(element.querySelector('.review-queue')).not.toBeNull();
+  });
+
+  it('previews duplicate recovery impact before enabling a merge', async () => {
+    await initialize([], {
+      items: [
+        { id: survivorId, title: 'Survivor', contributors: [], provisional: false, assets: [] },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.curate-button')!.click();
+    http
+      .expectOne(`/api/v1/curation/works/${survivorId}`)
+      .flush(curation('Survivor', 0, survivorId));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/recovery/history').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    setInput(element.querySelector<HTMLInputElement>('.recovery-inputs input')!, sourceId);
+    element
+      .querySelector<HTMLButtonElement>('.recovery-inputs button')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/v1/curation/recovery/preview' &&
+          request.params.get('survivorId') === survivorId &&
+          request.params.get('sourceId') === sourceId,
+      )
+      .flush({
+        subjectType: 'WORK',
+        survivor: { id: survivorId, displayName: 'Survivor', version: 0 },
+        source: { id: sourceId, displayName: 'Duplicate', version: 0 },
+        impact: {
+          editions: 1,
+          assets: 2,
+          observations: 4,
+          contributors: 1,
+          tags: 3,
+          personalReadStates: 1,
+          collectionMemberships: 2,
+          favoriteUsers: 0,
+        },
+        mergeAllowed: true,
+        conflicts: [],
+      });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/recovery/history').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('Duplicate');
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('Observations');
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('4');
+
+    const reason = element.querySelector<HTMLTextAreaElement>('.recovery-preview textarea')!;
+    reason.value = 'Separate publication evidence';
+    reason.dispatchEvent(new Event('input'));
+    element.querySelectorAll<HTMLButtonElement>('.recovery-preview button')[1].click();
+    http.expectOne('/api/v1/curation/recovery/not-same').flush({});
+    await fixture.whenStable();
+
+    expect(element.querySelector('.recovery-notice')?.textContent).toContain(
+      'these Works are not the same',
+    );
+  });
+
+  it('validates recovery identifiers and supports keyboard disclosure activation', async () => {
+    await initialize([], {
+      items: [
+        { id: survivorId, title: 'Survivor', contributors: [], provisional: false, assets: [] },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.curate-button')!.click();
+    http
+      .expectOne(`/api/v1/curation/works/${survivorId}`)
+      .flush(curation('Survivor', 0, survivorId));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/recovery/history').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    element
+      .querySelector<HTMLFormElement>('.recovery-inputs')!
+      .dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(element.querySelector('.notice-error')?.textContent).toContain(
+      'Enter the source Work ID',
+    );
+
+    setInput(element.querySelector<HTMLInputElement>('.recovery-inputs input')!, 'not-a-work-id');
+    element
+      .querySelector<HTMLFormElement>('.recovery-inputs')!
+      .dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(element.querySelector('.notice-error')?.textContent).toContain(
+      'Enter a valid source Work UUID',
+    );
+    http.expectNone('/api/v1/curation/recovery/preview');
+
+    const details = element.querySelector<HTMLDetailsElement>('.curation-editor details')!;
+    details
+      .querySelector('summary')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(details.open).toBe(true);
+  });
+
+  it('loads recovery history on open and explains unsafe undo without an active preview', async () => {
+    await initialize([], {
+      items: [
+        { id: survivorId, title: 'Survivor', contributors: [], provisional: false, assets: [] },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const operation = mergeOperation('APPLIED');
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.curate-button')!.click();
+    http
+      .expectOne(`/api/v1/curation/works/${survivorId}`)
+      .flush(curation('Survivor', 1, survivorId));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/v1/curation/recovery/history' &&
+          request.params.get('subjectId') === survivorId,
+      )
+      .flush([operation]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(element.querySelector('.recovery-history')?.textContent).toContain('Probable duplicate');
+    element.querySelector<HTMLButtonElement>('.recovery-history button')!.click();
+    http
+      .expectOne(`/api/v1/curation/recovery/merges/${operation.id}/split-preview`)
+      .flush({ operation, automaticUndoAllowed: true, conflicts: [] });
+    await fixture.whenStable();
+    expect(element.querySelector('.notice-error')?.textContent).toContain(
+      'Automatic undo is available',
+    );
+
+    const reason = element.querySelector<HTMLTextAreaElement>('.recovery-undo-reason textarea')!;
+    reason.value = 'Later evidence separates these Works';
+    reason.dispatchEvent(new Event('input'));
+    element.querySelector<HTMLButtonElement>('.recovery-history button')!.click();
+    http.expectOne(`/api/v1/curation/recovery/merges/${operation.id}/split-preview`).flush({
+      operation,
+      automaticUndoAllowed: false,
+      conflicts: ['The merged catalog state changed after this operation; use a guided split.'],
+    });
+    await fixture.whenStable();
+
+    expect(element.querySelector('.recovery-guidance')?.textContent).toContain(
+      'Guided split required',
+    );
+    expect(element.querySelector('.recovery-guidance')?.textContent).toContain(
+      'merged catalog state changed',
+    );
+    http.expectNone(`/api/v1/curation/recovery/merges/${operation.id}/undo`);
   });
 
   function setInput(input: HTMLInputElement, value: string) {
@@ -529,9 +709,9 @@ describe('App', () => {
     };
   }
 
-  function curation(title: string, version: number) {
+  function curation(title: string, version: number, id = 'work-1') {
     return {
-      id: 'work-1',
+      id,
       version: 0,
       title: {
         value: title,
@@ -544,6 +724,20 @@ describe('App', () => {
       tags: ['classic'],
       reviews: [],
       audit: [],
+    };
+  }
+
+  function mergeOperation(status: 'APPLIED' | 'UNDONE') {
+    return {
+      id: '42ad8cb3-3d6f-460d-88f9-68234ed2348e',
+      subjectType: 'WORK' as const,
+      survivorId,
+      sourceId,
+      status,
+      actorId: 'c8c4e5d7-e1d4-4b7c-a319-6ad8767fc775',
+      reason: 'Probable duplicate',
+      createdAt: '2026-10-02T12:00:00Z',
+      undoneAt: status === 'UNDONE' ? '2026-10-02T13:00:00Z' : null,
     };
   }
 });
