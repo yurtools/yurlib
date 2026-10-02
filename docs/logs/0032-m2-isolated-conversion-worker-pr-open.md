@@ -1,6 +1,6 @@
 # M2 Isolated Conversion Worker and EPUB Routes
 
-- Status: Verification
+- Status: PR Open
 - Started: 2026-10-02
 - Branch: `feat/60-isolated-conversion-worker`
 - Issue: [#60](https://github.com/yurtools/yurlib/issues/60)
@@ -50,6 +50,8 @@
 - `npm --prefix web/yurlib-web run build` — passed; initial bundle 380.82 kB raw and 97.10 kB estimated transfer.
 - `docker compose config` and `docker compose --profile worker config` — passed.
 - `git diff --check` — passed.
+- Committed the implementation as `f57364f` (`feat: add isolated conversion worker (#60)`) and pushed `feat/60-isolated-conversion-worker`.
+- Opened pull request [#75](https://github.com/yurtools/yurlib/pull/75), which closes issue #60 after squash merge.
 
 ## Blockers
 
