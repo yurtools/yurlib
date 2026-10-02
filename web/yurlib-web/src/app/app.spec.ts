@@ -159,10 +159,12 @@ describe('App', () => {
       .dispatchEvent(
         new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }),
       );
-    http.expectOne('/api/v1/session').flush(
-      { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
-      { status: 401, statusText: 'Unauthorized' },
-    );
+    http
+      .expectOne('/api/v1/session')
+      .flush(
+        { detail: 'Owner authentication is required.', code: 'AUTHENTICATION_REQUIRED' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await fixture.whenStable();
     expect(password.value).toBe('');
   });
@@ -318,7 +320,9 @@ describe('App', () => {
     });
 
     const element = fixture.nativeElement as HTMLElement;
-    const personalActions = element.querySelectorAll<HTMLButtonElement>('.personal-work-actions button');
+    const personalActions = element.querySelectorAll<HTMLButtonElement>(
+      '.personal-work-actions button',
+    );
     personalActions[0].click();
     const readRequest = http.expectOne('/api/v1/me/works/work-1/read-state');
     expect(readRequest.request.body).toEqual({
@@ -423,8 +427,7 @@ describe('App', () => {
     http
       .expectOne(
         (request) =>
-          request.url === '/api/v1/catalog/works' &&
-          request.params.get('query') === 'тестова',
+          request.url === '/api/v1/catalog/works' && request.params.get('query') === 'тестова',
       )
       .flush(emptyCatalog());
     await fixture.whenStable();
@@ -432,7 +435,9 @@ describe('App', () => {
 
   it('exposes accessible title correction, tags, review, and audit state to curators', async () => {
     await initialize([], {
-      items: [{ id: 'work-1', title: 'Observed', contributors: [], provisional: false, assets: [] }],
+      items: [
+        { id: 'work-1', title: 'Observed', contributors: [], provisional: false, assets: [] },
+      ],
       page: 0,
       size: 12,
       totalElements: 1,
@@ -462,8 +467,59 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(element.querySelector('.curation-editor')?.textContent).toContain('Corrected title');
-    expect(element.querySelector('.curation-editor')?.textContent).toContain('Evidence and correction history');
+    expect(element.querySelector('.curation-editor')?.textContent).toContain(
+      'Evidence and correction history',
+    );
     expect(element.querySelector('.review-queue')).not.toBeNull();
+  });
+
+  it('previews duplicate recovery impact before enabling a merge', async () => {
+    await initialize([], {
+      items: [
+        { id: 'work-1', title: 'Survivor', contributors: [], provisional: false, assets: [] },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.curate-button')!.click();
+    http.expectOne('/api/v1/curation/works/work-1').flush(curation('Survivor', 0));
+    await fixture.whenStable();
+
+    setInput(element.querySelector<HTMLInputElement>('.recovery-inputs input')!, 'work-2');
+    element.querySelector<HTMLButtonElement>('.recovery-inputs button')!.click();
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/v1/curation/recovery/preview' &&
+          request.params.get('survivorId') === 'work-1' &&
+          request.params.get('sourceId') === 'work-2',
+      )
+      .flush({
+        subjectType: 'WORK',
+        survivor: { id: 'work-1', displayName: 'Survivor', version: 0 },
+        source: { id: 'work-2', displayName: 'Duplicate', version: 0 },
+        impact: {
+          editions: 1,
+          assets: 2,
+          observations: 4,
+          contributors: 1,
+          tags: 3,
+          personalReadStates: 1,
+          collectionMemberships: 2,
+          favoriteUsers: 0,
+        },
+        mergeAllowed: true,
+        conflicts: [],
+      });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne((request) => request.url === '/api/v1/curation/recovery/history').flush([]);
+    await fixture.whenStable();
+
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('Duplicate');
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('Observations');
+    expect(element.querySelector('.recovery-preview')?.textContent).toContain('4');
   });
 
   function setInput(input: HTMLInputElement, value: string) {

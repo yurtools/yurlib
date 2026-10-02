@@ -26,6 +26,8 @@ import {
   MetadataReviewItem,
   PersonalCollection,
   PersonalLibraryState,
+  MergeOperation,
+  RecoveryPreview,
   WorkCuration,
 } from './library.model';
 
@@ -146,6 +148,11 @@ export class App {
   protected readonly curationContributorId = signal('');
   protected readonly curationContributorName = signal('');
   protected readonly curationContributorAliases = signal('');
+  protected readonly recoverySourceId = signal('');
+  protected readonly recoveryReason = signal('');
+  protected readonly recoveryPreview = signal<RecoveryPreview | undefined>(undefined);
+  protected readonly recoveryHistory = signal<MergeOperation[]>([]);
+  protected readonly runningRecovery = signal(false);
   protected readonly personalState = signal<PersonalLibraryState>({
     favoriteContributors: [],
     readStates: [],
@@ -341,11 +348,7 @@ export class App {
     });
   }
 
-  protected async updateCollection(
-    collection: PersonalCollection,
-    name: string,
-    ordered: boolean,
-  ) {
+  protected async updateCollection(collection: PersonalCollection, name: string, ordered: boolean) {
     if (!name.trim()) {
       this.personalStateError.set('Enter a collection name.');
       return;
@@ -374,7 +377,9 @@ export class App {
       const detail = await firstValueFrom(this.api.getWorkCuration(workId));
       this.setCuration(detail);
     } catch (error) {
-      this.curationError.set(this.problemMessage(error, 'The curation record could not be loaded.'));
+      this.curationError.set(
+        this.problemMessage(error, 'The curation record could not be loaded.'),
+      );
     } finally {
       this.loadingCuration.set(false);
     }
@@ -384,6 +389,110 @@ export class App {
     this.selectedCuration.set(undefined);
     this.curationError.set('');
     this.curationReason.set('');
+    this.clearRecovery();
+  }
+
+  protected async previewWorkMerge() {
+    const detail = this.selectedCuration();
+    const sourceId = this.recoverySourceId().trim();
+    if (!detail || !sourceId || this.runningRecovery()) {
+      this.curationError.set('Enter the source Work ID to compare with the selected survivor.');
+      return;
+    }
+    this.runningRecovery.set(true);
+    this.curationError.set('');
+    try {
+      const preview = await firstValueFrom(this.api.previewRecovery('WORK', detail.id, sourceId));
+      this.recoveryPreview.set(preview);
+      this.recoveryHistory.set(await firstValueFrom(this.api.recoveryHistory('WORK', detail.id)));
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The merge preview could not be loaded.'));
+    } finally {
+      this.runningRecovery.set(false);
+    }
+  }
+
+  protected async mergePreviewedWork() {
+    const preview = this.recoveryPreview();
+    const reason = this.recoveryReason().trim();
+    if (!preview || !preview.mergeAllowed || !reason || this.runningRecovery()) {
+      this.curationError.set('Review the preview and enter a reason before merging.');
+      return;
+    }
+    this.runningRecovery.set(true);
+    this.curationError.set('');
+    try {
+      await firstValueFrom(this.api.mergeSubjects(preview, reason, crypto.randomUUID()));
+      this.recoveryPreview.set(undefined);
+      this.recoveryReason.set('');
+      this.recoverySourceId.set('');
+      this.recoveryHistory.set(
+        await firstValueFrom(this.api.recoveryHistory('WORK', preview.survivor.id)),
+      );
+      await Promise.all([
+        this.openCuration(preview.survivor.id),
+        this.loadCatalog(this.catalog().page),
+        this.loadPersonalState(),
+      ]);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The catalog merge could not be applied.'));
+    } finally {
+      this.runningRecovery.set(false);
+    }
+  }
+
+  protected async markPreviewNotSame() {
+    const preview = this.recoveryPreview();
+    const reason = this.recoveryReason().trim();
+    if (!preview || !reason || this.runningRecovery()) {
+      this.curationError.set('Enter a reason for the not-the-same decision.');
+      return;
+    }
+    this.runningRecovery.set(true);
+    this.curationError.set('');
+    try {
+      await firstValueFrom(
+        this.api.markNotSame(preview.subjectType, preview.survivor.id, preview.source.id, reason),
+      );
+      this.recoveryPreview.set(undefined);
+      this.recoveryReason.set('');
+      this.recoverySourceId.set('');
+    } catch (error) {
+      this.curationError.set(
+        this.problemMessage(error, 'The duplicate decision could not be saved.'),
+      );
+    } finally {
+      this.runningRecovery.set(false);
+    }
+  }
+
+  protected async undoMerge(operation: MergeOperation) {
+    const reason = this.recoveryReason().trim();
+    if (!reason || this.runningRecovery()) {
+      this.curationError.set('Enter a reason before undoing a merge.');
+      return;
+    }
+    this.runningRecovery.set(true);
+    this.curationError.set('');
+    try {
+      const preview = await firstValueFrom(this.api.splitPreview(operation.id));
+      if (!preview.automaticUndoAllowed) {
+        this.curationError.set(
+          preview.conflicts.join(' ') || 'This merge requires a guided split.',
+        );
+        return;
+      }
+      await firstValueFrom(this.api.undoMerge(operation.id, reason));
+      this.recoveryReason.set('');
+      this.recoveryHistory.set(
+        await firstValueFrom(this.api.recoveryHistory('WORK', operation.survivorId)),
+      );
+      await Promise.all([this.loadCatalog(this.catalog().page), this.loadPersonalState()]);
+    } catch (error) {
+      this.curationError.set(this.problemMessage(error, 'The merge could not be undone.'));
+    } finally {
+      this.runningRecovery.set(false);
+    }
   }
 
   protected async saveCuratedTitle() {
@@ -425,9 +534,7 @@ export class App {
       .split(',')
       .map((tag) => tag.trim())
       .filter((tag) => tag !== '');
-    await this.runCurationUpdate(
-      this.api.replaceWorkTags(detail.id, tags, reason, detail.version),
-    );
+    await this.runCurationUpdate(this.api.replaceWorkTags(detail.id, tags, reason, detail.version));
   }
 
   protected selectCurationContributor(contributorId: string) {
@@ -470,7 +577,9 @@ export class App {
       this.curationReason.set('');
       await Promise.all([this.openCuration(detail.id), this.loadCatalog(this.catalog().page)]);
     } catch (error) {
-      this.curationError.set(this.problemMessage(error, 'The contributor change could not be saved.'));
+      this.curationError.set(
+        this.problemMessage(error, 'The contributor change could not be saved.'),
+      );
     } finally {
       this.savingCuration.set(false);
     }
@@ -565,12 +674,9 @@ export class App {
     try {
       this.catalog.set(
         await firstValueFrom(
-          this.api.searchCatalog(
-            this.searchModel().query.trim(),
-            page,
-            App.CATALOG_PAGE_SIZE,
-            [...this.selectedCatalogFormats()],
-          ),
+          this.api.searchCatalog(this.searchModel().query.trim(), page, App.CATALOG_PAGE_SIZE, [
+            ...this.selectedCatalogFormats(),
+          ]),
         ),
       );
     } catch (error) {
@@ -656,11 +762,20 @@ export class App {
     this.selectCurationContributor(detail.contributors[0]?.id ?? '');
   }
 
+  private clearRecovery() {
+    this.recoverySourceId.set('');
+    this.recoveryReason.set('');
+    this.recoveryPreview.set(undefined);
+    this.recoveryHistory.set([]);
+  }
+
   private async loadReviews() {
     try {
       this.reviewQueue.set(await firstValueFrom(this.api.listMetadataReviews()));
     } catch (error) {
-      this.curationError.set(this.problemMessage(error, 'The metadata review queue could not be loaded.'));
+      this.curationError.set(
+        this.problemMessage(error, 'The metadata review queue could not be loaded.'),
+      );
     }
   }
 

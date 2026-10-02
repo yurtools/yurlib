@@ -15,6 +15,10 @@ import {
   PersonalLibraryState,
   WorkReadState,
   FavoriteContributor,
+  MergeOperation,
+  RecoverableSubjectType,
+  RecoveryPreview,
+  SplitPreview,
 } from './library.model';
 
 @Injectable({ providedIn: 'root' })
@@ -122,6 +126,62 @@ export class LibraryApi {
     );
   }
 
+  previewRecovery(subjectType: RecoverableSubjectType, survivorId: string, sourceId: string) {
+    return this.http.get<RecoveryPreview>('/api/v1/curation/recovery/preview', {
+      params: new HttpParams()
+        .set('subjectType', subjectType)
+        .set('survivorId', survivorId)
+        .set('sourceId', sourceId),
+    });
+  }
+
+  mergeSubjects(preview: RecoveryPreview, reason: string, idempotencyKey: string) {
+    return this.http.post<MergeOperation>('/api/v1/curation/recovery/merges', {
+      subjectType: preview.subjectType,
+      survivorId: preview.survivor.id,
+      sourceId: preview.source.id,
+      survivorVersion: preview.survivor.version,
+      sourceVersion: preview.source.version,
+      idempotencyKey,
+      reason,
+    });
+  }
+
+  recoveryHistory(subjectType: RecoverableSubjectType, subjectId: string) {
+    return this.http.get<MergeOperation[]>('/api/v1/curation/recovery/history', {
+      params: new HttpParams().set('subjectType', subjectType).set('subjectId', subjectId),
+    });
+  }
+
+  splitPreview(operationId: string) {
+    return this.http.get<SplitPreview>(
+      `/api/v1/curation/recovery/merges/${encodeURIComponent(operationId)}/split-preview`,
+    );
+  }
+
+  undoMerge(operationId: string, reason: string) {
+    return this.http.post<MergeOperation>(
+      `/api/v1/curation/recovery/merges/${encodeURIComponent(operationId)}/undo`,
+      { reason },
+    );
+  }
+
+  markNotSame(
+    subjectType: RecoverableSubjectType,
+    firstId: string,
+    secondId: string,
+    reason: string,
+  ) {
+    return this.http.post('/api/v1/curation/recovery/not-same', {
+      subjectType,
+      firstId,
+      secondId,
+      ruleName: 'manual-duplicate-review',
+      ruleVersion: '1',
+      reason,
+    });
+  }
+
   personalLibraryState() {
     return this.http.get<PersonalLibraryState>('/api/v1/me/library-state');
   }
@@ -147,10 +207,9 @@ export class LibraryApi {
   }
 
   markWorkUnread(workId: string, expectedVersion: number) {
-    return this.http.delete<void>(
-      `/api/v1/me/works/${encodeURIComponent(workId)}/read-state`,
-      { params: new HttpParams().set('expectedVersion', expectedVersion) },
-    );
+    return this.http.delete<void>(`/api/v1/me/works/${encodeURIComponent(workId)}/read-state`, {
+      params: new HttpParams().set('expectedVersion', expectedVersion),
+    });
   }
 
   createCollection(name: string, ordered: boolean) {
@@ -165,10 +224,9 @@ export class LibraryApi {
   }
 
   deleteCollection(collection: PersonalCollection) {
-    return this.http.delete<void>(
-      `/api/v1/me/collections/${encodeURIComponent(collection.id)}`,
-      { params: new HttpParams().set('expectedVersion', collection.version) },
-    );
+    return this.http.delete<void>(`/api/v1/me/collections/${encodeURIComponent(collection.id)}`, {
+      params: new HttpParams().set('expectedVersion', collection.version),
+    });
   }
 
   addWorkToCollection(collection: PersonalCollection, workId: string) {

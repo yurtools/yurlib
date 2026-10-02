@@ -442,6 +442,136 @@ paths:
           description: Review dismissed
         "404":
           $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/preview:
+    get:
+      operationId: previewCatalogRecovery
+      summary: Preview a curator-reviewed catalog merge without changing state
+      parameters:
+        - $ref: "#/components/parameters/RecoverySubjectType"
+        - $ref: "#/components/parameters/SurvivorId"
+        - $ref: "#/components/parameters/SourceId"
+      responses:
+        "200":
+          description: Authorized merge impact and conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryPreview"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/merges:
+    post:
+      operationId: mergeCatalogSubjects
+      summary: Apply an idempotent curator-reviewed catalog merge
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergeRequest"
+      responses:
+        "200":
+          description: Applied or previously applied merge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MergeOperation"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/merges/{operationId}/split-preview:
+    get:
+      operationId: previewCatalogSplit
+      summary: Check whether a merge can be undone automatically
+      parameters:
+        - $ref: "#/components/parameters/OperationId"
+      responses:
+        "200":
+          description: Automatic-undo decision and guided-split conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SplitPreview"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/merges/{operationId}/undo:
+    post:
+      operationId: undoCatalogMerge
+      summary: Undo an unchanged merge using its before image
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/OperationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+      responses:
+        "200":
+          description: Undone merge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MergeOperation"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/not-same:
+    post:
+      operationId: markCatalogSubjectsNotSame
+      summary: Suppress a duplicate candidate for the same rule and version
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotSameRequest"
+      responses:
+        "200":
+          description: Durable duplicate decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateDecision"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /api/v1/curation/recovery/history:
+    get:
+      operationId: listCatalogRecoveryHistory
+      summary: List authorized merge and undo history for a catalog subject
+      parameters:
+        - $ref: "#/components/parameters/RecoverySubjectType"
+        - name: subjectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Most recent recovery operations
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items:
+                  $ref: "#/components/schemas/MergeOperation"
+        "404":
+          $ref: "#/components/responses/Problem"
   /api/v1/assets/{assetId}/content:
     get:
       operationId: downloadOriginalAsset
@@ -889,6 +1019,33 @@ components:
         type: integer
         format: int64
         minimum: 0
+    RecoverySubjectType:
+      name: subjectType
+      in: query
+      required: true
+      schema:
+        $ref: "#/components/schemas/RecoverableSubjectType"
+    SurvivorId:
+      name: survivorId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SourceId:
+      name: sourceId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OperationId:
+      name: operationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   responses:
     Problem:
       description: RFC 9457 problem response
@@ -1148,6 +1305,184 @@ components:
           type: integer
           format: int64
           minimum: 1
+    RecoverableSubjectType:
+      type: string
+      enum: [WORK, EDITION, CONTRIBUTOR]
+    RecoverySubjectSummary:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+    RecoveryImpact:
+      type: object
+      additionalProperties: false
+      required:
+        - editions
+        - assets
+        - observations
+        - contributors
+        - tags
+        - personalReadStates
+        - collectionMemberships
+        - favoriteUsers
+      properties:
+        editions: { type: integer, format: int64, minimum: 0 }
+        assets: { type: integer, format: int64, minimum: 0 }
+        observations: { type: integer, format: int64, minimum: 0 }
+        contributors: { type: integer, format: int64, minimum: 0 }
+        tags: { type: integer, format: int64, minimum: 0 }
+        personalReadStates: { type: integer, format: int64, minimum: 0 }
+        collectionMemberships: { type: integer, format: int64, minimum: 0 }
+        favoriteUsers: { type: integer, format: int64, minimum: 0 }
+    RecoveryPreview:
+      type: object
+      additionalProperties: false
+      required: [subjectType, survivor, source, impact, mergeAllowed, conflicts]
+      properties:
+        subjectType:
+          $ref: "#/components/schemas/RecoverableSubjectType"
+        survivor:
+          $ref: "#/components/schemas/RecoverySubjectSummary"
+        source:
+          $ref: "#/components/schemas/RecoverySubjectSummary"
+        impact:
+          $ref: "#/components/schemas/RecoveryImpact"
+        mergeAllowed:
+          type: boolean
+        conflicts:
+          type: array
+          items:
+            type: string
+    MergeRequest:
+      type: object
+      additionalProperties: false
+      required: [subjectType, survivorId, sourceId, survivorVersion, sourceVersion, idempotencyKey, reason]
+      properties:
+        subjectType:
+          $ref: "#/components/schemas/RecoverableSubjectType"
+        survivorId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        survivorVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        sourceVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        idempotencyKey:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    MergeOperation:
+      type: object
+      additionalProperties: false
+      required: [id, subjectType, survivorId, sourceId, status, actorId, reason, createdAt, undoneAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        subjectType:
+          $ref: "#/components/schemas/RecoverableSubjectType"
+        survivorId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [APPLIED, UNDONE]
+        actorId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        undoneAt:
+          type: [string, "null"]
+          format: date-time
+    SplitPreview:
+      type: object
+      additionalProperties: false
+      required: [operation, automaticUndoAllowed, conflicts]
+      properties:
+        operation:
+          $ref: "#/components/schemas/MergeOperation"
+        automaticUndoAllowed:
+          type: boolean
+        conflicts:
+          type: array
+          items:
+            type: string
+    NotSameRequest:
+      type: object
+      additionalProperties: false
+      required: [subjectType, firstId, secondId, ruleName, ruleVersion, reason]
+      properties:
+        subjectType:
+          $ref: "#/components/schemas/RecoverableSubjectType"
+        firstId:
+          type: string
+          format: uuid
+        secondId:
+          type: string
+          format: uuid
+        ruleName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ruleVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    DuplicateDecision:
+      type: object
+      additionalProperties: false
+      required: [id, subjectType, firstSubjectId, secondSubjectId, ruleName, ruleVersion, reason, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        subjectType:
+          $ref: "#/components/schemas/RecoverableSubjectType"
+        firstSubjectId:
+          type: string
+          format: uuid
+        secondSubjectId:
+          type: string
+          format: uuid
+        ruleName:
+          type: string
+        ruleVersion:
+          type: string
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     WorkCuration:
       type: object
       additionalProperties: false

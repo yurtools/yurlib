@@ -182,3 +182,43 @@ export interface ContributorCuration {
   version: number;
   aliases: string[];
 }
+
+export type RecoverableSubjectType = 'WORK' | 'EDITION' | 'CONTRIBUTOR';
+
+export interface RecoveryImpact {
+  editions: number;
+  assets: number;
+  observations: number;
+  contributors: number;
+  tags: number;
+  personalReadStates: number;
+  collectionMemberships: number;
+  favoriteUsers: number;
+}
+
+export interface RecoveryPreview {
+  subjectType: RecoverableSubjectType;
+  survivor: { id: string; displayName: string; version: number };
+  source: { id: string; displayName: string; version: number };
+  impact: RecoveryImpact;
+  mergeAllowed: boolean;
+  conflicts: string[];
+}
+
+export interface MergeOperation {
+  id: string;
+  subjectType: RecoverableSubjectType;
+  survivorId: string;
+  sourceId: string;
+  status: 'APPLIED' | 'UNDONE';
+  actorId: string;
+  reason: string;
+  createdAt: string;
+  undoneAt: string | null;
+}
+
+export interface SplitPreview {
+  operation: MergeOperation;
+  automaticUndoAllowed: boolean;
+  conflicts: string[];
+}

@@ -71,7 +71,7 @@ class YurlibServerIntegrationTest {
                 WHERE metadata_key = 'schema_version'
                 """).query(String.class).single();
 
-        assertThat(value).isEqualTo("10");
+        assertThat(value).isEqualTo("11");
     }
 
     @Test

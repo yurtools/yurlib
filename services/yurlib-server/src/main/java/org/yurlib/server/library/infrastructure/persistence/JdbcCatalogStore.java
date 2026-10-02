@@ -429,7 +429,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
         return jdbc.sql("""
                 SELECT count(*)
                 FROM work
-                WHERE EXISTS (
+                WHERE work.merged_into_id IS NULL
+                AND EXISTS (
                     SELECT 1
                     FROM edition visible_edition
                     JOIN asset visible_asset ON visible_asset.edition_id = visible_edition.id
@@ -528,7 +529,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                              AND display.metadata_source IN ('CURATED', 'RESOLVED')
                        ) AS provisional
                 FROM work
-                WHERE EXISTS (
+                WHERE work.merged_into_id IS NULL
+                AND EXISTS (
                     SELECT 1
                     FROM edition visible_edition
                     JOIN asset visible_asset ON visible_asset.edition_id = visible_edition.id
