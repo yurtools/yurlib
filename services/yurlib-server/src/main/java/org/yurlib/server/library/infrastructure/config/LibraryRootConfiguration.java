@@ -14,7 +14,11 @@ import org.yurlib.server.library.application.AssetFileOpener;
 import org.yurlib.server.library.application.CatalogCandidateReconciler;
 import org.yurlib.server.library.application.CatalogStore;
 import org.yurlib.server.library.application.ConfigureLibraryRootService;
+import org.yurlib.server.library.application.CoverContentStore;
+import org.yurlib.server.library.application.CoverContentUseCases;
+import org.yurlib.server.library.application.CoverQueue;
 import org.yurlib.server.library.application.DefaultCatalogCandidateReconciler;
+import org.yurlib.server.library.application.DefaultCoverContentService;
 import org.yurlib.server.library.application.DefaultOriginalAssetContentService;
 import org.yurlib.server.library.application.DefaultScanJobService;
 import org.yurlib.server.library.application.IngestionResourceGovernor;
@@ -34,13 +38,14 @@ import org.yurlib.server.library.application.ScanJobTelemetry;
 import org.yurlib.server.library.application.ScanJobUseCases;
 import org.yurlib.server.library.application.ScanJobWorker;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemAssetFileOpener;
+import org.yurlib.server.library.infrastructure.filesystem.FilesystemCoverFileOpener;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemRootVerifier;
 import org.yurlib.server.library.infrastructure.filesystem.FilesystemScanDiscovery;
 import org.yurlib.server.library.infrastructure.filesystem.MountAliasRegistry;
 import org.yurlib.server.library.infrastructure.metadata.BoundedMetadataExtractor;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({LibraryStorageProperties.class, PdfWorkerProperties.class})
+@EnableConfigurationProperties({LibraryStorageProperties.class, PdfWorkerProperties.class, CoverWorkerProperties.class})
 @EnableScheduling
 public class LibraryRootConfiguration {
 
@@ -92,8 +97,12 @@ public class LibraryRootConfiguration {
 
     @Bean
     CatalogCandidateReconciler catalogCandidateReconciler(
-            CatalogStore catalog, MetadataExtractor extractor, PdfMetadataQueue pdfQueue, Clock clock) {
-        return new DefaultCatalogCandidateReconciler(catalog, extractor, pdfQueue, clock);
+            CatalogStore catalog,
+            MetadataExtractor extractor,
+            PdfMetadataQueue pdfQueue,
+            CoverQueue coverQueue,
+            Clock clock) {
+        return new DefaultCatalogCandidateReconciler(catalog, extractor, pdfQueue, coverQueue, clock);
     }
 
     @Bean
@@ -105,6 +114,12 @@ public class LibraryRootConfiguration {
     OriginalAssetContentUseCases originalAssetContentUseCases(
             AssetContentStore assets, LibraryRootStore roots, AssetFileOpener opener) {
         return new DefaultOriginalAssetContentService(assets, roots, opener);
+    }
+
+    @Bean
+    CoverContentUseCases coverContentUseCases(
+            CoverContentStore covers, LibraryRootStore roots, FilesystemRootVerifier verifier) {
+        return new DefaultCoverContentService(covers, roots, new FilesystemCoverFileOpener(verifier));
     }
 
     @Bean

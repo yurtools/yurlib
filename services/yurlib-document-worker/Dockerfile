@@ -11,7 +11,9 @@ RUN mvn -B -pl services/yurlib-document-worker -am package -DskipTests
 
 FROM eclipse-temurin:25-jre-alpine
 
-RUN addgroup -S yurlib && adduser -S -G yurlib -u 10001 yurlib
+RUN apk add --no-cache djvulibre=3.5.30-r0 \
+    && addgroup -S yurlib \
+    && adduser -S -G yurlib -u 10001 yurlib
 
 WORKDIR /app
 COPY --from=build --chown=yurlib:yurlib /workspace/services/yurlib-document-worker/target/yurlib-document-worker-*.jar /app/worker.jar

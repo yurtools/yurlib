@@ -38,6 +38,9 @@ yurlib:
     staging-directory: ${YURLIB_PDF_STAGING_DIRECTORY:.local/staging/pdf}
     token: ${YURLIB_WORKER_TOKEN:}
     lease-duration: 2m
+  cover-worker:
+    staging-directory: ${YURLIB_COVER_STAGING_DIRECTORY:.local/staging/covers}
+    lease-duration: 2m
   security:
     owner:
       username: ${YURLIB_OWNER_USERNAME:owner}

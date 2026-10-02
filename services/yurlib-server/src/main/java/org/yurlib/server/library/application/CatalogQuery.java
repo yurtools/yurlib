@@ -20,10 +20,20 @@ public interface CatalogQuery {
     }
 
     record WorkSummary(
-            UUID id, String title, boolean provisional, List<String> contributors, List<AssetSummary> assets) {
+            UUID id,
+            String title,
+            boolean provisional,
+            List<String> contributors,
+            List<AssetSummary> assets,
+            boolean coverAvailable) {
         public WorkSummary {
             contributors = List.copyOf(contributors);
             assets = List.copyOf(assets);
+        }
+
+        public WorkSummary(
+                UUID id, String title, boolean provisional, List<String> contributors, List<AssetSummary> assets) {
+            this(id, title, provisional, contributors, assets, false);
         }
     }
 

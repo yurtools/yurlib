@@ -1,6 +1,6 @@
 # M2 EPUB and DjVu Compatibility
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-10-01
 - Branch: `feat/69-epub-djvu-compatibility`
 - Issue: [#69](https://github.com/yurtools/yurlib/issues/69)
@@ -38,6 +38,7 @@
 - Recorded 18.32 warm files/second, 4,051,056 counted bytes, 218,213,520 peak heap bytes, two peak open files per task, 442.343 microseconds database p95, and 4,290.697 microseconds interactive API p95. The approximately ten-minute wall duration includes 100 additional full-corpus interaction-load passes and is not the warm-pass interval.
 - Completed issue #69's acceptance checklist and recorded the aggregate-only verification results in its GitHub discussion.
 - Committed the implementation as `c358329`, pushed the feature branch, and opened pull request #71 with `Closes #69`.
+- Pull request #71 was squash-merged as `eab7f79`; issue #69 is closed and its Project item is Done.
 
 ## Verification
 

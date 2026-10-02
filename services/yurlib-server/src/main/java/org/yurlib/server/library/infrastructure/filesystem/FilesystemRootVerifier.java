@@ -51,7 +51,7 @@ public final class FilesystemRootVerifier implements RootLocationVerifier, Conta
         }
     }
 
-    MountAliasRegistry.ResolvedRoot verifyConfigured(LibraryRoot root) {
+    public MountAliasRegistry.ResolvedRoot verifyConfigured(LibraryRoot root) {
         var resolved = registry.resolve(root.mountAlias(), root.relativeBasePath());
         var marker = resolved.path().resolve(IDENTITY_MARKER);
         try {

@@ -57,6 +57,7 @@ export class App {
     relativePath: '',
     identityToken: '',
     mode: 'READ_ONLY_SOURCE',
+    defaultForCovers: false,
   });
   protected readonly rootForm = form(this.rootModel, (schema) => {
     required(schema.name, { message: 'Enter a library name.' });
@@ -216,7 +217,12 @@ export class App {
       this.savingRoot.set(true);
       this.rootError.set('');
       try {
-        const root = await firstValueFrom(this.api.createRoot(this.rootModel()));
+        const model = this.rootModel();
+        const request = {
+          ...model,
+          defaultForCovers: model.mode === 'MANAGED_OUTPUT' && Boolean(model.defaultForCovers),
+        };
+        const root = await firstValueFrom(this.api.createRoot(request));
         this.roots.update((roots) => [...roots, root]);
         this.selectedRootId.set(root.id);
         this.rootModel.update((model) => ({ ...model, identityToken: '' }));
@@ -268,6 +274,19 @@ export class App {
 
   protected downloadUrl(assetId: string) {
     return this.api.downloadUrl(assetId);
+  }
+
+  protected coverUrl(workId: string) {
+    return this.api.coverUrl(workId);
+  }
+
+  protected hideFailedCover(event: Event) {
+    const image = event.target;
+    if (image instanceof HTMLImageElement) image.hidden = true;
+  }
+
+  protected setDefaultForCovers(enabled: boolean) {
+    this.rootModel.update((model) => ({ ...model, defaultForCovers: enabled }));
   }
 
   protected async openCuration(workId: string) {

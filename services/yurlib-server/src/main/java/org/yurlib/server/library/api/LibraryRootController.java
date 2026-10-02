@@ -42,7 +42,8 @@ public class LibraryRootController {
                 request.mountAlias(),
                 request.relativePath(),
                 request.identityToken(),
-                request.mode());
+                request.mode(),
+                Boolean.TRUE.equals(request.defaultForCovers()));
         return LibraryRootResponse.from(useCases.configure(command));
     }
 

@@ -8,6 +8,7 @@ export interface CreateLibraryRootRequest {
   relativePath: string;
   identityToken: string;
   mode: 'READ_ONLY_SOURCE' | 'MANAGED_OUTPUT';
+  defaultForCovers?: boolean;
 }
 
 export interface LibraryRoot {
@@ -18,6 +19,7 @@ export interface LibraryRoot {
   mode: 'READ_ONLY_SOURCE' | 'MANAGED_OUTPUT';
   availability: 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'IDENTITY_MISMATCH';
   lastSuccessfulScanAt?: string | null;
+  defaultForCovers?: boolean;
 }
 
 export type ScanState =
@@ -61,6 +63,7 @@ export interface CatalogWork {
   contributors?: string[];
   provisional: boolean;
   assets: CatalogAsset[];
+  coverAvailable?: boolean;
 }
 
 export interface CatalogPage {

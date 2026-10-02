@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.yurlib.server.library.application.AssetContentFailure;
+import org.yurlib.server.library.application.CoverContentFailure;
 import org.yurlib.server.library.application.LibraryRootFailure;
 import org.yurlib.server.library.application.ScanJobFailure;
 
@@ -21,7 +22,8 @@ import org.yurlib.server.library.application.ScanJobFailure;
             LibraryRootController.class,
             ScanJobController.class,
             CatalogController.class,
-            AssetContentController.class
+            AssetContentController.class,
+            CoverContentController.class
         })
 public class LibraryRootProblemHandler {
 
@@ -51,6 +53,13 @@ public class LibraryRootProblemHandler {
     ProblemDetail handleAssetContentFailure(AssetContentFailure failure, HttpServletRequest request) {
         var status =
                 failure.code() == AssetContentFailure.Code.ASSET_NOT_FOUND ? HttpStatus.NOT_FOUND : HttpStatus.CONFLICT;
+        return problem(status, failure.code().name(), failure.getMessage(), request);
+    }
+
+    @ExceptionHandler(CoverContentFailure.class)
+    ProblemDetail handleCoverContentFailure(CoverContentFailure failure, HttpServletRequest request) {
+        var status =
+                failure.code() == CoverContentFailure.Code.COVER_NOT_FOUND ? HttpStatus.NOT_FOUND : HttpStatus.CONFLICT;
         return problem(status, failure.code().name(), failure.getMessage(), request);
     }
 
@@ -93,6 +102,8 @@ public class LibraryRootProblemHandler {
             case "ASSET_NOT_FOUND" -> "Original asset not found";
             case "ASSET_UNAVAILABLE" -> "Original asset unavailable";
             case "FILE_UNSTABLE" -> "Original asset changed";
+            case "COVER_NOT_FOUND" -> "Cover not found";
+            case "COVER_UNAVAILABLE" -> "Cover unavailable";
             default -> "Invalid request";
         };
     }

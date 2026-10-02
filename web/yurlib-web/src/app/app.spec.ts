@@ -172,6 +172,7 @@ describe('App', () => {
       relativePath: '',
       identityToken: 'private-token-1234',
       mode: 'READ_ONLY_SOURCE',
+      defaultForCovers: false,
     });
     request.flush(root());
     await fixture.whenStable();
@@ -261,6 +262,30 @@ describe('App', () => {
     expect(element.querySelector<HTMLAnchorElement>('.asset-list a')?.getAttribute('href')).toBe(
       '/api/v1/assets/asset-1/content',
     );
+  });
+
+  it('renders an accessible managed cover and retains the title fallback', async () => {
+    await initialize([], {
+      items: [
+        {
+          id: 'work-covered',
+          title: 'The Left Hand of Darkness',
+          contributors: ['Ursula K. Le Guin'],
+          provisional: false,
+          assets: [],
+          coverAvailable: true,
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+
+    const element = fixture.nativeElement as HTMLElement;
+    const cover = element.querySelector<HTMLImageElement>('.work-cover');
+    expect(cover?.getAttribute('src')).toBe('/api/v1/catalog/works/work-covered/cover');
+    expect(cover?.getAttribute('alt')).toBe('Cover of The Left Hand of Darkness');
+    expect(element.querySelector('.work-cover-fallback')?.textContent).toContain('T');
   });
 
   it('searches and pages with bounded relative catalog requests', async () => {

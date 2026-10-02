@@ -5,7 +5,12 @@ import java.util.UUID;
 import org.yurlib.server.library.application.CatalogQuery;
 
 public record CatalogWorkResponse(
-        UUID id, String title, List<String> contributors, boolean provisional, List<CatalogAssetResponse> assets) {
+        UUID id,
+        String title,
+        List<String> contributors,
+        boolean provisional,
+        List<CatalogAssetResponse> assets,
+        boolean coverAvailable) {
 
     public CatalogWorkResponse {
         contributors = List.copyOf(contributors);
@@ -18,6 +23,7 @@ public record CatalogWorkResponse(
                 work.title(),
                 work.contributors(),
                 work.provisional(),
-                work.assets().stream().map(CatalogAssetResponse::from).toList());
+                work.assets().stream().map(CatalogAssetResponse::from).toList(),
+                work.coverAvailable());
     }
 }

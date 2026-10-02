@@ -12,7 +12,8 @@ public record LibraryRoot(
         String expectedIdentityDigest,
         Mode mode,
         Availability availability,
-        Instant lastSuccessfulScanAt) {
+        Instant lastSuccessfulScanAt,
+        boolean defaultForCovers) {
 
     private static final Pattern MOUNT_ALIAS = Pattern.compile("[a-z][a-z0-9-]*");
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
@@ -31,6 +32,30 @@ public record LibraryRoot(
         if (!SHA_256.matcher(expectedIdentityDigest).matches()) {
             throw new IllegalArgumentException("expectedIdentityDigest must be a lowercase SHA-256 digest");
         }
+        if (defaultForCovers && mode != Mode.MANAGED_OUTPUT) {
+            throw new IllegalArgumentException("only a managed-output root can be the cover default");
+        }
+    }
+
+    public LibraryRoot(
+            UUID id,
+            String name,
+            String mountAlias,
+            String relativeBasePath,
+            String expectedIdentityDigest,
+            Mode mode,
+            Availability availability,
+            Instant lastSuccessfulScanAt) {
+        this(
+                id,
+                name,
+                mountAlias,
+                relativeBasePath,
+                expectedIdentityDigest,
+                mode,
+                availability,
+                lastSuccessfulScanAt,
+                false);
     }
 
     public enum Mode {
