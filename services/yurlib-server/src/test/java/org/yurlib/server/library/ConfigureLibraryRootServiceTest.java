@@ -42,6 +42,27 @@ class ConfigureLibraryRootServiceTest {
     }
 
     @Test
+    void persistsAManagedRootAsTheConversionDefault() {
+        var command = new ConfigureLibraryRootCommand(
+                "Managed output",
+                "managed",
+                "converted",
+                "private-token-1234",
+                LibraryRoot.Mode.MANAGED_OUTPUT,
+                false,
+                true);
+        when(verifier.verify("managed", "converted", "private-token-1234"))
+                .thenReturn(new RootLocationVerifier.VerifiedRootLocation("converted", "a".repeat(64)));
+        when(store.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.configure(command);
+
+        assertThat(result.mode()).isEqualTo(LibraryRoot.Mode.MANAGED_OUTPUT);
+        assertThat(result.defaultForCovers()).isFalse();
+        assertThat(result.defaultForConversions()).isTrue();
+    }
+
+    @Test
     void rejectsAnOverlappingRootAfterNormalizingItsLocation() {
         when(store.findAll())
                 .thenReturn(List.of(new LibraryRoot(

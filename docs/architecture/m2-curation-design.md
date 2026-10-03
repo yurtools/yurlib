@@ -196,6 +196,8 @@ A malformed or oversized cover does not fail catalog ingestion. Cover state is i
 
 The only initial routes are FB2 → EPUB and MOBI → EPUB. A route is a versioned contract containing converter/version, arguments, validation policy, resource profile, and fixture set. No route is inferred from an installed tool.
 
+The selected calibre version, artifact checksums, license compatibility, runtime packages, fixed settings, and representative-route evidence are recorded in [M2 Conversion Dependency and Packaging Review](m2-conversion-dependency-review.md).
+
 The server persists conversion jobs and owns transitions. The isolated optional worker claims jobs through an authenticated internal API, not direct SQL. A job key covers source Asset hash, route version, and effective settings, preventing duplicate publication. The server stages a verified read-only source copy; the worker has no source-root mount, database credential, shell interpolation, or general network egress. It writes into a quota-bound job directory. The server validates format, size, hash, EPUB structure, and cancellation state before atomic publication to a managed-output root.
 
 States are `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED_SAFE`, and `CANCELLED`; claims have leases and heartbeats. Defaults are one worker task, 2 GiB memory, one CPU, 2 GiB temporary storage, and a 10-minute wall deadline, all bounded by deployment ceilings. Forced termination is a failure, never partial success. Originals are immutable.

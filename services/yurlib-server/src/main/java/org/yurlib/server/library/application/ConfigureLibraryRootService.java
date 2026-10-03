@@ -31,7 +31,8 @@ public final class ConfigureLibraryRootService implements LibraryRootUseCases {
                 command.mode(),
                 LibraryRoot.Availability.AVAILABLE,
                 null,
-                command.defaultForCovers());
+                command.defaultForCovers(),
+                command.defaultForConversions());
         return store.save(root);
     }
 

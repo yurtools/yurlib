@@ -15,6 +15,7 @@ services:
       YURLIB_WORKER_TOKEN: ${YURLIB_WORKER_TOKEN:-}
       YURLIB_PDF_STAGING_DIRECTORY: /var/lib/yurlib/staging/pdf
       YURLIB_COVER_STAGING_DIRECTORY: /var/lib/yurlib/staging/covers
+      YURLIB_CONVERSION_STAGING_DIRECTORY: /var/lib/yurlib/staging/conversions
       YURLIB_LIBRARY_MOUNTS_0_ALIAS: main
       YURLIB_LIBRARY_MOUNTS_0_PATH: /library/main
       YURLIB_LIBRARY_MOUNTS_1_ALIAS: managed

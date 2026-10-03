@@ -23,6 +23,16 @@ public class JdbcAssetContentStore implements AssetContentStore {
     public Optional<AssetContentLocation> findByAssetId(UUID assetId) {
         var access = accessContext.current();
         return jdbc.sql("""
+                WITH RECURSIVE source_lineage(asset_id) AS (
+                    SELECT source_asset_id
+                    FROM asset_derivation_source
+                    WHERE derived_asset_id = :assetId
+                    UNION
+                    SELECT lineage.source_asset_id
+                    FROM asset_derivation_source lineage
+                    JOIN source_lineage ancestor
+                      ON lineage.derived_asset_id = ancestor.asset_id
+                )
                 SELECT asset.id AS asset_id,
                        location.library_root_id AS root_id,
                        location.normalized_relative_path,
@@ -40,15 +50,14 @@ public class JdbcAssetContentStore implements AssetContentStore {
                       WHERE denied.user_id = :userId
                         AND denied.library_root_id = location.library_root_id
                   ))
-                  AND (asset.derivation = 'ORIGINAL' OR :unrestricted OR NOT EXISTS (
+                  AND (:unrestricted OR NOT EXISTS (
                       SELECT 1
-                      FROM asset_derivation_source lineage
+                      FROM source_lineage lineage
                       JOIN asset_location source_location
-                        ON source_location.asset_id = lineage.source_asset_id
+                        ON source_location.asset_id = lineage.asset_id
                       JOIN user_root_deny denied_source
                         ON denied_source.library_root_id = source_location.library_root_id
                        AND denied_source.user_id = :userId
-                      WHERE lineage.derived_asset_id = asset.id
                   ))
                 ORDER BY CASE WHEN location.availability = 'AVAILABLE' THEN 0 ELSE 1 END,
                          location.normalized_relative_path

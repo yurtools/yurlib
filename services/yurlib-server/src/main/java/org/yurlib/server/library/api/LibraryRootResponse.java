@@ -12,7 +12,8 @@ public record LibraryRootResponse(
         String mode,
         String availability,
         Instant lastSuccessfulScanAt,
-        boolean defaultForCovers) {
+        boolean defaultForCovers,
+        boolean defaultForConversions) {
 
     static LibraryRootResponse from(LibraryRoot root) {
         return new LibraryRootResponse(
@@ -23,6 +24,7 @@ public record LibraryRootResponse(
                 root.mode().name(),
                 root.availability().name(),
                 root.lastSuccessfulScanAt(),
-                root.defaultForCovers());
+                root.defaultForCovers(),
+                root.defaultForConversions());
     }
 }

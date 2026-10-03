@@ -59,6 +59,9 @@ class M2AuthorizationAcceptanceTest {
     private static final UUID DENIED_ASSET_ID = UUID.fromString("41ae99dd-bac8-40cc-aea4-f927354b57eb");
     private static final UUID MIXED_ALLOWED_ASSET_ID = UUID.fromString("6f81d888-6cbb-46e1-803c-d3d263364a80");
     private static final UUID MIXED_DENIED_ASSET_ID = UUID.fromString("6696730e-35a0-4571-9d97-054b705de3e9");
+    private static final UUID MANAGED_ROOT_ID = UUID.fromString("d1fb3706-262d-42d4-a8c6-b9e49663464d");
+    private static final UUID DENIED_DERIVED_ASSET_ID = UUID.fromString("1ce2b4c7-3976-45ab-83aa-dfc5707c34be");
+    private static final UUID TRANSITIVE_DERIVED_ASSET_ID = UUID.fromString("8538d736-e06f-4672-a1d5-7083be0fceef");
     private static final UUID DENIED_JOB_ID = UUID.fromString("9b89a979-4a02-47c5-afc9-bfda31cc944a");
 
     @Container
@@ -121,6 +124,12 @@ class M2AuthorizationAcceptanceTest {
                 .andExpect(jsonPath("$.items[1].title").value("Mixed work"))
                 .andExpect(jsonPath("$.items[1].assets.length()").value(1));
         mockMvc.perform(get("/api/v1/assets/{assetId}/content", DENIED_ASSET_ID).session(readerSession.session()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/assets/{assetId}/content", DENIED_DERIVED_ASSET_ID)
+                        .session(readerSession.session()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/assets/{assetId}/content", TRANSITIVE_DERIVED_ASSET_ID)
+                        .session(readerSession.session()))
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/assets/{assetId}/content", ALLOWED_ASSET_ID)
                         .session(readerSession.session()))
@@ -195,8 +204,10 @@ class M2AuthorizationAcceptanceTest {
         var jdbc = JdbcClient.create(dataSource);
         insertRoot(jdbc, ALLOWED_ROOT_ID, "Allowed root", "allowed");
         insertRoot(jdbc, DENIED_ROOT_ID, "Denied root", "denied");
+        insertManagedRoot(jdbc);
         var allowedWorkId = insertWork(jdbc, "Allowed work", ALLOWED_ROOT_ID, ALLOWED_ASSET_ID, "allowed/book.epub");
         var deniedWorkId = insertWork(jdbc, "Denied work", DENIED_ROOT_ID, DENIED_ASSET_ID, "denied/book.pdf");
+        insertDeniedDerivedAssets(jdbc);
         insertMixedWork(jdbc);
         insertReview(jdbc, allowedWorkId, "Allowed metadata review");
         insertReview(jdbc, deniedWorkId, "Denied metadata review");
@@ -225,6 +236,78 @@ class M2AuthorizationAcceptanceTest {
                 .param("name", name)
                 .param("path", relativePath)
                 .param("digest", sha256("m2-root-token"))
+                .update();
+    }
+
+    private static void insertManagedRoot(JdbcClient jdbc) {
+        jdbc.sql("""
+                INSERT INTO library_root (
+                    id, name, mount_alias, relative_base_path,
+                    expected_identity_digest, mode, availability
+                ) VALUES (
+                    :id, 'Managed root', 'm2-acceptance', 'managed', :digest,
+                    'MANAGED_OUTPUT', 'AVAILABLE'
+                )
+                """)
+                .param("id", MANAGED_ROOT_ID)
+                .param("digest", sha256("m2-root-token"))
+                .update();
+    }
+
+    private static void insertDeniedDerivedAssets(JdbcClient jdbc) throws IOException {
+        var editionId = jdbc.sql("SELECT edition_id FROM asset WHERE id = :id")
+                .param("id", DENIED_ASSET_ID)
+                .query(UUID.class)
+                .single();
+        insertDerivedAsset(jdbc, editionId, DENIED_DERIVED_ASSET_ID, "derived.epub", DENIED_ASSET_ID);
+        insertDerivedAsset(jdbc, editionId, TRANSITIVE_DERIVED_ASSET_ID, "transitive.epub", DENIED_DERIVED_ASSET_ID);
+    }
+
+    private static void insertDerivedAsset(
+            JdbcClient jdbc, UUID editionId, UUID assetId, String filename, UUID sourceId) throws IOException {
+        var source = MOUNT.resolve("managed").resolve(filename);
+        var attributes = Files.readAttributes(source, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        jdbc.sql("""
+                WITH inserted_asset AS (
+                    INSERT INTO asset (
+                        id, edition_id, format, byte_size, derivation, extraction_version
+                    ) VALUES (
+                        :id, :editionId, 'EPUB', :size, 'DERIVED', 'm2-acceptance'
+                    )
+                    RETURNING id
+                )
+                INSERT INTO asset_derivation_source (
+                    derived_asset_id, source_asset_id, purpose
+                )
+                SELECT id, :sourceId, 'FORMAT_CONVERSION'
+                FROM inserted_asset
+                """)
+                .param("id", assetId)
+                .param("editionId", editionId)
+                .param("size", attributes.size())
+                .param("sourceId", sourceId)
+                .update();
+        jdbc.sql("""
+                INSERT INTO asset_location (
+                    id, asset_id, library_root_id, normalized_relative_path,
+                    byte_size, modified_at, file_key, availability
+                ) VALUES (
+                    :id, :assetId, :rootId, :path, :size, :modifiedAt, :fileKey, 'AVAILABLE'
+                )
+                """)
+                .param("id", UUID.randomUUID())
+                .param("assetId", assetId)
+                .param("rootId", MANAGED_ROOT_ID)
+                .param("path", filename)
+                .param("size", attributes.size())
+                .param(
+                        "modifiedAt",
+                        java.sql.Timestamp.from(attributes.lastModifiedTime().toInstant()))
+                .param(
+                        "fileKey",
+                        attributes.fileKey() == null
+                                ? null
+                                : attributes.fileKey().toString())
                 .update();
     }
 
@@ -323,12 +406,16 @@ class M2AuthorizationAcceptanceTest {
             var mount = Files.createTempDirectory("yurlib-m2-auth-");
             Files.createDirectories(mount.resolve("allowed"));
             Files.createDirectories(mount.resolve("denied"));
+            Files.createDirectories(mount.resolve("managed"));
             Files.writeString(mount.resolve("allowed/.yurlib-root-id"), "m2-root-token");
             Files.writeString(mount.resolve("denied/.yurlib-root-id"), "m2-root-token");
+            Files.writeString(mount.resolve("managed/.yurlib-root-id"), "m2-root-token");
             Files.writeString(mount.resolve("allowed/book.epub"), "allowed bytes");
             Files.writeString(mount.resolve("denied/book.pdf"), "denied bytes");
             Files.writeString(mount.resolve("allowed/mixed.epub"), "mixed allowed bytes");
             Files.writeString(mount.resolve("denied/mixed.pdf"), "mixed denied bytes");
+            Files.writeString(mount.resolve("managed/derived.epub"), "derived from denied bytes");
+            Files.writeString(mount.resolve("managed/transitive.epub"), "derived twice from denied bytes");
             return mount;
         } catch (IOException failure) {
             throw new ExceptionInInitializerError(failure);

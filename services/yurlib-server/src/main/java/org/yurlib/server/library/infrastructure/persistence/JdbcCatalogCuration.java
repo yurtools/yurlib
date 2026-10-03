@@ -17,6 +17,32 @@ public class JdbcCatalogCuration implements CatalogCuration {
 
     private static final int MAXIMUM_TAGS_PER_WORK = 50;
     private static final int MAXIMUM_AUDIT_EVENTS = 100;
+    private static final String ASSET_ACCESS_PREDICATE = """
+            (:unrestricted OR (
+                NOT EXISTS (
+                    SELECT 1 FROM user_root_deny denied
+                    WHERE denied.user_id = :userId
+                      AND denied.library_root_id = location.library_root_id
+                )
+                AND (asset.derivation = 'ORIGINAL' OR NOT EXISTS (
+                    WITH RECURSIVE source_lineage(asset_id) AS (
+                        SELECT source_asset_id
+                        FROM asset_derivation_source
+                        WHERE derived_asset_id = asset.id
+                        UNION
+                        SELECT source.source_asset_id
+                        FROM asset_derivation_source source
+                        JOIN source_lineage ON source.derived_asset_id = source_lineage.asset_id
+                    )
+                    SELECT 1
+                    FROM source_lineage lineage
+                    JOIN asset_location source_location ON source_location.asset_id = lineage.asset_id
+                    JOIN user_root_deny denied_source
+                      ON denied_source.library_root_id = source_location.library_root_id
+                     AND denied_source.user_id = :userId
+                ))
+            ))
+            """;
 
     private final JdbcClient jdbc;
     private final LibraryAccessContext accessContext;
@@ -224,32 +250,21 @@ public class JdbcCatalogCuration implements CatalogCuration {
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE edition.work_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'EDITION' AND EXISTS (
                       SELECT 1
                       FROM asset
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE asset.edition_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'ASSET' AND EXISTS (
                       SELECT 1
-                      FROM asset_location location
-                      WHERE location.asset_id = review.subject_id
+                      FROM asset
+                      JOIN asset_location location ON location.asset_id = asset.id
+                      WHERE asset.id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'CONTRIBUTOR' AND EXISTS (
                       SELECT 1
                       FROM work_contributor linked
@@ -258,15 +273,11 @@ public class JdbcCatalogCuration implements CatalogCuration {
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE linked.contributor_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )))
                 ORDER BY review.created_at, review.id
                 LIMIT :limit
-                """)
+                """.replace("/*ASSET_ACCESS*/", ASSET_ACCESS_PREDICATE))
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())
                 .param("limit", limit)
@@ -308,32 +319,21 @@ public class JdbcCatalogCuration implements CatalogCuration {
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE edition.work_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'EDITION' AND EXISTS (
                       SELECT 1
                       FROM asset
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE asset.edition_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'ASSET' AND EXISTS (
                       SELECT 1
-                      FROM asset_location location
-                      WHERE location.asset_id = review.subject_id
+                      FROM asset
+                      JOIN asset_location location ON location.asset_id = asset.id
+                      WHERE asset.id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )) OR (review.subject_type = 'CONTRIBUTOR' AND EXISTS (
                       SELECT 1
                       FROM work_contributor linked
@@ -342,13 +342,9 @@ public class JdbcCatalogCuration implements CatalogCuration {
                       JOIN asset_location location ON location.asset_id = asset.id
                       WHERE linked.contributor_id = review.subject_id
                         AND location.availability = 'AVAILABLE'
-                        AND (:unrestricted OR NOT EXISTS (
-                            SELECT 1 FROM user_root_deny denied
-                            WHERE denied.user_id = :userId
-                              AND denied.library_root_id = location.library_root_id
-                        ))
+                        AND /*ASSET_ACCESS*/
                   )))
-                """)
+                """.replace("/*ASSET_ACCESS*/", ASSET_ACCESS_PREDICATE))
                 .param("reviewId", reviewId)
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())
@@ -444,13 +440,9 @@ public class JdbcCatalogCuration implements CatalogCuration {
                     JOIN asset_location location ON location.asset_id = asset.id
                     WHERE linked.contributor_id = contributor.id
                       AND location.availability = 'AVAILABLE'
-                      AND (:unrestricted OR NOT EXISTS (
-                          SELECT 1 FROM user_root_deny denied
-                          WHERE denied.user_id = :userId
-                            AND denied.library_root_id = location.library_root_id
-                      ))
+                      AND /*ASSET_ACCESS*/
                   )
-                """ + lockClause)
+                """.replace("/*ASSET_ACCESS*/", ASSET_ACCESS_PREDICATE) + lockClause)
                 .param("contributorId", contributorId)
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())
@@ -475,13 +467,9 @@ public class JdbcCatalogCuration implements CatalogCuration {
                     JOIN asset_location location ON location.asset_id = asset.id
                     WHERE edition.work_id = work.id
                       AND location.availability = 'AVAILABLE'
-                      AND (:unrestricted OR NOT EXISTS (
-                          SELECT 1 FROM user_root_deny denied
-                          WHERE denied.user_id = :userId
-                            AND denied.library_root_id = location.library_root_id
-                      ))
+                      AND /*ASSET_ACCESS*/
                   )
-                """ + lockClause)
+                """.replace("/*ASSET_ACCESS*/", ASSET_ACCESS_PREDICATE) + lockClause)
                 .param("workId", workId)
                 .param("unrestricted", access.unrestricted())
                 .param("userId", access.userId())

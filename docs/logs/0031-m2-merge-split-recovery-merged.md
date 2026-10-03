@@ -1,6 +1,6 @@
 # M2 Merge, Split, and Duplicate-Review Recovery
 
-- Status: Pull request open
+- Status: Merged
 - Started: 2026-10-02
 - Branch: `feat/59-merge-split-recovery`
 - Issue: [#59](https://github.com/yurtools/yurlib/issues/59)
@@ -51,6 +51,7 @@
 - Confirmed the final recovery UI displayed `Automatic undo is unavailable; this merge requires a guided split.` together with `The merged catalog state changed after this operation; use a guided split.` Controls remained readable and accessible with no overflow, clipping, or overlap.
 - Confirmed the final browser console contained no Yurlib errors and backend logs contained no `DuplicateKeyException`, redirect-version constraint error, or other error. Only the permitted Electron development CSP warning appeared.
 - Removed the disposable Angular server, Compose containers, networks, database volumes, credentials, proxy, root markers, and synthetic books after acceptance. Existing persistent volumes were untouched, test ports were closed, and the pre-existing user-owned Angular analytics preference remained the only worktree change.
+- Squash-merged pull request #74 as `1a336b12c6587a3beea9b3b36b255aca5a0431cd`; issue #59 closed automatically and its Project item moved to Done.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference without staging or modifying it.
 
 ## Verification

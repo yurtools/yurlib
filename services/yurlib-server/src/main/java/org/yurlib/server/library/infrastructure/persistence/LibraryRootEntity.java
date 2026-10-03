@@ -42,6 +42,9 @@ class LibraryRootEntity {
     @Column(name = "default_for_covers")
     private boolean defaultForCovers;
 
+    @Column(name = "default_for_conversions")
+    private boolean defaultForConversions;
+
     protected LibraryRootEntity() {
         // Required by JPA.
     }
@@ -56,6 +59,7 @@ class LibraryRootEntity {
         availability = root.availability().name();
         lastSuccessfulScanAt = root.lastSuccessfulScanAt();
         defaultForCovers = root.defaultForCovers();
+        defaultForConversions = root.defaultForConversions();
     }
 
     LibraryRoot toDomain() {
@@ -68,6 +72,7 @@ class LibraryRootEntity {
                 LibraryRoot.Mode.valueOf(mode),
                 LibraryRoot.Availability.valueOf(availability),
                 lastSuccessfulScanAt,
-                defaultForCovers);
+                defaultForCovers,
+                defaultForConversions);
     }
 }
