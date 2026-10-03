@@ -1,10 +1,12 @@
 # M2 Backup, Restore, Security, and Walking-Skeleton Acceptance
 
-- Status: Implementation complete; pull request preparation
+- Status: Pull request open; owner visual acceptance pending
 - Started: 2026-10-02
 - Branch: `feat/61-m2-acceptance`
 - Issue: [#61](https://github.com/yurtools/yurlib/issues/61)
 - Repository: `yurtools/yurlib`
+- Commit: `7e90354`
+- Pull request: [#76](https://github.com/yurtools/yurlib/pull/76)
 
 ## Prompt
 
@@ -38,6 +40,7 @@
   - observed an initial PostgreSQL startup race before any restore mutation; added a bounded `pg_isready` wait and repeated the restore successfully;
   - stopped and removed both disposable Compose projects, networks, volumes, and ports, and moved the temporary drill directory to the desktop trash. Existing Yurlib volumes and library data were not used.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference; it is not part of this change.
+- Committed the implementation as `7e90354`, pushed `feat/61-m2-acceptance`, and opened pull request #76 with `Closes #61`.
 
 ## Verification
 
@@ -52,4 +55,4 @@
 
 ## Blockers
 
-- Final GitHub CI and owner-facing M2 desktop/mobile acceptance remain pull-request gates.
+- Final GitHub CI and owner-facing M2 desktop/mobile acceptance remain pull-request gates. The pull-request checklist deliberately leaves visual acceptance incomplete.
