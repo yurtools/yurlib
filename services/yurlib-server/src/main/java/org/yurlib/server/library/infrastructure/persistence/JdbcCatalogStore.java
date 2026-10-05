@@ -652,7 +652,8 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     private Map<UUID, List<AssetSummary>> findAssets(List<UUID> workIds, LibraryAccessContext.Access access) {
         var result = new LinkedHashMap<UUID, List<AssetSummary>>();
         jdbc.sql("""
-                SELECT edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
+                SELECT edition.work_id, edition.id AS edition_id, asset.id, asset.format,
+                       asset.byte_size, asset.derivation,
                        asset.metadata_state,
                        bool_or(location.availability = 'AVAILABLE') AS available
                 FROM asset
@@ -681,7 +682,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                         ON denied_source.library_root_id = source_location.library_root_id
                        AND denied_source.user_id = :userId
                   ))
-                GROUP BY edition.work_id, asset.id, asset.format, asset.byte_size, asset.derivation,
+                GROUP BY edition.work_id, edition.id, asset.id, asset.format, asset.byte_size, asset.derivation,
                          asset.metadata_state
                 ORDER BY edition.work_id, asset.id
                 """)
@@ -691,6 +692,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .query((row, rowNumber) -> new AssetRow(
                         row.getObject("work_id", UUID.class),
                         row.getObject("id", UUID.class),
+                        row.getObject("edition_id", UUID.class),
                         Asset.Format.valueOf(row.getString("format")),
                         row.getLong("byte_size"),
                         row.getBoolean("available"),
@@ -700,6 +702,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
                 .forEach(row -> result.computeIfAbsent(row.workId(), ignored -> new ArrayList<>())
                         .add(new AssetSummary(
                                 row.id(),
+                                row.editionId(),
                                 row.format(),
                                 row.size(),
                                 row.available() ? Availability.AVAILABLE : Availability.UNAVAILABLE,
@@ -797,6 +800,7 @@ public class JdbcCatalogStore implements CatalogStore, CatalogQuery {
     private record AssetRow(
             UUID workId,
             UUID id,
+            UUID editionId,
             Asset.Format format,
             long size,
             boolean available,

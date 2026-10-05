@@ -24,6 +24,7 @@ class CatalogControllerTest {
 
     private static final UUID WORK_ID = UUID.fromString("3a924e93-0c94-4467-a5bb-1813bcf491df");
     private static final UUID ASSET_ID = UUID.fromString("9d889ec8-9ae5-49db-8d75-79d2969dd202");
+    private static final UUID EDITION_ID = UUID.fromString("0a05208b-5478-474b-b4b8-a5dc44b52f65");
 
     @Autowired
     private MockMvc mockMvc;
@@ -41,7 +42,12 @@ class CatalogControllerTest {
                                 true,
                                 List.of("An Author"),
                                 List.of(new CatalogQuery.AssetSummary(
-                                        ASSET_ID, Asset.Format.EPUB, 123, CatalogQuery.Availability.AVAILABLE, true)))),
+                                        ASSET_ID,
+                                        EDITION_ID,
+                                        Asset.Format.EPUB,
+                                        123,
+                                        CatalogQuery.Availability.AVAILABLE,
+                                        true)))),
                         0,
                         25,
                         1));
@@ -54,6 +60,7 @@ class CatalogControllerTest {
                 .andExpect(jsonPath("$.items[0].contributors[0]").value("An Author"))
                 .andExpect(jsonPath("$.items[0].provisional").value(true))
                 .andExpect(jsonPath("$.items[0].assets[0].id").value(ASSET_ID.toString()))
+                .andExpect(jsonPath("$.items[0].assets[0].editionId").value(EDITION_ID.toString()))
                 .andExpect(jsonPath("$.items[0].assets[0].format").value("EPUB"))
                 .andExpect(jsonPath("$.items[0].assets[0].availability").value("AVAILABLE"))
                 .andExpect(jsonPath("$.page").value(0))

@@ -258,7 +258,7 @@ An M2 backup consists of a consistent PostgreSQL backup, managed-output roots, a
 4. require source-root identity verification before marking source locations available;
 5. resume or safely fail interrupted jobs without duplicate publication.
 
-Acceptance includes a destructive disposable-environment restore drill for local SSD and one NAS-backed managed root.
+Acceptance includes a destructive disposable-environment restore drill for a local managed root. NFS/NAS performance and compatibility evidence is deferred to post-M2 issue [#70](https://github.com/yurtools/yurlib/issues/70).
 
 ## 16. Acceptance matrix
 
@@ -267,7 +267,7 @@ Acceptance includes a destructive disposable-environment restore drill for local
 | Canonical model    | Migrations and tests for observation → normalized → resolved → curated precedence, conflicts, reprocessing, undo, merge/split, and source preservation                                                                                  |
 | Authorization      | Two-user tests for default visibility, denies, mixed-root Works, direct IDs, totals, covers, downloads, conversions, personal state, session invalidation, and owner-only administration                                                |
 | Formats            | Generated/licensed valid, multilingual, malformed, encrypted, adversarial, near/over-limit fixtures for all six formats; real-world EPUB directory-entry and DjVu `DJVI`/padding compatibility; byte/read and constrained-heap evidence |
-| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable NAS, and benchmark report                                                                                             |
+| Parallel ingestion | Single-worker equivalence, bounded queues/memory/files, fairness, cancellation, restart, idempotency, unavailable roots, and local-storage benchmark observations                                                                       |
 | Covers             | Hostile image limits, PDF/DjVu page one, DOCX thumbnail, fallback, provenance, caching, and source hashes unchanged                                                                                                                     |
 | Conversion         | Worker isolation, no egress/DB/source mount, two route corpora, timeout/OOM/cancel/retry, atomic publication, lineage authorization, and no original mutation                                                                           |
 | Personal curation  | Favorite contributors, Work read state with Edition evidence, private collections, shared tags, merge/split reconciliation, privacy/export/removal                                                                                      |
