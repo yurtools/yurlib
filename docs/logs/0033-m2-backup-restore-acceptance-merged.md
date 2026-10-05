@@ -1,12 +1,13 @@
 # M2 Backup, Restore, Security, and Walking-Skeleton Acceptance
 
-- Status: Pull request open; owner visual acceptance passed; ready to squash merge
+- Status: Merged
 - Started: 2026-10-02
 - Branch: `feat/61-m2-acceptance`
 - Issue: [#61](https://github.com/yurtools/yurlib/issues/61)
 - Repository: `yurtools/yurlib`
 - Commits: `7e90354`, `6c35f2c`, `c9f7f97`
 - Pull request: [#76](https://github.com/yurtools/yurlib/pull/76)
+- Squash commit: `421b72c3f90270404133aab6c3fd5a77ff7efc50`
 
 ## Prompt
 
@@ -89,6 +90,7 @@
 - Recorded the owner retest at exact commit `c9f7f97c020825c4388dca490fb74f592f0f7398`. Desktop 1440×900 and mobile 390×844 passed PDF ingestion and cover generation, fallback behavior, edition-specific read state, favorites, FB2-to-EPUB conversion, merge/undo, post-merge curation, guided-split protection, restricted-reader filtering, overflow, console, and backend/worker-log checks.
 - Confirmed restricted assets and work returned 404, session invalidation and private-state filtering passed, and the disposable acceptance environment was completely removed. The only local worktree change remains the preserved user-owned Angular analytics preference.
 - Restored pull request #76's empty body, marked its owner desktop/mobile acceptance checklist complete, and retained the `Closes #61` linkage.
+- Squash-merged pull request #76 after all automated and owner acceptance checks passed; issue #61 closed through the pull-request linkage.
 
 ## Verification
 
@@ -114,4 +116,4 @@
 
 ## Blockers
 
-- None. Pull request #76 is ready for squash merge after its successful automated and owner acceptance gates.
+- None. Pull request #76 is merged and issue #61 is closed.
