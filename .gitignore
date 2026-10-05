@@ -11,6 +11,10 @@ node_modules/
 **/node_modules/
 .angular/
 
+# Python operator tooling
+__pycache__/
+*.py[cod]
+
 # IDE and operating-system files
 .idea/
 .vscode/

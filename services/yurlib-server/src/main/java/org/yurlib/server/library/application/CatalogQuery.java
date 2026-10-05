@@ -53,14 +53,16 @@ public interface CatalogQuery {
 
     record AssetSummary(
             UUID id,
+            UUID editionId,
             Asset.Format format,
             long size,
             Availability availability,
             boolean original,
             CatalogReconciliation.MetadataState metadataState) {
 
-        public AssetSummary(UUID id, Asset.Format format, long size, Availability availability, boolean original) {
-            this(id, format, size, availability, original, CatalogReconciliation.MetadataState.READY);
+        public AssetSummary(
+                UUID id, UUID editionId, Asset.Format format, long size, Availability availability, boolean original) {
+            this(id, editionId, format, size, availability, original, CatalogReconciliation.MetadataState.READY);
         }
     }
 

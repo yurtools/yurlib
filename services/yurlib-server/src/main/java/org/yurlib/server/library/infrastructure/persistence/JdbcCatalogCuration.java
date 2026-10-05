@@ -518,7 +518,7 @@ public class JdbcCatalogCuration implements CatalogCuration {
 
     private OverrideRow activeOverride(UUID workId) {
         return jdbc.sql("""
-                SELECT id, curated_value, supersedes_override_id
+                SELECT id, curated_value AS value, supersedes_override_id AS supersedes_id
                 FROM metadata_curated_override
                 WHERE subject_type = 'WORK' AND subject_id = :workId
                   AND field_name = 'title' AND active
@@ -531,7 +531,7 @@ public class JdbcCatalogCuration implements CatalogCuration {
 
     private OverrideRow overrideById(UUID overrideId) {
         return jdbc.sql("""
-                SELECT id, curated_value, supersedes_override_id
+                SELECT id, curated_value AS value, supersedes_override_id AS supersedes_id
                 FROM metadata_curated_override
                 WHERE id = :id
                 """)
