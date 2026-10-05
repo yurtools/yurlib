@@ -5,7 +5,7 @@
 - Branch: `feat/61-m2-acceptance`
 - Issue: [#61](https://github.com/yurtools/yurlib/issues/61)
 - Repository: `yurtools/yurlib`
-- Commit: `7e90354`
+- Commits: `7e90354`, `6c35f2c`
 - Pull request: [#76](https://github.com/yurtools/yurlib/pull/76)
 
 ## Prompt
@@ -50,6 +50,7 @@
 - Added owner-facing on-demand FB2/MOBI-to-EPUB controls for request, status refresh, cooperative cancellation, safe failure details, and derived EPUB download. Managed-root setup now exposes the existing default-conversion-output setting.
 - Updated the server image to run with the deterministic unprivileged UID/GID 10001 and to seed private, writable PDF, cover, and conversion staging directories into a new Compose volume.
 - Built the actual server image and ran it with the Compose staging volume as `uid=10001(yurlib)`. Creation and removal of a test file succeeded in all three staging directories. The disposable image, volumes, networks, and bind directories were then removed.
+- Committed the acceptance repairs as `6c35f2c`, pushed the branch, and updated pull request #76 without marking visual acceptance complete.
 
 ## Verification
 
@@ -70,7 +71,8 @@
 - Post-repair `npm --prefix web/yurlib-web test -- --watch=false` — passed, 19 tests.
 - Post-repair `npm --prefix web/yurlib-web run build` — passed, 386.72 kB initial bundle.
 - Post-repair `docker compose config --quiet` and `git diff --check` — passed.
+- GitHub Actions run `37315700375` — passed: Backend, Frontend, Compose Configuration, and Dependency Review.
 
 ## Blockers
 
-- Final GitHub CI and a focused rerun of owner-facing M2 desktop/mobile acceptance remain pull-request gates. The pull-request checklist remains incomplete until the repaired curation, cover, conversion, and edition-evidence paths pass in the browser.
+- A focused rerun of owner-facing M2 desktop/mobile acceptance remains the final pull-request gate. The pull-request checklist remains incomplete until the repaired curation, cover, conversion, and edition-evidence paths pass in the browser.
