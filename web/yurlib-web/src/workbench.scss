@@ -521,6 +521,22 @@ app-root {
   .collection-add {
     margin-top: 0.9rem;
   }
+  .edition-choice {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .edition-choice span,
+  .edition-evidence,
+  .conversion-diagnostic {
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  .edition-choice select {
+    max-width: 16rem;
+  }
+  .edition-evidence {
+    margin: 0.55rem 0 0;
+  }
   .quiet-action {
     background: transparent;
     border-color: var(--line);
@@ -557,6 +573,26 @@ app-root {
   }
   .asset-list a:hover {
     color: white;
+  }
+  .conversion-actions {
+    align-items: center;
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    justify-content: flex-end;
+  }
+  .conversion-actions button,
+  .conversion-actions a {
+    font-size: 0.78rem;
+    padding: 0.48rem 0.68rem;
+  }
+  .conversion-state {
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .empty-state {
     border-top: 1px solid var(--line);

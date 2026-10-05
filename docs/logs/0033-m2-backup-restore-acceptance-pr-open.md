@@ -12,6 +12,8 @@
 
 > merged, continue
 
+> proceed
+
 ## Plan
 
 1. Reconcile merged pull request #75, close its process log, update `main`, create the issue #61 branch, and preserve the unrelated Angular analytics preference.
@@ -21,6 +23,8 @@
 5. Add a complete automated M2 walking-skeleton and cross-user security acceptance suite covering the six formats, curation, personal state, covers, conversion, direct identifiers, jobs, totals, downloads, collections, and session invalidation.
 6. Run a disposable backup/restore drill, hostile-input and full repository verification, record benchmark observations without universal claims, and prepare manual desktop/mobile accessibility acceptance instructions.
 7. Update operational and acceptance documentation, commit, push, and open a pull request that closes issue #61.
+8. Reproduce and repair the failures found during PR #76 manual acceptance: post-merge curation mapping, container staging permissions, missing conversion controls, and missing completed-edition evidence.
+9. Add regression coverage, verify the server image's staging permissions as its unprivileged runtime user, run the full repository baseline, push the repair, and request focused acceptance again.
 
 ## Actions and results
 
@@ -41,6 +45,11 @@
   - stopped and removed both disposable Compose projects, networks, volumes, and ports, and moved the temporary drill directory to the desktop trash. Existing Yurlib volumes and library data were not used.
 - Preserved the unrelated user-owned `web/yurlib-web/angular.json` analytics preference; it is not part of this change.
 - Committed the implementation as `7e90354`, pushed `feat/61-m2-acceptance`, and opened pull request #76 with `Closes #61`.
+- Reviewed the failed manual acceptance at `5875924` and reproduced the post-merge title-correction error in a Spring/PostgreSQL integration test. The JDBC record mapper expected `value` and `supersedes_id`, while the query returned `curated_value` and `supersedes_override_id`; both columns now have explicit aliases.
+- Added edition identifiers to catalog asset responses and the OpenAPI contract. The Angular personal-state workflow now requires a concrete completed edition, displays the selected edition as evidence, and supports clearing the state.
+- Added owner-facing on-demand FB2/MOBI-to-EPUB controls for request, status refresh, cooperative cancellation, safe failure details, and derived EPUB download. Managed-root setup now exposes the existing default-conversion-output setting.
+- Updated the server image to run with the deterministic unprivileged UID/GID 10001 and to seed private, writable PDF, cover, and conversion staging directories into a new Compose volume.
+- Built the actual server image and ran it with the Compose staging volume as `uid=10001(yurlib)`. Creation and removal of a test file succeeded in all three staging directories. The disposable image, volumes, networks, and bind directories were then removed.
 
 ## Verification
 
@@ -52,7 +61,16 @@
 - `npm --prefix web/yurlib-web run build` — passed, 380.82 kB initial bundle.
 - `docker compose config --quiet` — passed.
 - `git diff --check` — passed.
+- `npm --prefix web/yurlib-web test -- --watch=false` — passed, 19 tests including completed-edition evidence and the on-demand conversion UI.
+- `npm --prefix web/yurlib-web run build` — passed, 386.72 kB initial bundle.
+- `./mvnw -pl services/yurlib-server -Dtest=CatalogRecoveryIntegrationTest,CatalogControllerTest test` — passed, 8 tests. The new recovery path initially reproduced both mapper mismatches before the aliases were corrected.
+- Disposable `yurlib_staging_check_76` image/volume permission check — passed for PDF, cover, and conversion staging as UID/GID 10001; cleanup passed.
+- Post-repair `./mvnw -B verify` — passed; server 174 tests with one opt-in benchmark skipped, worker 9 tests, coverage, architecture, formatting, backward-compatible OpenAPI diff, PMD, and SpotBugs passed.
+- Post-repair `npm --prefix web/yurlib-web ci` — passed; 267 packages and 0 vulnerabilities, with the existing install-script policy warning for four optional/native packages.
+- Post-repair `npm --prefix web/yurlib-web test -- --watch=false` — passed, 19 tests.
+- Post-repair `npm --prefix web/yurlib-web run build` — passed, 386.72 kB initial bundle.
+- Post-repair `docker compose config --quiet` and `git diff --check` — passed.
 
 ## Blockers
 
-- Final GitHub CI and owner-facing M2 desktop/mobile acceptance remain pull-request gates. The pull-request checklist deliberately leaves visual acceptance incomplete.
+- Final GitHub CI and a focused rerun of owner-facing M2 desktop/mobile acceptance remain pull-request gates. The pull-request checklist remains incomplete until the repaired curation, cover, conversion, and edition-evidence paths pass in the browser.

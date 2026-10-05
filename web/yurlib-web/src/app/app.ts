@@ -15,6 +15,8 @@ import { EMPTY, Observable, Subscription, expand, firstValueFrom, switchMap, tim
 import { LibraryApi } from './library-api';
 import {
   CatalogPage,
+  CatalogAsset,
+  CatalogWork,
   CatalogFormat,
   CreateLibraryRootRequest,
   LibraryMount,
@@ -29,6 +31,8 @@ import {
   MergeOperation,
   RecoveryPreview,
   WorkCuration,
+  ConversionJob,
+  ConversionRoute,
 } from './library.model';
 
 const TERMINAL_SCAN_STATES: ReadonlySet<ScanState> = new Set([
@@ -63,6 +67,7 @@ export class App {
     identityToken: '',
     mode: 'READ_ONLY_SOURCE',
     defaultForCovers: false,
+    defaultForConversions: false,
   });
   protected readonly rootForm = form(this.rootModel, (schema) => {
     required(schema.name, { message: 'Enter a library name.' });
@@ -165,6 +170,9 @@ export class App {
   protected readonly loadingPersonalState = signal(false);
   protected readonly savingPersonalState = signal(false);
   protected readonly personalStateError = signal('');
+  protected readonly conversionJobs = signal<Record<string, ConversionJob>>({});
+  protected readonly busyConversions = signal<ReadonlySet<string>>(new Set());
+  protected readonly conversionErrors = signal<Record<string, string>>({});
 
   protected readonly selectedRoot = computed(() =>
     this.roots().find((root) => root.id === this.selectedRootId()),
@@ -246,6 +254,8 @@ export class App {
         const request = {
           ...model,
           defaultForCovers: model.mode === 'MANAGED_OUTPUT' && Boolean(model.defaultForCovers),
+          defaultForConversions:
+            model.mode === 'MANAGED_OUTPUT' && Boolean(model.defaultForConversions),
         };
         const root = await firstValueFrom(this.api.createRoot(request));
         this.roots.update((roots) => [...roots, root]);
@@ -314,6 +324,10 @@ export class App {
     this.rootModel.update((model) => ({ ...model, defaultForCovers: enabled }));
   }
 
+  protected setDefaultForConversions(enabled: boolean) {
+    this.rootModel.update((model) => ({ ...model, defaultForConversions: enabled }));
+  }
+
   protected isFavorite(contributorId: string) {
     return this.personalState().favoriteContributors.some(
       (favorite) => favorite.contributorId === contributorId,
@@ -333,14 +347,65 @@ export class App {
     );
   }
 
-  protected async toggleRead(workId: string) {
+  protected async toggleRead(workId: string, completedEditionId: string) {
     if (this.savingPersonalState()) return;
     const current = this.readState(workId);
     await this.runPersonalMutation(
       current
         ? this.api.markWorkUnread(workId, current.version)
-        : this.api.markWorkRead(workId, -1),
+        : this.api.markWorkRead(workId, completedEditionId, -1),
     );
+  }
+
+  protected editionOptions(work: CatalogWork) {
+    const formats = new Map<string, Set<CatalogFormat>>();
+    for (const asset of work.assets) {
+      const editionFormats = formats.get(asset.editionId) ?? new Set<CatalogFormat>();
+      editionFormats.add(asset.format);
+      formats.set(asset.editionId, editionFormats);
+    }
+    return [...formats].map(([id, editionFormats], index) => ({
+      id,
+      label: `Edition ${index + 1} · ${[...editionFormats].join(', ')}`,
+    }));
+  }
+
+  protected editionEvidence(work: CatalogWork, editionId: string | null) {
+    if (!editionId) return 'No edition recorded';
+    return this.editionOptions(work).find((edition) => edition.id === editionId)?.label ?? editionId;
+  }
+
+  protected conversionRoute(asset: CatalogAsset): ConversionRoute | undefined {
+    if (!asset.original || asset.availability !== 'AVAILABLE') return undefined;
+    if (asset.format === 'FB2') return 'FB2_TO_EPUB_V1';
+    if (asset.format === 'MOBI') return 'MOBI_TO_EPUB_V1';
+    return undefined;
+  }
+
+  protected conversionJob(assetId: string) {
+    return this.conversionJobs()[assetId];
+  }
+
+  protected conversionBusy(assetId: string) {
+    return this.busyConversions().has(assetId);
+  }
+
+  protected async requestConversion(asset: CatalogAsset) {
+    const route = this.conversionRoute(asset);
+    if (!route || this.conversionBusy(asset.id)) return;
+    await this.runConversionAction(asset.id, () => this.api.requestConversion(asset.id, route));
+  }
+
+  protected async refreshConversion(assetId: string) {
+    const job = this.conversionJob(assetId);
+    if (!job || this.conversionBusy(assetId)) return;
+    await this.runConversionAction(assetId, () => this.api.getConversion(job.id));
+  }
+
+  protected async cancelConversion(assetId: string) {
+    const job = this.conversionJob(assetId);
+    if (!job || this.conversionBusy(assetId)) return;
+    await this.runConversionAction(assetId, () => this.api.cancelConversion(job.id, job.version));
   }
 
   protected createCollection(event: SubmitEvent) {
@@ -730,6 +795,36 @@ export class App {
     this.selectedCuration.set(undefined);
     this.reviewQueue.set([]);
     this.personalState.set({ favoriteContributors: [], readStates: [], collections: [] });
+    this.conversionJobs.set({});
+    this.busyConversions.set(new Set());
+    this.conversionErrors.set({});
+  }
+
+  private async runConversionAction(
+    assetId: string,
+    action: () => Observable<ConversionJob>,
+  ) {
+    this.busyConversions.update((current) => new Set(current).add(assetId));
+    this.conversionErrors.update((errors) => {
+      const remaining = { ...errors };
+      delete remaining[assetId];
+      return remaining;
+    });
+    try {
+      const job = await firstValueFrom(action());
+      this.conversionJobs.update((jobs) => ({ ...jobs, [assetId]: job }));
+    } catch (error) {
+      this.conversionErrors.update((errors) => ({
+        ...errors,
+        [assetId]: this.problemMessage(error, 'The conversion request could not be completed.'),
+      }));
+    } finally {
+      this.busyConversions.update((current) => {
+        const next = new Set(current);
+        next.delete(assetId);
+        return next;
+      });
+    }
   }
 
   private async loadCatalog(page: number) {

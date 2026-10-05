@@ -140,6 +140,14 @@
               />
               <span>Use as the default cover output</span>
             </label>
+            <label class="checkbox-field">
+              <input
+                type="checkbox"
+                [checked]="rootModel().defaultForConversions"
+                (change)="setDefaultForConversions($any($event.target).checked)"
+              />
+              <span>Use as the default conversion output</span>
+            </label>
           }
 
           <label>
@@ -332,15 +340,30 @@
                       : 'Contributor unknown'
                   }}
                 </p>
+                @let editions = editionOptions(work);
+                @let completedReadState = readState(work.id);
                 <div class="personal-work-actions" aria-label="Personal library actions">
+                  <label class="edition-choice">
+                    <span>Completed edition</span>
+                    <select #editionSelection [disabled]="completedReadState !== undefined">
+                      @for (edition of editions; track edition.id) {
+                        <option
+                          [value]="edition.id"
+                          [selected]="completedReadState?.completedEditionId === edition.id"
+                        >
+                          {{ edition.label }}
+                        </option>
+                      }
+                    </select>
+                  </label>
                   <button
                     class="quiet-action"
                     type="button"
-                    [attr.aria-pressed]="readState(work.id) !== undefined"
-                    [disabled]="savingPersonalState()"
-                    (click)="toggleRead(work.id)"
+                    [attr.aria-pressed]="completedReadState !== undefined"
+                    [disabled]="savingPersonalState() || editions.length === 0"
+                    (click)="toggleRead(work.id, editionSelection.value)"
                   >
-                    {{ readState(work.id) ? 'Read' : 'Mark as read' }}
+                    {{ completedReadState ? 'Mark as unread' : 'Mark as read' }}
                   </button>
                   @for (contributor of work.contributorDetails || []; track contributor.id) {
                     <button
@@ -354,6 +377,11 @@
                     </button>
                   }
                 </div>
+                @if (completedReadState) {
+                  <p class="edition-evidence">
+                    Edition evidence: {{ editionEvidence(work, completedReadState.completedEditionId) }}
+                  </p>
+                }
                 @if (personalState().collections.length > 0) {
                   <div class="collection-add">
                     <label [for]="'collection-' + work.id">Add to collection</label>
@@ -389,9 +417,57 @@
                       </span>
                     }
                     @if (asset.availability === 'AVAILABLE') {
-                      <a [href]="downloadUrl(asset.id)" download>Download original</a>
+                      <a [href]="downloadUrl(asset.id)" download>
+                        {{ asset.original ? 'Download original' : 'Download derived file' }}
+                      </a>
                     } @else {
                       <span class="unavailable">Unavailable</span>
+                    }
+                    @if (conversionRoute(asset)) {
+                      @let conversion = conversionJob(asset.id);
+                      <div class="conversion-actions">
+                        @if (!conversion) {
+                          <button
+                            type="button"
+                            [disabled]="conversionBusy(asset.id)"
+                            (click)="requestConversion(asset)"
+                          >
+                            {{ conversionBusy(asset.id) ? 'Requesting…' : 'Convert to EPUB' }}
+                          </button>
+                        } @else {
+                          <span class="conversion-state" [attr.data-state]="conversion.state">
+                            Conversion {{ formatState(conversion.state) }}
+                          </span>
+                          @if (conversion.state === 'QUEUED' || conversion.state === 'RUNNING') {
+                            <button
+                              type="button"
+                              [disabled]="conversionBusy(asset.id)"
+                              (click)="refreshConversion(asset.id)"
+                            >
+                              Refresh status
+                            </button>
+                            <button
+                              class="quiet-action"
+                              type="button"
+                              [disabled]="conversionBusy(asset.id)"
+                              (click)="cancelConversion(asset.id)"
+                            >
+                              Cancel
+                            </button>
+                          }
+                          @if (conversion.state === 'SUCCEEDED' && conversion.derivedAssetId) {
+                            <a [href]="downloadUrl(conversion.derivedAssetId)" download>
+                              Download converted EPUB
+                            </a>
+                          }
+                          @if (conversion.safeDiagnostic) {
+                            <span class="conversion-diagnostic">{{ conversion.safeDiagnostic }}</span>
+                          }
+                        }
+                        @if (conversionErrors()[asset.id]; as conversionError) {
+                          <span class="field-error" role="alert">{{ conversionError }}</span>
+                        }
+                      </div>
                     }
                   </li>
                 }
