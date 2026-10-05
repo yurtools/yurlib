@@ -1412,9 +1412,12 @@ components:
           type: string
     AssetSummary:
       type: object
-      required: [id, format, size, availability, original, metadataState]
+      required: [id, editionId, format, size, availability, original, metadataState]
       properties:
         id:
+          type: string
+          format: uuid
+        editionId:
           type: string
           format: uuid
         format:

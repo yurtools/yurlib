@@ -109,6 +109,11 @@ jobs:
         run: |
           set -euo pipefail
           docker compose config 2>&1 | tee compose-config.log
+      - name: Test backup manifest safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s ops/tests -p 'test_*.py' -v 2>&1 | tee recovery-test.log
 
   dependency-review:
     name: Dependency Review

@@ -12,7 +12,12 @@ RUN mvn -B -pl services/yurlib-server -am package -DskipTests
 
 FROM eclipse-temurin:25-jre-alpine
 
-RUN addgroup -S yurlib && adduser -S -G yurlib -h /app yurlib
+RUN addgroup -S -g 10001 yurlib \
+    && adduser -S -D -u 10001 -G yurlib -h /app yurlib \
+    && install -d -o yurlib -g yurlib -m 0700 \
+        /var/lib/yurlib/staging/pdf \
+        /var/lib/yurlib/staging/covers \
+        /var/lib/yurlib/staging/conversions
 WORKDIR /app
 COPY --from=build --chown=yurlib:yurlib /workspace/services/yurlib-server/target/yurlib-server-*.jar app.jar
 USER yurlib

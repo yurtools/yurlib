@@ -19,6 +19,8 @@ import {
   RecoverableSubjectType,
   RecoveryPreview,
   SplitPreview,
+  ConversionJob,
+  ConversionRoute,
 } from './library.model';
 
 @Injectable({ providedIn: 'root' })
@@ -73,6 +75,24 @@ export class LibraryApi {
 
   coverUrl(workId: string) {
     return `/api/v1/catalog/works/${encodeURIComponent(workId)}/cover`;
+  }
+
+  requestConversion(assetId: string, route: ConversionRoute) {
+    return this.http.post<ConversionJob>(
+      `/api/v1/assets/${encodeURIComponent(assetId)}/conversions`,
+      { route },
+    );
+  }
+
+  getConversion(jobId: string) {
+    return this.http.get<ConversionJob>(`/api/v1/conversions/${encodeURIComponent(jobId)}`);
+  }
+
+  cancelConversion(jobId: string, expectedVersion: number) {
+    return this.http.post<ConversionJob>(
+      `/api/v1/conversions/${encodeURIComponent(jobId)}/cancel`,
+      { expectedVersion },
+    );
   }
 
   getWorkCuration(workId: string) {
@@ -199,10 +219,10 @@ export class LibraryApi {
     );
   }
 
-  markWorkRead(workId: string, expectedVersion: number) {
+  markWorkRead(workId: string, completedEditionId: string, expectedVersion: number) {
     return this.http.put<WorkReadState>(
       `/api/v1/me/works/${encodeURIComponent(workId)}/read-state`,
-      { completedEditionId: null, completedAt: new Date().toISOString(), expectedVersion },
+      { completedEditionId, completedAt: new Date().toISOString(), expectedVersion },
     );
   }
 
