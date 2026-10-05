@@ -4,6 +4,8 @@
 - Started: 2026-10-05
 - Repository: `yurtools/yurlib`
 - Branch: `chore/angular-22-2-1`
+- Consolidated pull request: [#84](https://github.com/yurtools/yurlib/pull/84)
+- Squash commit: `d65addf649d8f978e69dd1cee6755cb8bd3617e4`
 
 ## Prompt
 
@@ -29,6 +31,9 @@
 - Renormalized `mvnw.cmd` after the Maven wrapper update committed CRLF bytes contrary to the repository's text-normalization rules, preventing a false dirty worktree on Linux without changing script content.
 - Preserved the unrelated, unstaged `web/yurlib-web/angular.json` analytics preference throughout the work.
 - Renamed the completed M2 acceptance log from `pr-open` to `merged` and recorded pull request #76's squash commit.
+- Opened consolidated pull request #84, waited for all protected checks, and squash-merged it as `d65addf649d8f978e69dd1cee6755cb8bd3617e4`.
+- Closed split Angular pull requests #79 through #82 as superseded by #84. Dependabot concurrently auto-closed #80 after detecting that compiler CLI was current; the superseding explanation was still recorded on it.
+- Confirmed that no pull requests remain open.
 
 ## Verification
 
@@ -42,6 +47,7 @@
 - `docker compose config --quiet` — passed.
 - `./mvnw --version` — passed with Apache Maven 3.10.0 after wrapper renormalization.
 - `git diff --check` — passed.
+- GitHub Actions run `37329112513` for pull request #84 — passed Backend, Frontend, Compose Configuration, and Dependency Review.
 
 ## Blockers
 
