@@ -9,6 +9,7 @@ export interface CreateLibraryRootRequest {
   identityToken: string;
   mode: 'READ_ONLY_SOURCE' | 'MANAGED_OUTPUT';
   defaultForCovers?: boolean;
+  defaultForConversions?: boolean;
 }
 
 export interface LibraryRoot {
@@ -20,6 +21,7 @@ export interface LibraryRoot {
   availability: 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'IDENTITY_MISMATCH';
   lastSuccessfulScanAt?: string | null;
   defaultForCovers?: boolean;
+  defaultForConversions?: boolean;
 }
 
 export type ScanState =
@@ -50,11 +52,31 @@ export type CatalogFormat = 'EPUB' | 'FB2' | 'MOBI' | 'PDF' | 'DOCX' | 'DJVU';
 
 export interface CatalogAsset {
   id: string;
+  editionId: string;
   format: CatalogFormat;
   size: number;
   availability: 'AVAILABLE' | 'UNAVAILABLE';
-  original: true;
+  original: boolean;
   metadataState: 'PENDING' | 'READY' | 'FAILED_SAFE';
+}
+
+export type ConversionRoute = 'FB2_TO_EPUB_V1' | 'MOBI_TO_EPUB_V1';
+export type ConversionState = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED_SAFE' | 'CANCELLED';
+
+export interface ConversionJob {
+  id: string;
+  sourceAssetId: string;
+  derivedAssetId: string | null;
+  route: ConversionRoute;
+  state: ConversionState;
+  attemptCount: number;
+  cancellationRequested: boolean;
+  errorCode: string | null;
+  safeDiagnostic: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  version: number;
 }
 
 export interface CatalogWork {

@@ -27,6 +27,9 @@ describe('LibraryApi', () => {
     api.startScan('root id').subscribe();
     api.getJob('job id').subscribe();
     api.searchCatalog('book', 2, 12).subscribe();
+    api.requestConversion('asset/id', 'FB2_TO_EPUB_V1').subscribe();
+    api.getConversion('conversion/id').subscribe();
+    api.cancelConversion('conversion/id', 2).subscribe();
     api.getWorkCuration('work/id').subscribe();
     api.updateWorkTitle('work/id', 'Title', 'Reason', 1).subscribe();
     api.undoWorkTitle('work/id', 'Reason', 2).subscribe();
@@ -75,6 +78,11 @@ describe('LibraryApi', () => {
     expect(
       http.expectOne((request) => request.url === '/api/v1/catalog/works').request.url,
     ).not.toContain('://');
+    expect(http.expectOne('/api/v1/assets/asset%2Fid/conversions').request.method).toBe('POST');
+    expect(http.expectOne('/api/v1/conversions/conversion%2Fid').request.method).toBe('GET');
+    expect(http.expectOne('/api/v1/conversions/conversion%2Fid/cancel').request.method).toBe(
+      'POST',
+    );
     expect(http.expectOne('/api/v1/curation/works/work%2Fid').request.method).toBe('GET');
     expect(http.expectOne('/api/v1/curation/works/work%2Fid/title').request.method).toBe('PUT');
     expect(http.expectOne('/api/v1/curation/works/work%2Fid/title/undo').request.method).toBe(

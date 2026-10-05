@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.yurlib.server.library.application.CatalogCuration;
 import org.yurlib.server.library.application.CatalogRecovery;
 import org.yurlib.server.library.application.CatalogRecoveryFailure;
 import org.yurlib.server.library.application.CatalogRecoveryFailureInjector;
@@ -38,6 +39,9 @@ class CatalogRecoveryIntegrationTest {
 
     @Autowired
     private CatalogRecovery recovery;
+
+    @Autowired
+    private CatalogCuration curation;
 
     @MockitoBean
     private CatalogRecoveryFailureInjector failureInjector;
@@ -157,6 +161,14 @@ class CatalogRecoveryIntegrationTest {
     void supportsRepeatedRecoveryAndRequiresGuidedSplitAfterALaterCuratedTitle() {
         var fixture = seedFixture();
 
+        var initialCuration = curation.findWork(fixture.survivorWork());
+        curation.updateTitle(
+                fixture.survivorWork(),
+                "Survivor curated title",
+                "Verified before recovery",
+                initialCuration.version(),
+                fixture.actor());
+
         var firstMerge = mergeWork(fixture, "First duplicate decision");
         assertThat(recovery.undo(firstMerge.id(), "Restore for another review", fixture.actor())
                         .status())
@@ -168,19 +180,15 @@ class CatalogRecoveryIntegrationTest {
                 .isEqualTo("UNDONE");
 
         var thirdMerge = mergeWork(fixture, "Third duplicate decision");
-        jdbc.sql("""
-                INSERT INTO metadata_curated_override (
-                    id, subject_id, subject_type, field_name, value_state, curated_value,
-                    actor_id, reason, override_version, active
-                ) VALUES (
-                    :id, :workId, 'WORK', 'title', 'PRESENT', 'Later curated title',
-                    :actorId, 'Verified after merge', 1, TRUE
-                )
-                """)
-                .param("id", UUID.randomUUID())
-                .param("workId", fixture.survivorWork())
-                .param("actorId", fixture.actor())
-                .update();
+        var mergedCuration = curation.findWork(fixture.survivorWork());
+        var updatedCuration = curation.updateTitle(
+                fixture.survivorWork(),
+                "Later curated title",
+                "Verified after merge",
+                mergedCuration.version(),
+                fixture.actor());
+
+        assertThat(updatedCuration.title().value()).isEqualTo("Later curated title");
 
         var splitPreview = recovery.splitPreview(thirdMerge.id());
         assertThat(splitPreview.automaticUndoAllowed()).isFalse();

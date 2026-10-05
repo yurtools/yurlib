@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { App } from './app';
-import { CatalogPage, LibraryRoot, ScanJob } from './library.model';
+import { CatalogPage, ConversionJob, LibraryRoot, ScanJob } from './library.model';
 
 describe('App', () => {
   const survivorId = '21cae7c7-4f67-4cf1-9678-148178276ceb';
@@ -189,6 +189,7 @@ describe('App', () => {
       identityToken: 'private-token-1234',
       mode: 'READ_ONLY_SOURCE',
       defaultForCovers: false,
+      defaultForConversions: false,
     });
     request.flush(root());
     await fixture.whenStable();
@@ -257,6 +258,7 @@ describe('App', () => {
           assets: [
             {
               id: 'asset-1',
+              editionId: 'edition-1',
               format: 'EPUB',
               size: 2048,
               availability: 'AVAILABLE',
@@ -304,6 +306,57 @@ describe('App', () => {
     expect(element.querySelector('.work-cover-fallback')?.textContent).toContain('T');
   });
 
+  it('requests and exposes a completed on-demand EPUB conversion', async () => {
+    await initialize([], {
+      items: [
+        {
+          id: 'work-convert',
+          title: 'Conversion fixture',
+          contributors: [],
+          provisional: false,
+          assets: [
+            {
+              id: 'asset-fb2',
+              editionId: 'edition-fb2',
+              format: 'FB2',
+              size: 4096,
+              availability: 'AVAILABLE',
+              original: true,
+              metadataState: 'READY',
+            },
+          ],
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
+    });
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.conversion-actions button')?.click();
+    const request = http.expectOne('/api/v1/assets/asset-fb2/conversions');
+    expect(request.request.body).toEqual({ route: 'FB2_TO_EPUB_V1' });
+    request.flush(conversionJob('QUEUED'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.conversion-state')?.textContent).toContain('queued');
+    element.querySelector<HTMLButtonElement>('.conversion-actions button')?.click();
+    http.expectOne('/api/v1/conversions/conversion-1').flush({
+      ...conversionJob('SUCCEEDED'),
+      derivedAssetId: 'asset-epub',
+      completedAt: '2026-10-05T12:00:00Z',
+      version: 2,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const convertedDownload = [...element.querySelectorAll<HTMLAnchorElement>('.asset-list a')].find(
+      (link) => link.textContent?.includes('Download converted EPUB'),
+    );
+    expect(convertedDownload?.getAttribute('href')).toBe('/api/v1/assets/asset-epub/content');
+  });
+
   it('marks a work as read and favorites a canonical contributor', async () => {
     await initialize([], {
       items: [
@@ -313,7 +366,17 @@ describe('App', () => {
           contributors: ['Ursula K. Le Guin'],
           contributorDetails: [{ id: 'contributor-1', displayName: 'Ursula K. Le Guin' }],
           provisional: false,
-          assets: [],
+          assets: [
+            {
+              id: 'asset-read',
+              editionId: 'edition-1',
+              format: 'EPUB',
+              size: 2048,
+              availability: 'AVAILABLE',
+              original: true,
+              metadataState: 'READY',
+            },
+          ],
         },
       ],
       page: 0,
@@ -328,13 +391,13 @@ describe('App', () => {
     personalActions[0].click();
     const readRequest = http.expectOne('/api/v1/me/works/work-1/read-state');
     expect(readRequest.request.body).toEqual({
-      completedEditionId: null,
+      completedEditionId: 'edition-1',
       completedAt: expect.any(String),
       expectedVersion: -1,
     });
     readRequest.flush({
       workId: 'work-1',
-      completedEditionId: null,
+      completedEditionId: 'edition-1',
       completedAt: '2026-10-02T12:00:00Z',
       version: 0,
     });
@@ -344,7 +407,7 @@ describe('App', () => {
       readStates: [
         {
           workId: 'work-1',
-          completedEditionId: null,
+          completedEditionId: 'edition-1',
           completedAt: '2026-10-02T12:00:00Z',
           version: 0,
         },
@@ -353,8 +416,11 @@ describe('App', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(personalActions[0].textContent).toContain('Read');
+    expect(personalActions[0].textContent).toContain('Mark as unread');
     expect(personalActions[0].getAttribute('aria-pressed')).toBe('true');
+    expect(element.querySelector('.edition-evidence')?.textContent).toContain(
+      'Edition evidence: Edition 1 · EPUB',
+    );
 
     personalActions[1].click();
     http.expectOne('/api/v1/me/favorite-contributors/contributor-1').flush({
@@ -706,6 +772,24 @@ describe('App', () => {
       coverageComplete: false,
       failures: [],
       createdAt: '2026-09-29T12:00:00Z',
+    };
+  }
+
+  function conversionJob(state: ConversionJob['state']): ConversionJob {
+    return {
+      id: 'conversion-1',
+      sourceAssetId: 'asset-fb2',
+      derivedAssetId: null,
+      route: 'FB2_TO_EPUB_V1',
+      state,
+      attemptCount: state === 'QUEUED' ? 0 : 1,
+      cancellationRequested: false,
+      errorCode: null,
+      safeDiagnostic: null,
+      createdAt: '2026-10-05T11:00:00Z',
+      startedAt: state === 'QUEUED' ? null : '2026-10-05T11:01:00Z',
+      completedAt: null,
+      version: state === 'QUEUED' ? 0 : 1,
     };
   }
 
