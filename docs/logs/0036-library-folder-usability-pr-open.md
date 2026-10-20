@@ -1,8 +1,10 @@
 # Library Folder Usability
 
-- Status: In progress
+- Status: Draft pull request open; implementation verified locally, awaiting owner review
 - Issue: #97
 - Branch: `fix/97-library-folder-usability`
+- Implementation commit: `6c9a94a`
+- Pull request: [#98](https://github.com/yurtools/yurlib/pull/98), closes #97 on merge
 
 ## Initiating user prompt
 
@@ -49,4 +51,6 @@
 
 ## Blockers and delivery references
 
-- None. No commit or pull request yet.
+- None. The local frontend, loopback backend, database, and isolated worker remain running for owner testing at `http://localhost:4200`.
+- Draft pull request #98 contains the implementation and verification evidence. It has not been merged; the project item remains In Progress during review.
+- The pre-existing local `web/yurlib-web/angular.json` analytics preference was preserved and excluded from the commits.
