@@ -10,5 +10,7 @@ public interface LibraryRootUseCases {
 
     List<LibraryRoot> list();
 
+    LibraryRoot setDefaultOutput(UUID rootId, LibraryRoot.OutputPurpose purpose);
+
     void remove(UUID rootId);
 }

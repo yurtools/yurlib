@@ -1,6 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   FormField,
   form,
@@ -58,10 +67,12 @@ export class App {
 
   private readonly api = inject(LibraryApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
   private pollSubscription?: Subscription;
 
   protected readonly rootModel = signal<CreateLibraryRootRequest>({
-    name: 'Main library',
+    name: 'My books',
     mountAlias: '',
     relativePath: '',
     identityToken: '',
@@ -122,6 +133,25 @@ export class App {
 
   protected readonly mounts = signal<LibraryMount[]>([]);
   protected readonly roots = signal<LibraryRoot[]>([]);
+  protected readonly settingsOpen = signal(false);
+  protected readonly addingFolder = signal(false);
+  protected readonly savingOutput = signal(false);
+  protected readonly outputError = signal('');
+  protected readonly outputNotice = signal('');
+  protected readonly sourceRoots = computed(() =>
+    this.roots().filter((root) => root.mode === 'READ_ONLY_SOURCE'),
+  );
+  protected readonly outputRoots = computed(() =>
+    this.roots().filter((root) => root.mode === 'MANAGED_OUTPUT'),
+  );
+  protected readonly conversionOutput = computed(() =>
+    this.outputRoots().find(
+      (root) => root.defaultForConversions && root.availability === 'AVAILABLE',
+    ),
+  );
+  protected readonly needsConversionOutput = computed(
+    () => this.canManageSources() && !this.loadingWorkspace() && !this.conversionOutput(),
+  );
   protected readonly selectedRootId = signal('');
   protected readonly job = signal<ScanJob | undefined>(undefined);
   protected readonly catalog = signal<CatalogPage>({
@@ -259,8 +289,9 @@ export class App {
         };
         const root = await firstValueFrom(this.api.createRoot(request));
         this.roots.update((roots) => [...roots, root]);
-        this.selectedRootId.set(root.id);
+        if (root.mode === 'READ_ONLY_SOURCE') this.selectedRootId.set(root.id);
         this.rootModel.update((model) => ({ ...model, identityToken: '' }));
+        this.addingFolder.set(false);
       } catch (error) {
         this.rootError.set(this.problemMessage(error, 'The library root could not be configured.'));
       } finally {
@@ -269,9 +300,79 @@ export class App {
     });
   }
 
-  protected async startScan() {
+  protected openSettings() {
+    this.settingsOpen.set(true);
+  }
+
+  protected addFolder(mode: LibraryRoot['mode']) {
+    const output = mode === 'MANAGED_OUTPUT';
+    this.rootModel.set({
+      name: output ? 'Generated files' : 'My books',
+      mode,
+      mountAlias:
+        this.mounts().find((mount) => mount.alias === (output ? 'managed' : 'main'))?.alias ??
+        this.mounts()[0]?.alias ??
+        '',
+      relativePath: '',
+      identityToken: '',
+      defaultForCovers: output && !this.outputRoots().some((root) => root.defaultForCovers),
+      defaultForConversions:
+        output && !this.outputRoots().some((root) => root.defaultForConversions),
+    });
+    this.rootForm().reset();
+    this.rootError.set('');
+    this.addingFolder.set(true);
+    this.settingsOpen.set(true);
+    this.focusAfterRender('folder-name');
+  }
+
+  protected cancelAddFolder() {
+    this.rootModel.update((model) => ({ ...model, identityToken: '' }));
+    this.addingFolder.set(false);
+    this.rootError.set('');
+    this.focusAfterRender(this.rootModel().mode === 'MANAGED_OUTPUT' ? 'add-output' : 'add-source');
+  }
+
+  private focusAfterRender(id: string) {
+    afterNextRender(() => this.document.getElementById(id)?.focus(), { injector: this.injector });
+  }
+
+  protected async setDefaultOutput(root: LibraryRoot, purpose: 'COVERS' | 'CONVERSIONS') {
+    if (this.savingOutput()) return;
+    this.savingOutput.set(true);
+    this.outputError.set('');
+    this.outputNotice.set('');
+    try {
+      const updated = await firstValueFrom(this.api.setDefaultOutput(root.id, purpose));
+      this.roots.update((roots) =>
+        roots.map((item) =>
+          item.id === updated.id
+            ? updated
+            : {
+                ...item,
+                ...(purpose === 'COVERS'
+                  ? { defaultForCovers: false }
+                  : { defaultForConversions: false }),
+              },
+        ),
+      );
+      this.outputNotice.set(
+        purpose === 'CONVERSIONS'
+          ? 'Conversion folder saved. You can now convert a book to EPUB.'
+          : 'Cover folder saved.',
+      );
+      this.conversionErrors.set({});
+    } catch (error) {
+      this.outputError.set(this.problemMessage(error, 'The output folder could not be selected.'));
+    } finally {
+      this.savingOutput.set(false);
+    }
+  }
+
+  protected async startScan(rootId = this.selectedRootId()) {
+    this.selectedRootId.set(rootId);
     const root = this.selectedRoot();
-    if (!root) return;
+    if (!root || root.mode !== 'READ_ONLY_SOURCE' || this.startingScan()) return;
     this.startingScan.set(true);
     this.scanError.set('');
     try {
@@ -372,7 +473,9 @@ export class App {
 
   protected editionEvidence(work: CatalogWork, editionId: string | null) {
     if (!editionId) return 'No edition recorded';
-    return this.editionOptions(work).find((edition) => edition.id === editionId)?.label ?? editionId;
+    return (
+      this.editionOptions(work).find((edition) => edition.id === editionId)?.label ?? editionId
+    );
   }
 
   protected conversionRoute(asset: CatalogAsset): ConversionRoute | undefined {
@@ -392,7 +495,7 @@ export class App {
 
   protected async requestConversion(asset: CatalogAsset) {
     const route = this.conversionRoute(asset);
-    if (!route || this.conversionBusy(asset.id)) return;
+    if (!route || this.conversionBusy(asset.id) || this.needsConversionOutput()) return;
     await this.runConversionAction(asset.id, () => this.api.requestConversion(asset.id, route));
   }
 
@@ -758,7 +861,9 @@ export class App {
         if (this.rootModel().mountAlias === '' && mounts.length > 0) {
           this.rootModel.update((model) => ({ ...model, mountAlias: mounts[0].alias }));
         }
-        if (roots.length > 0) this.selectedRootId.set(roots[0].id);
+        const sources = roots.filter((root) => root.mode === 'READ_ONLY_SOURCE');
+        if (sources.length > 0) this.selectedRootId.set(sources[0].id);
+        if (sources.length === 0) this.settingsOpen.set(true);
       }
     } catch (error) {
       this.workspaceError.set(
@@ -789,6 +894,11 @@ export class App {
     this.pollSubscription?.unsubscribe();
     this.mounts.set([]);
     this.roots.set([]);
+    this.settingsOpen.set(false);
+    this.addingFolder.set(false);
+    this.outputError.set('');
+    this.outputNotice.set('');
+    this.rootModel.update((model) => ({ ...model, identityToken: '' }));
     this.selectedRootId.set('');
     this.job.set(undefined);
     this.catalog.set({ items: [], page: 0, size: App.CATALOG_PAGE_SIZE, totalElements: 0 });
@@ -800,10 +910,7 @@ export class App {
     this.conversionErrors.set({});
   }
 
-  private async runConversionAction(
-    assetId: string,
-    action: () => Observable<ConversionJob>,
-  ) {
+  private async runConversionAction(assetId: string, action: () => Observable<ConversionJob>) {
     this.busyConversions.update((current) => new Set(current).add(assetId));
     this.conversionErrors.update((errors) => {
       const remaining = { ...errors };
@@ -814,9 +921,16 @@ export class App {
       const job = await firstValueFrom(action());
       this.conversionJobs.update((jobs) => ({ ...jobs, [assetId]: job }));
     } catch (error) {
+      const missingOutput =
+        error instanceof HttpErrorResponse &&
+        (error.error as ProblemDetails | undefined)?.code === 'MANAGED_ROOT_UNAVAILABLE';
       this.conversionErrors.update((errors) => ({
         ...errors,
-        [assetId]: this.problemMessage(error, 'The conversion request could not be completed.'),
+        [assetId]: missingOutput
+          ? this.canManageSources()
+            ? 'Choose an available conversion folder in Library settings → Generated files, then try again.'
+            : 'Conversion storage is unavailable for your account. Ask the library owner to check output storage and access.'
+          : this.problemMessage(error, 'The conversion request could not be completed.'),
       }));
     } finally {
       this.busyConversions.update((current) => {

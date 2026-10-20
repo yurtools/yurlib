@@ -2,8 +2,10 @@ package org.yurlib.server.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -132,6 +134,19 @@ class OwnerSecurityConfigurationTest {
         mockMvc.perform(withCsrf(post("/api/v1/library-roots/root-1/scans"))).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/actuator/health")).andExpect(status().isNotFound());
+        mockMvc.perform(withCsrf(put("/api/v1/library-roots/238fe729-8360-440e-94a7-012a23ac49f3/defaults")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"purpose\":\"CONVERSIONS\"}")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deniesOutputConfigurationToAReaderEvenWithCsrf() throws Exception {
+        mockMvc.perform(withCsrf(put("/api/v1/library-roots/238fe729-8360-440e-94a7-012a23ac49f3/defaults")
+                        .with(user("reader").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"purpose\":\"CONVERSIONS\"}")))
+                .andExpect(status().isForbidden());
     }
 
     @Test

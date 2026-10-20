@@ -28,6 +28,7 @@ class OpenApiContractTest {
                         "/api/v1/session/logout",
                         "/api/v1/library-roots",
                         "/api/v1/library-roots/{rootId}",
+                        "/api/v1/library-roots/{rootId}/defaults",
                         "/api/v1/library-roots/{rootId}/scans",
                         "/api/v1/jobs/{jobId}",
                         "/api/v1/jobs/{jobId}/cancel",

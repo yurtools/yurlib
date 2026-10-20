@@ -15,5 +15,7 @@ public interface LibraryRootStore {
 
     List<LibraryRoot> findAll();
 
+    LibraryRoot setDefaultOutput(UUID rootId, LibraryRoot.OutputPurpose purpose);
+
     void delete(UUID rootId);
 }

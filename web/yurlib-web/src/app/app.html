@@ -3,6 +3,17 @@
     <span class="brand-mark" aria-hidden="true">Y</span><span>Yurlib</span>
   </a>
   <div class="topbar-actions">
+    @if (session()?.authenticated && canManageSources()) {
+      <button
+        class="settings-toggle quiet-action"
+        type="button"
+        [attr.aria-expanded]="settingsOpen()"
+        aria-controls="library-settings"
+        (click)="settingsOpen.set(!settingsOpen())"
+      >
+        {{ settingsOpen() ? 'Back to library' : 'Library settings' }}
+      </button>
+    }
     <a class="health-link" href="/actuator/health">
       <span class="health-dot" aria-hidden="true"></span>Backend health
     </a>
@@ -70,13 +81,17 @@
   </main>
 } @else {
   <main id="workspace">
-    <header class="workspace-heading">
+    <header class="workspace-heading" [class.settings-heading]="settingsOpen()">
       <div>
         <p class="eyebrow">Local library</p>
-        <h1>Library workbench</h1>
+        <h1>{{ settingsOpen() ? 'Library settings' : 'Library workbench' }}</h1>
       </div>
       <p class="workspace-summary">
-        Browse the books available to your account and manage sources when authorized.
+        {{
+          settingsOpen()
+            ? 'Manage your book folders and storage for converted books and covers.'
+            : 'Search your books, download originals, and convert supported formats.'
+        }}
       </p>
     </header>
 
@@ -85,129 +100,290 @@
     }
 
     @if (canManageSources()) {
-      <section class="workspace-section setup-section" aria-labelledby="source-heading">
-        <div class="section-heading">
-          <p class="step">01</p>
-          <div>
-            <h2 id="source-heading">Library source</h2>
-            <p>Yurlib reads this location without modifying the source files.</p>
+      <section
+        id="library-settings"
+        class="workspace-section setup-section"
+        [class.settings-collapsed]="!settingsOpen()"
+        aria-label="Library settings"
+      >
+        @if (settingsOpen()) {
+          <div class="section-heading">
+            <p class="step">Settings</p>
+            <div>
+              <h2>Library folders</h2>
+              <p>Choose where books are read from and where generated files are saved.</p>
+            </div>
           </div>
-        </div>
-
-        @if (loadingWorkspace()) {
-          <p class="loading" aria-live="polite">Loading configured sources…</p>
+          @if (loadingWorkspace()) {
+            <p class="loading" aria-live="polite">Loading folders…</p>
+          } @else {
+            <div class="folder-settings">
+              <section aria-labelledby="book-folders-heading">
+                <div class="folder-section-heading">
+                  <div>
+                    <h3 id="book-folders-heading">Book folders</h3>
+                    <p>Your original books. Scanning leaves these files unchanged.</p>
+                  </div>
+                  <button
+                    type="button"
+                    id="add-source"
+                    class="quiet-action add-source"
+                    (click)="addFolder('READ_ONLY_SOURCE')"
+                  >
+                    Add book folder
+                  </button>
+                </div>
+                @for (root of sourceRoots(); track root.id) {
+                  <div class="folder-row">
+                    <div>
+                      <p class="source-name">{{ root.name }}</p>
+                      <p class="source-path">
+                        {{ root.mountAlias
+                        }}{{ root.relativePath ? '/' + root.relativePath : '' }} · Book folder
+                      </p>
+                    </div>
+                    <div class="source-actions">
+                      <span class="status" [attr.data-state]="root.availability">{{
+                        formatState(root.availability)
+                      }}</span>
+                      <button
+                        type="button"
+                        (click)="startScan(root.id)"
+                        [disabled]="startingScan() || root.availability !== 'AVAILABLE'"
+                      >
+                        Start scan
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="folder-empty">Add a book folder to start building your catalog.</p>
+                }
+              </section>
+              <section id="generated-files" tabindex="-1" aria-labelledby="output-folders-heading">
+                <div class="folder-section-heading">
+                  <div>
+                    <h3 id="output-folders-heading">Generated files</h3>
+                    <p>Converted books and covers are saved here as new files.</p>
+                  </div>
+                  <button
+                    type="button"
+                    id="add-output"
+                    class="quiet-action add-output"
+                    (click)="addFolder('MANAGED_OUTPUT')"
+                  >
+                    Add output folder
+                  </button>
+                </div>
+                @if (!conversionOutput()) {
+                  <p class="output-guidance">
+                    Select “Use for conversions” on an available output folder to enable EPUB
+                    conversion.
+                  </p>
+                }
+                @for (root of outputRoots(); track root.id) {
+                  <div class="folder-row output-folder">
+                    <div>
+                      <p class="source-name">{{ root.name }}</p>
+                      <p class="source-path">
+                        {{ root.mountAlias
+                        }}{{ root.relativePath ? '/' + root.relativePath : '' }} · Output folder
+                      </p>
+                      <span class="status" [attr.data-state]="root.availability">{{
+                        formatState(root.availability)
+                      }}</span>
+                    </div>
+                    <div class="output-actions">
+                      @if (root.defaultForConversions) {
+                        <span class="output-default">✓ Conversion destination</span>
+                      } @else {
+                        <button
+                          class="set-conversion-output quiet-action"
+                          type="button"
+                          [disabled]="savingOutput() || root.availability !== 'AVAILABLE'"
+                          (click)="setDefaultOutput(root, 'CONVERSIONS')"
+                        >
+                          Use for conversions
+                        </button>
+                      }
+                      @if (root.defaultForCovers) {
+                        <span class="output-default">✓ Cover destination</span>
+                      } @else {
+                        <button
+                          class="set-cover-output quiet-action"
+                          type="button"
+                          [disabled]="savingOutput() || root.availability !== 'AVAILABLE'"
+                          (click)="setDefaultOutput(root, 'COVERS')"
+                        >
+                          Use for covers
+                        </button>
+                      }
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="folder-empty">
+                    Add an output folder to store converted books and covers.
+                  </p>
+                }
+                @if (outputError()) {
+                  <p class="notice notice-error" role="alert">{{ outputError() }}</p>
+                }
+                @if (outputNotice()) {
+                  <p class="notice notice-success" role="status">{{ outputNotice() }}</p>
+                }
+              </section>
+              @if (addingFolder()) {
+                <section class="add-folder-section" aria-labelledby="add-folder-heading">
+                  <h3 id="add-folder-heading">
+                    {{
+                      rootModel().mode === 'MANAGED_OUTPUT'
+                        ? 'Add output folder'
+                        : 'Add book folder'
+                    }}
+                  </h3>
+                  <p>
+                    {{
+                      rootModel().mode === 'MANAGED_OUTPUT'
+                        ? 'Choose a writable server folder for generated files.'
+                        : 'Choose a server folder containing your books.'
+                    }}
+                  </p>
+                  <form class="root-form" (submit)="configureRoot($event)" novalidate>
+                    <label
+                      ><span>Folder name</span
+                      ><input id="folder-name" autocomplete="off" [formField]="rootForm.name" />
+                      @if (rootForm.name().touched() && rootForm.name().errors()[0]; as error) {
+                        <small class="field-error">{{ error.message }}</small>
+                      }
+                    </label>
+                    <label
+                      ><span>Server folder</span
+                      ><select [formField]="rootForm.mountAlias">
+                        @if (mounts().length === 0) {
+                          <option value="">No server folders configured</option>
+                        }
+                        @for (mount of mounts(); track mount.alias) {
+                          <option [value]="mount.alias">{{ mount.alias }}</option>
+                        }</select
+                      ><small
+                        >Folders made available by your server administrator. Books stay on the
+                        server.</small
+                      >
+                    </label>
+                    <details class="folder-subfolder">
+                      <summary>Choose a subfolder (optional)</summary>
+                      <label
+                        ><span>Subfolder</span
+                        ><input
+                          autocomplete="off"
+                          placeholder="e.g. fiction"
+                          [formField]="rootForm.relativePath"
+                        />
+                        <small>Leave empty to use the entire server folder.</small>
+                        @if (
+                          rootForm.relativePath().touched() && rootForm.relativePath().errors()[0];
+                          as error
+                        ) {
+                          <small class="field-error">{{ error.message }}</small>
+                        }
+                      </label>
+                    </details>
+                    <label class="folder-verification"
+                      ><span>Folder verification code</span>
+                      <input
+                        type="password"
+                        autocomplete="off"
+                        [formField]="rootForm.identityToken"
+                      />
+                      <small
+                        >One-time setup: paste the code from <code>.yurlib-root-id</code> in this
+                        folder. Ask your server administrator for it. This confirms the correct
+                        storage is connected.</small
+                      >
+                      @if (
+                        rootForm.identityToken().touched() && rootForm.identityToken().errors()[0];
+                        as error
+                      ) {
+                        <small class="field-error">{{ error.message }}</small>
+                      }
+                    </label>
+                    @if (rootModel().mode === 'MANAGED_OUTPUT') {
+                      <label class="checkbox-field"
+                        ><input
+                          type="checkbox"
+                          [checked]="rootModel().defaultForConversions"
+                          (change)="setDefaultForConversions($any($event.target).checked)"
+                        /><span>Save converted books here</span></label
+                      >
+                      <label class="checkbox-field"
+                        ><input
+                          type="checkbox"
+                          [checked]="rootModel().defaultForCovers"
+                          (change)="setDefaultForCovers($any($event.target).checked)"
+                        /><span>Save covers here</span></label
+                      >
+                    }
+                    <div class="form-action">
+                      <button
+                        type="submit"
+                        [disabled]="rootForm().invalid() || savingRoot() || mounts().length === 0"
+                      >
+                        {{ savingRoot() ? 'Checking folder…' : 'Add folder' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="quiet-action"
+                        [disabled]="savingRoot()"
+                        (click)="cancelAddFolder()"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    @if (rootError()) {
+                      <p class="notice notice-error" role="alert">{{ rootError() }}</p>
+                    }
+                  </form>
+                </section>
+              }
+            </div>
+          }
         } @else if (selectedRoot(); as root) {
           <div class="source-summary">
             <div>
-              <p class="summary-label">Configured root</p>
+              <p class="summary-label">Book folder</p>
               <p class="source-name">{{ root.name }}</p>
-              <p class="source-path">
-                {{ root.mountAlias }}{{ root.relativePath ? '/' + root.relativePath : '' }}
-              </p>
+              @if (sourceRoots().length > 1) {
+                <label
+                  ><span>Scan a different folder</span
+                  ><select
+                    [value]="selectedRootId()"
+                    (change)="selectedRootId.set($any($event.target).value)"
+                  >
+                    @for (source of sourceRoots(); track source.id) {
+                      <option [value]="source.id">
+                        {{ source.name }} · {{ source.mountAlias
+                        }}{{ source.relativePath ? '/' + source.relativePath : '' }}
+                      </option>
+                    }
+                  </select></label
+                >
+              }
             </div>
             <div class="source-actions">
-              <span class="status" [attr.data-state]="root.availability">
-                {{ formatState(root.availability) }}
-              </span>
+              <span class="status" [attr.data-state]="root.availability">{{
+                formatState(root.availability)
+              }}</span>
               <button
                 type="button"
                 (click)="startScan()"
-                [disabled]="startingScan() || root.mode !== 'READ_ONLY_SOURCE'"
+                [disabled]="startingScan() || root.availability !== 'AVAILABLE'"
               >
                 {{ startingScan() ? 'Starting scan…' : 'Start scan' }}
               </button>
             </div>
           </div>
-          @if (scanError()) {
-            <p class="notice notice-error" role="alert">{{ scanError() }}</p>
-          }
         }
-        <form class="root-form" (submit)="configureRoot($event)" novalidate>
-          <label>
-            <span>Root mode</span>
-            <select [formField]="rootForm.mode">
-              <option value="READ_ONLY_SOURCE">Read-only source</option>
-              <option value="MANAGED_OUTPUT">Managed output</option>
-            </select>
-          </label>
-
-          @if (rootModel().mode === 'MANAGED_OUTPUT') {
-            <label class="checkbox-field">
-              <input
-                type="checkbox"
-                [checked]="rootModel().defaultForCovers"
-                (change)="setDefaultForCovers($any($event.target).checked)"
-              />
-              <span>Use as the default cover output</span>
-            </label>
-            <label class="checkbox-field">
-              <input
-                type="checkbox"
-                [checked]="rootModel().defaultForConversions"
-                (change)="setDefaultForConversions($any($event.target).checked)"
-              />
-              <span>Use as the default conversion output</span>
-            </label>
-          }
-
-          <label>
-            <span>Library name</span>
-            <input autocomplete="off" [formField]="rootForm.name" />
-            @if (rootForm.name().touched() && rootForm.name().errors()[0]; as error) {
-              <small class="field-error">{{ error.message }}</small>
-            }
-          </label>
-
-          <label>
-            <span>Allowed mount</span>
-            <select [formField]="rootForm.mountAlias">
-              @if (mounts().length === 0) {
-                <option value="">No mounts advertised</option>
-              }
-              @for (mount of mounts(); track mount.alias) {
-                <option [value]="mount.alias">{{ mount.alias }}</option>
-              }
-            </select>
-            @if (rootForm.mountAlias().touched() && rootForm.mountAlias().errors()[0]; as error) {
-              <small class="field-error">{{ error.message }}</small>
-            }
-          </label>
-
-          <label>
-            <span>Path within mount <em>optional</em></span>
-            <input autocomplete="off" placeholder="books" [formField]="rootForm.relativePath" />
-            @if (
-              rootForm.relativePath().touched() && rootForm.relativePath().errors()[0];
-              as error
-            ) {
-              <small class="field-error">{{ error.message }}</small>
-            }
-          </label>
-
-          <label>
-            <span>Identity token</span>
-            <input type="password" autocomplete="off" [formField]="rootForm.identityToken" />
-            <small>Must match the private token stored in <code>.yurlib-root-id</code>.</small>
-            @if (
-              rootForm.identityToken().touched() && rootForm.identityToken().errors()[0];
-              as error
-            ) {
-              <small class="field-error">{{ error.message }}</small>
-            }
-          </label>
-
-          <div class="form-action">
-            <button
-              type="submit"
-              [disabled]="rootForm().invalid() || savingRoot() || mounts().length === 0"
-            >
-              {{ savingRoot() ? 'Verifying source…' : 'Configure source' }}
-            </button>
-            <p>The identity token is verified and never returned by the server.</p>
-          </div>
-        </form>
-        @if (rootError()) {
-          <p class="notice notice-error" role="alert">{{ rootError() }}</p>
+        @if (scanError()) {
+          <p class="notice notice-error" role="alert">{{ scanError() }}</p>
         }
       </section>
     }
@@ -379,7 +555,8 @@
                 </div>
                 @if (completedReadState) {
                   <p class="edition-evidence">
-                    Edition evidence: {{ editionEvidence(work, completedReadState.completedEditionId) }}
+                    Edition evidence:
+                    {{ editionEvidence(work, completedReadState.completedEditionId) }}
                   </p>
                 }
                 @if (personalState().collections.length > 0) {
@@ -429,11 +606,19 @@
                         @if (!conversion) {
                           <button
                             type="button"
-                            [disabled]="conversionBusy(asset.id)"
+                            [disabled]="conversionBusy(asset.id) || needsConversionOutput()"
                             (click)="requestConversion(asset)"
                           >
                             {{ conversionBusy(asset.id) ? 'Requesting…' : 'Convert to EPUB' }}
                           </button>
+                          @if (needsConversionOutput()) {
+                            <span class="conversion-setup"
+                              >Choose where converted books will be saved.
+                              <a href="#generated-files" (click)="openSettings()"
+                                >Set up conversion folder</a
+                              >
+                            </span>
+                          }
                         } @else {
                           <span class="conversion-state" [attr.data-state]="conversion.state">
                             Conversion {{ formatState(conversion.state) }}
@@ -461,7 +646,9 @@
                             </a>
                           }
                           @if (conversion.safeDiagnostic) {
-                            <span class="conversion-diagnostic">{{ conversion.safeDiagnostic }}</span>
+                            <span class="conversion-diagnostic">{{
+                              conversion.safeDiagnostic
+                            }}</span>
                           }
                         }
                         @if (conversionErrors()[asset.id]; as conversionError) {

@@ -42,6 +42,11 @@ public final class ConfigureLibraryRootService implements LibraryRootUseCases {
     }
 
     @Override
+    public LibraryRoot setDefaultOutput(UUID rootId, LibraryRoot.OutputPurpose purpose) {
+        return store.setDefaultOutput(rootId, purpose);
+    }
+
+    @Override
     public void remove(UUID rootId) {
         if (store.findById(rootId).isEmpty()) {
             throw new LibraryRootFailure(
