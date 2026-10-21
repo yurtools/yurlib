@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,6 +59,45 @@ class LibraryRootControllerTest {
                 .andExpect(jsonPath("$.availability").value("AVAILABLE"))
                 .andExpect(jsonPath("$.identityToken").doesNotExist())
                 .andExpect(jsonPath("$.expectedIdentityDigest").doesNotExist());
+    }
+
+    @Test
+    void selectsAnExistingOutputFolderWithoutRequestingItsIdentityToken() throws Exception {
+        var source = root();
+        var output = new LibraryRoot(
+                source.id(),
+                "Generated files",
+                "managed",
+                "",
+                "a".repeat(64),
+                LibraryRoot.Mode.MANAGED_OUTPUT,
+                LibraryRoot.Availability.AVAILABLE,
+                null,
+                false,
+                true);
+        when(useCases.setDefaultOutput(output.id(), LibraryRoot.OutputPurpose.CONVERSIONS))
+                .thenReturn(output);
+
+        mockMvc.perform(put("/api/v1/library-roots/{rootId}/defaults", output.id())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"purpose":"CONVERSIONS"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.defaultForConversions").value(true))
+                .andExpect(jsonPath("$.identityToken").doesNotExist())
+                .andExpect(jsonPath("$.expectedIdentityDigest").doesNotExist());
+    }
+
+    @Test
+    void rejectsAnAbsentOrUnknownOutputPurpose() throws Exception {
+        for (var body : List.of("{}", "{\"purpose\":\"ORIGINALS\"}")) {
+            mockMvc.perform(put("/api/v1/library-roots/{rootId}/defaults", root().id())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        }
     }
 
     @Test

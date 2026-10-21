@@ -121,6 +121,45 @@ paths:
           $ref: "#/components/responses/Problem"
         "409":
           $ref: "#/components/responses/Problem"
+  /api/v1/library-roots/{rootId}/defaults:
+    put:
+      operationId: setDefaultOutputFolder
+      summary: Select an available managed folder for covers or conversions
+      description: Requires MANAGE_INGESTION_SOURCES. Atomically replaces the previous default for the selected purpose, preserving the other purpose and existing assets. Repeating the request is safe.
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/RootId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [purpose]
+              properties:
+                purpose:
+                  type: string
+                  enum: [COVERS, CONVERSIONS]
+      responses:
+        "200":
+          description: Updated output folder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryRoot"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
   /api/v1/library-roots/{rootId}/scans:
     post:
       operationId: startLibraryScan

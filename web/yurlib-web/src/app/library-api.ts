@@ -54,6 +54,13 @@ export class LibraryApi {
     return this.http.post<LibraryRoot>('/api/v1/library-roots', request);
   }
 
+  setDefaultOutput(rootId: string, purpose: 'COVERS' | 'CONVERSIONS') {
+    return this.http.put<LibraryRoot>(
+      `/api/v1/library-roots/${encodeURIComponent(rootId)}/defaults`,
+      { purpose },
+    );
+  }
+
   startScan(rootId: string) {
     return this.http.post<ScanJob>(`/api/v1/library-roots/${rootId}/scans`, undefined);
   }

@@ -86,6 +86,25 @@ public record LibraryRoot(
                 false);
     }
 
+    public LibraryRoot withOutputDefaults(boolean covers, boolean conversions) {
+        return new LibraryRoot(
+                id,
+                name,
+                mountAlias,
+                relativeBasePath,
+                expectedIdentityDigest,
+                mode,
+                availability,
+                lastSuccessfulScanAt,
+                covers,
+                conversions);
+    }
+
+    public enum OutputPurpose {
+        COVERS,
+        CONVERSIONS
+    }
+
     public enum Mode {
         READ_ONLY_SOURCE,
         MANAGED_OUTPUT

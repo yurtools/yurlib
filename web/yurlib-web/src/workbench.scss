@@ -229,6 +229,103 @@ app-root {
     margin-left: 4.5rem;
     max-width: 64rem;
   }
+  .settings-toggle {
+    white-space: nowrap;
+  }
+  .settings-heading {
+    padding-bottom: 2rem;
+  }
+  .settings-heading h1 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    line-height: 1.05;
+  }
+  .settings-collapsed {
+    padding-block: 1.5rem;
+  }
+  .folder-settings {
+    margin-left: 4.5rem;
+  }
+  .folder-settings > section + section {
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+    padding-top: 2rem;
+  }
+  .folder-section-heading,
+  .folder-row {
+    align-items: center;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+  }
+  .folder-section-heading h3,
+  .add-folder-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+  .folder-section-heading p,
+  .add-folder-section > p,
+  .folder-empty,
+  .output-guidance,
+  .conversion-setup {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .folder-row {
+    border-bottom: 1px solid var(--line);
+    padding-block: 1.25rem;
+  }
+  .folder-row .source-name {
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 650;
+  }
+  .folder-row .source-path {
+    font-size: 0.82rem;
+    margin-bottom: 0.8rem;
+    overflow-wrap: anywhere;
+  }
+  .output-actions {
+    align-items: flex-end;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .output-default {
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 650;
+  }
+  .folder-settings .root-form {
+    margin: 1.5rem 0 0;
+  }
+  .folder-subfolder,
+  .folder-verification,
+  .folder-settings .notice {
+    grid-column: 1 / -1;
+    max-width: 44rem;
+  }
+  .folder-subfolder summary {
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding-block: 0.5rem;
+  }
+  .folder-subfolder label {
+    margin-top: 0.75rem;
+  }
+  .folder-settings small {
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: normal;
+    line-height: 1.6;
+  }
+  .conversion-setup a {
+    display: block;
+  }
+  #generated-files {
+    scroll-margin-top: 2rem;
+  }
   label {
     color: var(--ink);
     display: grid;
@@ -935,6 +1032,28 @@ app-root {
   }
 
   @media (max-width: 760px) {
+    .folder-settings {
+      margin-left: 0;
+    }
+    .folder-section-heading,
+    .folder-row {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .output-actions {
+      align-items: flex-start;
+    }
+    .topbar-actions {
+      gap: 0.5rem;
+    }
+    .settings-toggle {
+      font-size: 0.75rem;
+      padding: 0.6rem;
+    }
+    .topbar-actions .development-mode {
+      display: none;
+    }
     .topbar {
       height: 4.25rem;
     }

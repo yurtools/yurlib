@@ -26,6 +26,7 @@ import org.yurlib.server.library.application.CatalogQuery;
 import org.yurlib.server.library.application.CatalogReconciliation;
 import org.yurlib.server.library.application.CatalogStore;
 import org.yurlib.server.library.application.ExtractedBookMetadata;
+import org.yurlib.server.library.application.LibraryRootFailure;
 import org.yurlib.server.library.application.LibraryRootStore;
 import org.yurlib.server.library.application.ScanJobFailure;
 import org.yurlib.server.library.application.ScanJobStore;
@@ -62,6 +63,80 @@ class YurlibServerIntegrationTest {
 
     @Autowired
     private AssetContentStore assetContentStore;
+
+    @Test
+    void switchesOutputDefaultsIndependentlyWithoutRecreatingFolders() {
+        var first = libraryRootStore.save(new LibraryRoot(
+                UUID.randomUUID(),
+                "First output",
+                "first-output",
+                "",
+                "a".repeat(64),
+                LibraryRoot.Mode.MANAGED_OUTPUT,
+                LibraryRoot.Availability.AVAILABLE,
+                null,
+                true,
+                true));
+        var second = libraryRootStore.save(new LibraryRoot(
+                UUID.randomUUID(),
+                "Second output",
+                "second-output",
+                "",
+                "b".repeat(64),
+                LibraryRoot.Mode.MANAGED_OUTPUT,
+                LibraryRoot.Availability.AVAILABLE,
+                null));
+
+        var selected = libraryRootStore.setDefaultOutput(second.id(), LibraryRoot.OutputPurpose.CONVERSIONS);
+
+        assertThat(selected.id()).isEqualTo(second.id());
+        assertThat(selected.defaultForConversions()).isTrue();
+        var original = libraryRootStore.findById(first.id()).orElseThrow();
+        assertThat(original.defaultForCovers()).isTrue();
+        assertThat(original.defaultForConversions()).isFalse();
+        assertThat(libraryRootStore.setDefaultOutput(second.id(), LibraryRoot.OutputPurpose.CONVERSIONS))
+                .isEqualTo(selected);
+        libraryRootStore.setDefaultOutput(second.id(), LibraryRoot.OutputPurpose.COVERS);
+        assertThat(libraryRootStore.findById(first.id()).orElseThrow().defaultForCovers())
+                .isFalse();
+        assertThat(libraryRootStore.findById(second.id()).orElseThrow().defaultForCovers())
+                .isTrue();
+        assertThat(libraryRootStore.findById(second.id()).orElseThrow().defaultForConversions())
+                .isTrue();
+    }
+
+    @Test
+    void rejectsSourceFoldersAsOutputWithoutChangingExistingDefaults() {
+        var source = saveRoot();
+        assertThatThrownBy(() -> libraryRootStore.setDefaultOutput(source.id(), LibraryRoot.OutputPurpose.CONVERSIONS))
+                .isInstanceOfSatisfying(
+                        LibraryRootFailure.class,
+                        failure -> assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_MODE_INVALID));
+        assertThat(libraryRootStore.findById(source.id()).orElseThrow().defaultForConversions())
+                .isFalse();
+    }
+
+    @Test
+    void rejectsUnavailableAndMissingOutputFolders() {
+        var unavailable = libraryRootStore.save(new LibraryRoot(
+                UUID.randomUUID(),
+                "Offline output",
+                "offline",
+                "",
+                "a".repeat(64),
+                LibraryRoot.Mode.MANAGED_OUTPUT,
+                LibraryRoot.Availability.UNAVAILABLE,
+                null));
+        assertThatThrownBy(() -> libraryRootStore.setDefaultOutput(unavailable.id(), LibraryRoot.OutputPurpose.COVERS))
+                .isInstanceOfSatisfying(
+                        LibraryRootFailure.class,
+                        failure -> assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_UNAVAILABLE));
+        assertThatThrownBy(() ->
+                        libraryRootStore.setDefaultOutput(UUID.randomUUID(), LibraryRoot.OutputPurpose.CONVERSIONS))
+                .isInstanceOfSatisfying(
+                        LibraryRootFailure.class,
+                        failure -> assertThat(failure.code()).isEqualTo(LibraryRootFailure.Code.ROOT_NOT_FOUND));
+    }
 
     @Test
     void appliesFlywayMigrations() {

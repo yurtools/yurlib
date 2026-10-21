@@ -24,20 +24,140 @@ describe('App', () => {
     http.verify();
   });
 
-  it('loads only server-advertised mounts and renders accessible root fields', async () => {
+  it('offers task-based folder setup using only server-advertised folders', async () => {
     await initialize([], emptyCatalog(), [{ alias: 'archive' }, { alias: 'main' }]);
 
     const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.add-source')!.click();
+    await fixture.whenStable();
     const labels = [...element.querySelectorAll('label')].map((label) => label.textContent?.trim());
     const options = [...element.querySelectorAll('select option')].map((option) =>
       option.textContent?.trim(),
     );
 
-    expect(labels.some((label) => label === 'Library name')).toBe(true);
-    expect(labels.some((label) => label?.startsWith('Allowed mount'))).toBe(true);
-    expect(labels.some((label) => label?.startsWith('Identity token'))).toBe(true);
-    expect(options).toEqual(['Read-only source', 'Managed output', 'archive', 'main']);
+    expect(labels.some((label) => label === 'Folder name')).toBe(true);
+    expect(labels.some((label) => label?.startsWith('Server folder'))).toBe(true);
+    expect(labels.some((label) => label?.startsWith('Folder verification code'))).toBe(true);
+    expect(options).toEqual(['archive', 'main']);
+    expect(element.textContent).not.toContain('Root mode');
     expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+  });
+
+  it('keeps completed setup out of browsing and selects a book folder even when output is first', async () => {
+    await initialize([outputRoot(), root()], emptyCatalog());
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.root-form')).toBeNull();
+    expect(element.querySelector('.folder-settings')).toBeNull();
+    expect(element.querySelector('.source-name')?.textContent).toContain('Main library');
+
+    element.querySelector<HTMLButtonElement>('.settings-toggle')!.click();
+    await fixture.whenStable();
+    expect(element.querySelector('#book-folders-heading')?.textContent).toBe('Book folders');
+    expect(element.querySelector('#output-folders-heading')?.textContent).toBe('Generated files');
+    expect(element.querySelector('.root-form')).toBeNull();
+    expect(element.querySelector('.set-conversion-output')).toBeNull();
+  });
+
+  it('scans the chosen source when several book folders are configured', async () => {
+    await initialize(
+      [root(), { ...root(), id: 'root-2', name: 'Archive', mountAlias: 'archive' }],
+      emptyCatalog(),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+    const select = element.querySelector<HTMLSelectElement>('.source-summary select')!;
+    select.value = 'root-2';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    element.querySelector<HTMLButtonElement>('.source-actions button')!.click();
+    http
+      .expectOne('/api/v1/library-roots/root-2/scans')
+      .flush({ ...job('QUEUED'), rootId: 'root-2' });
+    await fixture.whenStable();
+  });
+
+  it('blocks conversion until an existing output folder is selected and then allows retry', async () => {
+    await initialize(
+      [root(), { ...outputRoot(), defaultForConversions: false }],
+      conversionCatalog(),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector<HTMLButtonElement>('.conversion-actions button')?.disabled).toBe(
+      true,
+    );
+    http.expectNone('/api/v1/assets/asset-fb2/conversions');
+
+    element.querySelector<HTMLAnchorElement>('.conversion-setup a')!.click();
+    await fixture.whenStable();
+    expect(element.querySelector('#output-folders-heading')).not.toBeNull();
+    element.querySelector<HTMLButtonElement>('.set-conversion-output')!.click();
+    const update = http.expectOne('/api/v1/library-roots/output-1/defaults');
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toEqual({ purpose: 'CONVERSIONS' });
+    update.flush(outputRoot());
+    await fixture.whenStable();
+    expect(element.querySelector('.output-default')?.textContent).toContain(
+      'Conversion destination',
+    );
+    expect(element.querySelector('.conversion-setup')).toBeNull();
+    expect(element.querySelector<HTMLButtonElement>('.conversion-actions button')?.disabled).toBe(
+      false,
+    );
+    element.querySelector<HTMLButtonElement>('.conversion-actions button')!.click();
+    http.expectOne('/api/v1/assets/asset-fb2/conversions').flush(conversionJob('QUEUED'));
+    await fixture.whenStable();
+  });
+
+  it('keeps output selection actionable after a failed save', async () => {
+    await initialize([root(), { ...outputRoot(), defaultForConversions: false }], emptyCatalog());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.settings-toggle')!.click();
+    await fixture.whenStable();
+    element.querySelector<HTMLButtonElement>('.set-conversion-output')!.click();
+    http
+      .expectOne('/api/v1/library-roots/output-1/defaults')
+      .flush(
+        { detail: 'The output folder is unavailable.', code: 'ROOT_UNAVAILABLE' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await fixture.whenStable();
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'output folder is unavailable',
+    );
+    expect(element.querySelector<HTMLButtonElement>('.set-conversion-output')?.disabled).toBe(
+      false,
+    );
+    expect(element.querySelector('.output-default')).toBeNull();
+  });
+
+  it('prepares generated output with useful defaults and clears verification on cancel', async () => {
+    await initialize([root()], emptyCatalog(), [{ alias: 'main' }, { alias: 'managed' }]);
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.settings-toggle')!.click();
+    await fixture.whenStable();
+    element.querySelector<HTMLButtonElement>('.add-output')!.click();
+    await fixture.whenStable();
+    expect(element.querySelector<HTMLInputElement>('.root-form input')?.value).toBe(
+      'Generated files',
+    );
+    expect(element.querySelector<HTMLSelectElement>('.root-form select')?.value).toBe('managed');
+    expect(
+      [...element.querySelectorAll<HTMLInputElement>('.checkbox-field input')].every(
+        (input) => input.checked,
+      ),
+    ).toBe(true);
+    setInput(
+      element.querySelector<HTMLInputElement>('.root-form input[type="password"]')!,
+      'private-token-1234',
+    );
+    element.querySelector<HTMLButtonElement>('.form-action button[type="button"]')!.click();
+    await fixture.whenStable();
+    expect(element.querySelector('.root-form')).toBeNull();
+    expect(document.activeElement).toBe(element.querySelector('.add-output'));
+    element.querySelector<HTMLButtonElement>('.add-output')!.click();
+    await fixture.whenStable();
+    expect(
+      element.querySelector<HTMLInputElement>('.root-form input[type="password"]')?.value,
+    ).toBe('');
   });
 
   it('gates the workspace behind owner sign-in and clears the password', async () => {
@@ -174,6 +294,8 @@ describe('App', () => {
   it('validates root input and sends the selected alias without a backend host', async () => {
     await initialize([], emptyCatalog(), [{ alias: 'main' }]);
     const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.add-source')!.click();
+    await fixture.whenStable();
     setInput(
       element.querySelectorAll<HTMLInputElement>('.root-form input')[2],
       'private-token-1234',
@@ -183,7 +305,7 @@ describe('App', () => {
     element.querySelector<HTMLFormElement>('.root-form')?.dispatchEvent(new SubmitEvent('submit'));
     const request = http.expectOne('/api/v1/library-roots');
     expect(request.request.body).toEqual({
-      name: 'Main library',
+      name: 'My books',
       mountAlias: 'main',
       relativePath: '',
       identityToken: 'private-token-1234',
@@ -307,7 +429,7 @@ describe('App', () => {
   });
 
   it('requests and exposes a completed on-demand EPUB conversion', async () => {
-    await initialize([], {
+    await initialize([outputRoot()], {
       items: [
         {
           id: 'work-convert',
@@ -351,9 +473,9 @@ describe('App', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const convertedDownload = [...element.querySelectorAll<HTMLAnchorElement>('.asset-list a')].find(
-      (link) => link.textContent?.includes('Download converted EPUB'),
-    );
+    const convertedDownload = [
+      ...element.querySelectorAll<HTMLAnchorElement>('.asset-list a'),
+    ].find((link) => link.textContent?.includes('Download converted EPUB'));
     expect(convertedDownload?.getAttribute('href')).toBe('/api/v1/assets/asset-epub/content');
   });
 
@@ -772,6 +894,45 @@ describe('App', () => {
       coverageComplete: false,
       failures: [],
       createdAt: '2026-09-29T12:00:00Z',
+    };
+  }
+
+  function outputRoot(): LibraryRoot {
+    return {
+      id: 'output-1',
+      name: 'Generated files',
+      mountAlias: 'managed',
+      relativePath: '',
+      mode: 'MANAGED_OUTPUT',
+      availability: 'AVAILABLE',
+      defaultForCovers: false,
+      defaultForConversions: true,
+    };
+  }
+
+  function conversionCatalog(): CatalogPage {
+    return {
+      items: [
+        {
+          id: 'work-convert',
+          title: 'Conversion fixture',
+          provisional: false,
+          assets: [
+            {
+              id: 'asset-fb2',
+              editionId: 'edition-fb2',
+              format: 'FB2',
+              size: 4096,
+              availability: 'AVAILABLE',
+              original: true,
+              metadataState: 'READY',
+            },
+          ],
+        },
+      ],
+      page: 0,
+      size: 12,
+      totalElements: 1,
     };
   }
 
