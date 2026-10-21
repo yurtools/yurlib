@@ -51,6 +51,26 @@
 
 ## Blockers and delivery references
 
-- None. The local frontend, loopback backend, database, and isolated worker remain running for owner testing at `http://localhost:4200`.
+- None. Local runtime was stopped at the owner's request after testing; library files, generated files, and the database volume were preserved.
 - Draft pull request #98 contains the implementation and verification evidence. It has not been merged; the project item remains In Progress during review.
-- The pre-existing local `web/yurlib-web/angular.json` analytics preference was preserved and excluded from the commits.
+- The pre-existing local `web/yurlib-web/angular.json` analytics preference was preserved and excluded from the initial implementation commits. The owner subsequently requested committing and pushing the remaining changes, including this preference.
+
+## Local runtime shutdown
+
+Initiating user prompt:
+
+> stop it for now
+
+- Stopped `yurlib-local-document-worker`, `yurlib-local-worker-api`, and the Compose PostgreSQL service without deleting containers or volumes.
+- Sent SIGTERM to the verified Yurlib frontend/backend processes and their npm/Maven launchers.
+- Verified that ports 4200 and 8082 have no listeners and no Yurlib containers remain running. Unrelated applications were left running.
+
+## Commit remaining changes
+
+Initiating user prompt:
+
+> commit and push the changes
+
+- Reviewed the remaining diff: the runtime-shutdown record and the existing Angular CLI analytics opt-out.
+- Validated `angular.json` as JSON and checked the diff for whitespace errors. Application tests were not repeated for this configuration/documentation-only change.
+- Committed both changes on `fix/97-library-folder-usability` and pushed the branch to its existing upstream for pull request #98.
