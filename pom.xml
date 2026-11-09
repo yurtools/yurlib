@@ -38,7 +38,7 @@
         <archunit.version>1.5.1</archunit.version>
         <findsecbugs.version>1.14.0</findsecbugs.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <maven-enforcer.version>3.6.3</maven-enforcer.version>
+        <maven-enforcer.version>3.7.0</maven-enforcer.version>
         <maven-pmd.version>3.28.0</maven-pmd.version>
         <openapi-diff.version>2.1.7</openapi-diff.version>
         <palantir-java-format.version>2.98.0</palantir-java-format.version>
